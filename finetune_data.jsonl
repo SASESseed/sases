@@ -1,0 +1,79 @@
+{"messages": [{"role": "user", "content": "任务：写一个Python函数，接收一个整数列表，返回所有偶数的和。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：证明√2是无理数。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：证明勾股定理（直角三角形两直角边平方和等于斜边平方）。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：实现二分查找算法，返回目标值在已排序数组中的索引，若不存在返回-1。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：证明质数有无穷多个。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：实现一个函数，将两个有序升序列表合并为一个有序升序列表。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：证明三角形内角和等于180度。\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "命题为假。因为质数定义为大于1的自然数且只有1和自身两个因数。其中，2是质数，但2是偶数。因此存在反例：质数2是偶数，并非所有质数都是奇数。命题错误。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "《红楼梦》以贾宝玉、林黛玉和薛宝钗的爱情悲剧为主线，描写了贾、史、王、薛四大家族的兴衰历程，揭示了封建社会的腐朽与没落。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "追问问题：“您能具体举一个例子，说明因为过于追求完美而导致项目进度或质量出现问题的情形吗？以及您是如何调整的？”"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "《哈姆雷特》、《奥赛罗》、《李尔王》、《麦克白》。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "【SunPower 20000太阳能充电宝】专为户外爱好者和旅行者打造。内置20000mAh大容量电池，支持QC3.0快速充电，无论手机、平板还是相机都能迅速补充电量。顶部高效太阳能板，阳光下自动蓄能，让你远离电源焦虑。更配备高亮LED手电筒，夜间照明、求救信号一灯多用。坚韧防水外壳，无惧风雨，是您探险路上的全能伙伴。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "1.23×10⁸"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "摩尔定律是英特尔联合创始人戈登·摩尔在1965年提出的观察：集成电路上可容纳的晶体管数量大约每两年翻一番，性能随之提升，成本降低。这一定律持续驱动了数十年半导体产业的发展。对现代科技的影响包括：推动了计算机、智能手机、云计算等领域的指数级进步；促进了人工智能、大数据等高算力应用的出现；同时也带来了功耗和散热挑战，促使芯片架构创新（如多核、异构计算）。近年来摩尔定律逐渐放缓，但仍在通过新材料、新技术延续。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "该说法缺乏科学依据，属于过度概括。批判性思维评估：1）全球权威机构（WHO、FDA、EFSA）一致认为经严格审批的转基因食品与常规食品同样安全。2）“必然”一词过于绝对，没有证据支持所有转基因食品均有害。3）部分人担忧的过敏、基因转移等问题在上市前已通过毒理和过敏原测试。4）实际案例中，转基因作物如抗虫棉、黄金大米等带来了减少农药使用、增加营养等益处。合理的态度是：对具体转基因产品个案评估，而非一刀切否定。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "SELECT emp_name FROM employees WHERE dept_id = 10 AND salary > 5000;"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "亲爱的李明：\n\n非常感谢你在我生病期间接手并完成了Q3市场分析报告。你不仅承担了额外的工作，还保证了报告的高质量，让我能安心休养。你的帮助对我至关重要，再次由衷感谢！\n\n祝工作顺利！\n\n[你的名字]"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "您可以想象元宇宙就像一个巨大的“虚拟游乐园”，您戴上VR眼镜或通过电脑就能进去。这个游乐园里有各种场馆：购物中心、电影院、体育馆，甚至还有学校和办公室。您的虚拟形象可以像在现实中一样走路、聊天、买东西、上课。而且这个游乐园是24小时开放的，您可以和全世界的朋友一起进去玩，就像他们真的在身边一样。简单说，元宇宙就是把现实世界的很多活动搬到数字世界里，让您身临其境。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "该数列为1²+2²+3²+...+10²，根据平方和公式S=n(n+1)(2n+1)/6，其中n=10，得S=10×11×21÷6=385。因此和为385。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "\"A journey of a thousand miles begins with a single step.\""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "主题名称：“蔚蓝重生——海洋垃圾清零行动”\n口号：“每捡起一片垃圾，大海就多一份纯净。加入绿动未来，让蔚蓝重生！”"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "她不禁皱起眉头，明明约好三点见面，现在却不见踪影。她走近桌子，小心地碰了碰咖啡杯——还很烫。这时，她突然注意到杯子下面压着一张纸条，上面潦草地写着：“临时有急事，请等我十分钟。”她松了一口气，坐到沙发上，拿起手机准备打发时间。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "经典解法：总球数8个。第二个球是红球的概率与第一个球无关（对称性），可以直接计算为红球比例，即5/8。更严谨地：P(第二个红)=P(第一个红)*P(第二个红|第一个红)+P(第一个蓝)*P(第二个红|第一个蓝)=(5/8)*(4/7)+(3/8)*(5/7)=20/56+15/56=35/56=5/8。因此概率为5/8。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "设矩阵A为2×3：\nA = [[1,2,3],\n     [4,5,6]]\n矩阵B为3×2：\nB = [[7,8],\n     [9,10],\n     [11,12]]\n乘积C=A×B为2×2：\nC[0][0]=1×7+2×9+3×11=7+18+33=58\nC[0][1]=1×8+2×10+3×12=8+20+36=64\nC[1][0]=4×7+5×9+6×11=28+45+66=139\nC[1][1]=4×8+5×10+6×12=32+50+72=154\n所以C = [[58,64],\n         [139,154]]"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "机器学习是人工智能的一个子领域，指算法从数据中学习模式并做出预测，通常需要手工特征工程。深度学习是机器学习的一个分支，使用多层神经网络自动学习特征表示。主要区别：1）特征提取：机器学习依赖人工设计特征，深度学习自动从数据中提取层次化特征。2）数据需求：深度学习通常需要大量标注数据，机器学习在小数据集上也可能有效。3）计算资源：深度学习需要更强硬件（GPU），训练时间更长。4）可解释性：机器学习模型（如决策树）相对可解释，深度学习是“黑箱”。5）性能：在图像、语音、自然语言等复杂任务上深度学习显著优于传统机器学习，而结构化数据上传统机器学习仍很有竞争力。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "唤醒词1：“小智小智”——“智”字寓意智能，发音清晰响亮，两个重复音节便于记忆和中老年人口语化使用。\n唤醒词2：“阿福阿福”——“阿”字亲切，像叫家人名字，“福”寓意幸福，符合家庭氛围，且发音对老年人友好。\n唤醒词3：“你好小灵”——“你好”是日常礼貌用语，“小灵”简单好记，与“灵敏”谐音，暗示音箱反应快，容易上口。"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": "啊，今天这天气，简直像是上帝特意为懒汉们准备的恩赐——阳光温和得连最挑剔的蚊子都满意了，空气里飘着一种让人想丢掉工作的香气。我敢说，就连我那只总爱抱怨的猫都忍不住想出门溜达一圈。所以，还等什么呢？走吧，趁着理智还没回来接管大脑！"}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}
+{"messages": [{"role": "user", "content": "任务：\n请综合不同思路，给出一个完整可运行的解决方案。"}, {"role": "assistant", "content": ""}]}

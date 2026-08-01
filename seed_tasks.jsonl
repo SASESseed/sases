@@ -1,0 +1,99 @@
+{"task_id": "SEED-CODE-0001", "category": "code_generation", "difficulty": "easy", "description": "写一个Python函数，接收一个整数列表，返回所有偶数的和。", "test_cases": [{"input": [1, 2, 3, 4, 5], "expected_output": 6}, {"input": [2, 4, 6, 8], "expected_output": 20}], "reference_answer": "def sum_even(nums):\n    return sum(x for x in nums if x % 2 == 0)"}
+{"task_id": "SEED-MATH-0002", "category": "math_proof", "difficulty": "medium", "description": "证明√2是无理数。", "test_cases": [{"input": ["请用反证法证明"], "expected_output": "假设√2=p/q（p,q互质），平方得2q^2=p^2，则p为偶数，设p=2k，代入得q^2=2k^2，q偶数，矛盾"}], "reference_answer": "假设√2是有理数，则可表示为最简分数p/q（p,q互质），平方得2q^2=p^2，说明p^2是偶数，故p是偶数。设p=2k，则2q^2=4k^2，q^2=2k^2，q^2是偶数，q也是偶数，与p,q互质矛盾，故√2是无理数。"}
+{"task_id": "SEED-LOGIC-0003", "category": "logic_reasoning", "difficulty": "easy", "description": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？", "test_cases": [{"input": ["判断谁真谁假"], "expected_output": "只有乙说真话"}], "reference_answer": "假设甲真，则乙假，乙假意味着丙真，丙真则甲乙都假，矛盾。假设乙真，则甲假，丙假，丙假意味着甲乙不都说谎，即至少一人真，甲假乙真成立，无矛盾。假设丙真，则甲乙都假，甲假则乙真，矛盾。因此乙说真话。"}
+{"task_id": "SEED-SEC-0004", "category": "security_judgment", "difficulty": "easy", "description": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```", "test_cases": [{"input": ["代码片段"], "expected_output": "存在SQL注入漏洞"}], "reference_answer": "存在SQL注入漏洞。用户输入直接拼接进SQL语句，攻击者可通过输入' OR 1=1 -- 等绕过。应使用参数化查询，如cursor.execute(\"SELECT * FROM users WHERE name = %s\", (username,))"}
+{"task_id": "SEED-TEXT-0005", "category": "text_summarization", "difficulty": "easy", "description": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"", "test_cases": [{"input": ["新闻文本"], "expected_output": "中国科学家研制出新型量子计算机，速度比超算快百万倍，应用于药物研发等领域。"}], "reference_answer": "中国科学家成功研发新型量子计算机，速度超现有超算百万倍，应用于药物研发和材料科学，成果发表于《自然》。"}
+{"task_id": "SEED-DATA-0006", "category": "data_analysis", "difficulty": "easy", "description": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。", "test_cases": [{"input": [[2, 4, 6, 8, 10, 12, 14, 16, 18, 20]], "expected_output": "平均值=11.0, 中位数=11.0"}], "reference_answer": "平均值 = (2+4+6+8+10+12+14+16+18+20)/10 = 110/10 = 11.0。中位数：已排序，偶数个，取中间两数平均：(10+12)/2=11.0。"}
+{"task_id": "SEED-CODE-0007", "category": "code_generation", "difficulty": "medium", "description": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。", "test_cases": [{"input": ["\"A man, a plan, a canal: Panama\""], "expected_output": "True"}, {"input": ["\"race a car\""], "expected_output": "False"}], "reference_answer": "def is_palindrome(s):\n    cleaned = ''.join(c.lower() for c in s if c.isalnum())\n    return cleaned == cleaned[::-1]"}
+{"task_id": "SEED-MATH-0008", "category": "math_proof", "difficulty": "easy", "description": "证明勾股定理（直角三角形两直角边平方和等于斜边平方）。", "test_cases": [{"input": ["证明勾股定理"], "expected_output": "利用面积法或相似三角形"}], "reference_answer": "构造边长为a+b的大正方形，内嵌边长为c的正方形。大正方形面积(a+b)^2，等于四个直角三角形面积2ab加上小正方形面积c^2，得(a+b)^2=2ab+c^2，展开得a^2+2ab+b^2=2ab+c^2，即a^2+b^2=c^2。"}
+{"task_id": "SEED-LOGIC-0009", "category": "logic_reasoning", "difficulty": "medium", "description": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？", "test_cases": [{"input": ["如何操作？"], "expected_output": "从标有'混合'的箱子中取出一个水果"}], "reference_answer": "因为所有标签都错了，标有'混合'的箱子实际上只含一种水果。从该箱子取出一个水果，如果是苹果，则此箱为苹果；那么标有'橘子'的箱子不可能是橘子（标签错），也不可能是苹果（已确定），只能是混合；剩下标有'苹果'的箱子为橘子。"}
+{"task_id": "SEED-SEC-0010", "category": "security_judgment", "difficulty": "medium", "description": "以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```", "test_cases": [{"input": ["代码片段"], "expected_output": "存在XSS漏洞"}], "reference_answer": "存在XSS漏洞。直接将用户输入赋值给innerHTML会执行其中的HTML和JavaScript脚本。应使用textContent或对输入进行转义，如innerText或使用DOMPurify清理。"}
+{"task_id": "SEED-TEXT-0011", "category": "text_summarization", "difficulty": "medium", "description": "请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"", "test_cases": [{"input": ["文档段落"], "expected_output": "Gin是Go语言的高性能HTTP框架，支持中间件和路由，适用于微服务和API开发。"}], "reference_answer": "Gin是Go语言的轻量级高性能Web框架，基于httprouter，支持中间件、路由分组和JSON验证，常用于微服务和RESTful API。"}
+{"task_id": "SEED-DATA-0012", "category": "data_analysis", "difficulty": "medium", "description": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。", "test_cases": [{"input": [[1, 2, 3, 4, 5], [2, 4, 6, 8, 10]], "expected_output": "1.0"}], "reference_answer": "计算均值：A_mean=3, B_mean=6。协方差=((1-3)*(2-6)+(2-3)*(4-6)+(3-3)*(6-6)+(4-3)*(8-6)+(5-3)*(10-6))/4 = (8+2+0+2+8)/4=20/4=5。A标准差=√((4+1+0+1+4)/4)=√2.5≈1.581, B标准差=√((16+4+0+4+16)/4)=√10≈3.162。相关系数=5/(1.581*3.162)=5/5=1.0。"}
+{"task_id": "SEED-CODE-0013", "category": "code_generation", "difficulty": "medium", "description": "实现二分查找算法，返回目标值在已排序数组中的索引，若不存在返回-1。", "test_cases": [{"input": [[1, 3, 5, 7, 9], 5], "expected_output": "2"}, {"input": [[1, 3, 5, 7, 9], 2], "expected_output": "-1"}], "reference_answer": "def binary_search(arr, target):\n    left, right = 0, len(arr)-1\n    while left <= right:\n        mid = (left+right)//2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid+1\n        else:\n            right = mid-1\n    return -1"}
+{"task_id": "SEED-MATH-0014", "category": "math_proof", "difficulty": "easy", "description": "证明质数有无穷多个。", "test_cases": [{"input": ["证明质数无限"], "expected_output": "欧几里得证法"}], "reference_answer": "假设质数有限，设为p1,p2,...,pn。构造数N=p1*p2*...*pn+1。N不能被任何已知质数整除，余1，故N要么是质数，要么有新的质因子，与假设矛盾。因此质数有无穷多个。"}
+{"task_id": "SEED-LOGIC-0015", "category": "logic_reasoning", "difficulty": "hard", "description": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。", "test_cases": [{"input": ["推理"], "expected_output": "A是骑士，B是无赖，C是无赖"}], "reference_answer": "假设A是骑士，则B是无赖（真），那么B的话为假，即A和C不是同一类，A是骑士，故C是无赖，符合C说假话（C说A是骑士，假，因为A是骑士，所以C的话是假的，矛盾？注意C说A是骑士，如果A是骑士，C的话为真，但C是无赖应说假，矛盾。所以A不可能是骑士。因此A是无赖，则B是骑士（因为A说假话，说B是无赖为假，即B是骑士）。B为骑士，其话真：A和C同一类，A无赖，则C也是无赖。C说A是骑士为假，符合。因此A无赖，B骑士，C无赖。"}
+{"task_id": "SEED-SEC-0016", "category": "security_judgment", "difficulty": "easy", "description": "以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```", "test_cases": [{"input": ["代码片段"], "expected_output": "存在路径遍历漏洞"}], "reference_answer": "存在路径遍历漏洞。用户可以通过filename参数包含'../'等字符访问任意文件。应对filename进行过滤，例如只允许字母数字，或使用os.path.basename限制在当前目录。"}
+{"task_id": "SEED-TEXT-0017", "category": "text_summarization", "difficulty": "medium", "description": "请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。", "test_cases": [{"input": ["对话文本"], "expected_output": "用户手机屏幕人为损坏，不保修，可购买换屏服务。"}], "reference_answer": "用户购买的手机因人为损坏无法退换，客服建议购买换屏服务。"}
+{"task_id": "SEED-DATA-0018", "category": "data_analysis", "difficulty": "hard", "description": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。", "test_cases": [{"input": ["年龄和收入数据"], "expected_output": "R方≈0.967"}], "reference_answer": "使用最小二乘法：计算平均值 age_mean=47.5, income_mean=57。计算斜率b = Σ((x_i-x̄)(y_i-ȳ))/Σ((x_i-x̄)^2) = ( (25-47.5)*(30-57)+... ) / Σ(x_i-x̄)^2。经计算分子=4187.5，分母=4125，b≈1.015。截距a=ȳ-b*x̄=57-1.015*47.5≈57-48.2=8.8。模型: income=8.8+1.015*age。总平方和SST= Σ(y_i-ȳ)^2=2720，残差平方和SSE= Σ(y_i - (8.8+1.015*x_i))^2≈91.2，R方=1-SSE/SST=1-91.2/2720≈0.9665。"}
+{"task_id": "SEED-CODE-0019", "category": "code_generation", "difficulty": "medium", "description": "实现一个函数，将两个有序升序列表合并为一个有序升序列表。", "test_cases": [{"input": [[1, 3, 5], [2, 4, 6]], "expected_output": [1, 2, 3, 4, 5, 6]}, {"input": [[], [1, 2]], "expected_output": [1, 2]}], "reference_answer": "def merge_sorted(arr1, arr2):\n    i=j=0\n    res=[]\n    while i<len(arr1) and j<len(arr2):\n        if arr1[i] < arr2[j]:\n            res.append(arr1[i]); i+=1\n        else:\n            res.append(arr2[j]); j+=1\n    res.extend(arr1[i:]); res.extend(arr2[j:])\n    return res"}
+{"task_id": "SEED-MATH-0020", "category": "math_proof", "difficulty": "medium", "description": "证明三角形内角和等于180度。", "test_cases": [{"input": ["证明三角形内角和"], "expected_output": "通过平行线辅助线"}], "reference_answer": "作三角形ABC，过顶点A作直线平行于BC。则∠B的内错角等于∠B'，∠C的内错角等于∠C'，而∠A+∠B'+∠C'=180°(平角)，因此∠A+∠B+∠C=180°。"}
+{"task_id": "SEED-LOGIC-0021", "category": "logic_reasoning", "difficulty": "easy", "description": "如果下雨则地湿。现在地没湿，你能得出什么结论？", "test_cases": [{"input": ["推理"], "expected_output": "没下雨"}], "reference_answer": "根据逆否命题：如果地没湿，则没下雨。因为原命题“下雨→地湿”等价于其逆否“地不湿→没下雨”。所以得出结论：没下雨。"}
+{"task_id": "SEED-SEC-0022", "category": "security_judgment", "difficulty": "medium", "description": "以下代码是否存在CSRF漏洞？\n```\n<form action=\"/transfer\" method=\"POST\">\n  <input name=\"amount\" value=\"1000\">\n  <input type=\"submit\">\n</form>\n```\n假设用户已登录并有转账权限。", "test_cases": [{"input": ["代码片段"], "expected_output": "存在CSRF漏洞"}], "reference_answer": "存在CSRF漏洞。表单没有CSRF令牌，攻击者可伪造请求诱骗用户提交。应添加隐藏的CSRF token并在服务端验证，或使用SameSite Cookie属性。"}
+{"task_id": "SEED-TEXT-0023", "category": "text_summarization", "difficulty": "hard", "description": "请总结以下法律条文：\n\"根据《中华人民共和国合同法》第94条，有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）在履行期限届满之前，当事人一方明确表示或者以自己的行为表明不履行主要债务；（三）当事人一方迟延履行主要债务，经催告后在合理期限内仍未履行；（四）当事人一方迟延履行债务或者有其他违约行为致使不能实现合同目的；（五）法律规定的其他情形。\"", "test_cases": [{"input": ["法律条文"], "expected_output": "合同法第94条规定了五种可以解除合同的情形：不可抗力、预期违约、迟延履行经催告仍不履行、根本违约、其他法定情形。"}], "reference_answer": "合同法第94条列举了合同解除的法定情形：不可抗力导致目的无法实现、明确表示或行为表明不履行主要债务、迟延履行经催告仍不履行、迟延履行或其他违约导致合同目的无法实现，以及法律其他规定。"}
+{"task_id": "SEED-DATA-0024", "category": "data_analysis", "difficulty": "medium", "description": "给定一个包含缺失值的数据集：[1, None, 3, 4, None, 6, 7, 8, None, 10]。请用均值填充缺失值，并输出填充后的列表。", "test_cases": [{"input": [[1, null, 3, 4, null, 6, 7, 8, null, 10]], "expected_output": [1, 5.571, 3, 4, 5.571, 6, 7, 8, 5.571, 10]}], "reference_answer": "计算非缺失值均值：(1+3+4+6+7+8+10)/7 = 39/7 ≈ 5.571。用该值替换所有None，得到列表。"}
+{"task_id": "SEED-CODE-0025", "category": "code_generation", "difficulty": "medium", "description": "编写一个函数计算斐波那契数列的第n项（n从0开始，F(0)=0, F(1)=1）。要求使用动态规划，避免递归。", "test_cases": [{"input": ["10"], "expected_output": "55"}, {"input": ["0"], "expected_output": "0"}], "reference_answer": "def fib(n):\n    if n < 2: return n\n    a,b = 0,1\n    for _ in range(2,n+1):\n        a,b = b, a+b\n    return b"}
+{"task_id": "SEED-MATH-0026", "category": "math_proof", "difficulty": "medium", "description": "证明欧拉公式 e^(iπ) + 1 = 0。", "test_cases": [{"input": ["证明欧拉公式"], "expected_output": "利用泰勒展开"}], "reference_answer": "e^(ix)的泰勒展开：e^(ix)=1+ix+(ix)^2/2!+(ix)^3/3!+... = (1 - x^2/2! + x^4/4! - ...) + i(x - x^3/3! + ...) = cos x + i sin x。令x=π，得e^(iπ)=cosπ+ i sinπ = -1，因此e^(iπ)+1=0。"}
+{"description": "请用通俗的语言解释什么是量子纠缠，并给出一个生活类比。 假设你有一个朋友和一个双胞胎兄弟，他们之间有一种超距离的感应。", "test_cases": []}
+{"description": "写一篇150字以内的短文，描述一个未来城市的一天早晨。 背景：2124年，地球城市化率99%，交通全自动驾驶，食物由合成工厂生产。", "test_cases": []}
+{"description": "计算下面表达式的值：(3+5)×2^3 - 7÷(4-1)", "test_cases": []}
+{"description": "将以下英文句子翻译成中文：\"The early bird catches the worm.\"", "test_cases": []}
+{"description": "根据给定的食谱，计算总共需要多少克面粉？食谱：200克中筋面粉，50克全麦面粉，30克杏仁粉。", "test_cases": []}
+{"description": "分析以下论点中的逻辑谬误：\"大多数人都支持这个政策，所以这个政策一定是对的。\"", "test_cases": []}
+{"description": "为一家新开的宠物咖啡馆设计一句广告语，要突出“猫狗互动”和“放松”两个卖点。 咖啡馆叫‘爪印时光’，位于大学城附近。", "test_cases": []}
+{"description": "编写一个Python函数，输入一个整数列表，返回所有偶数的平方。", "test_cases": []}
+{"description": "请列出三种减少塑料污染的日常方法，并简要说明每种方法的优点。", "test_cases": []}
+{"description": "根据以下数据，画出饼图的大致分布：A类33%，B类25%，C类20%，D类22%。", "test_cases": []}
+{"description": "将下面的中文段落改写成正式的学术风格：\"现在大家都很忙，很少有人愿意花时间读书。\"", "test_cases": []}
+{"description": "给定三个词语：'晚霞'、'钢琴'、'咖啡'，用它们写一个80字左右的短故事。", "test_cases": []}
+{"description": "解出方程组：2x+3y=7, x-2y= -3", "test_cases": []}
+{"description": "为以下产品写一段电商详情页的描述：智能手环，具有心率监测、血氧检测、睡眠分析功能，续航14天。", "test_cases": []}
+{"description": "判断下面命题的真假，并给出证明或反例：\"所有质数都是奇数。\"", "test_cases": []}
+{"description": "请用一句话概括《红楼梦》的主要情节。", "test_cases": []}
+{"description": "模拟面试场景：你是面试官，应聘者说‘我最大的缺点是太追求完美’。请追问一个问题。", "test_cases": []}
+{"description": "列出莎士比亚四大悲剧的名称。", "test_cases": []}
+{"description": "根据提示写一段产品介绍：一个太阳能充电宝，容量20000mAh，支持QC快充，有LED手电筒功能。 目标用户：户外爱好者、旅行者。", "test_cases": []}
+{"description": "将下面的数字改成科学计数法：123000000", "test_cases": []}
+{"description": "解释一下什么是‘摩尔定律’，并说明它对现代科技的影响。", "test_cases": []}
+{"description": "请用批判性思维评估以下说法：‘转基因食品必然有害健康。’", "test_cases": []}
+{"description": "编写一个SQL查询，从员工表中选出所有部门编号为10且工资大于5000的员工姓名。 表名：employees，字段：emp_name, dept_id, salary。", "test_cases": []}
+{"description": "写一封简短的感谢信，感谢同事在你生病期间帮忙完成项目。 同事名字：李明，项目名称：Q3市场分析报告。", "test_cases": []}
+{"description": "用类比法解释‘元宇宙’的概念给一位60岁的老人听。", "test_cases": []}
+{"description": "计算以下数列的和：1+4+9+16+...+100", "test_cases": []}
+{"description": "将以下中文翻译成英文：\"千里之行，始于足下。\"", "test_cases": []}
+{"description": "请为一家环保公益组织设计一个筹款活动的主题名称和口号。 组织名称：绿动未来，专注于海洋垃圾清理。", "test_cases": []}
+{"description": "根据给出的上下文，续写一段话：\"她推开门，发现房间里空无一人，只有桌上的咖啡还冒着热气。\"", "test_cases": []}
+{"description": "给出一个关于概率的经典问题：袋中有5个红球、3个蓝球，不放回连续取两个球，求第二个球是红球的概率。", "test_cases": []}
+{"description": "写一个矩阵乘法示例，尺寸为2x3和3x2。", "test_cases": []}
+{"description": "请对比‘机器学习’和‘深度学习’的主要区别。", "test_cases": []}
+{"description": "为一款智能音箱设计三个不同的唤醒词，并解释为什么选这些词。 产品定位：家庭场景，中老年用户较多。", "test_cases": []}
+{"description": "请用马克·吐温的语气重写下面这句话：‘今天天气真好，适合出去玩。’", "test_cases": []}
+{"description": "解析以下ip地址的类别和默认子网掩码：192.168.1.100", "test_cases": []}
+{"description": "写一段关于‘时间管理’的实用建议，适合大学生。", "test_cases": []}
+{"description": "计算一杯咖啡（200ml，浓度1.5%）中含有多少克咖啡因？假设每100ml含60mg咖啡因。", "test_cases": []}
+{"description": "根据以下关键词生成一个冷笑话：程序员、咖啡、bug", "test_cases": []}
+{"description": "说明什么是‘奥卡姆剃刀’原则，并给一个应用例子。", "test_cases": []}
+{"description": "请用三个不同角度的提问来启发读者思考‘人工智能对就业的影响’。", "test_cases": []}
+{"description": "将以下代码片段从JavaScript改写成Python：let a = [1,2,3]; a.forEach(x=>console.log(x*2));", "test_cases": []}
+{"description": "写一篇关于‘为什么要保护语言多样性’的议论文提纲。", "test_cases": []}
+{"description": "给一个物理问题：一个物体从100米高自由落体，忽略空气阻力，求落地速度（g=9.8m/s²）。", "test_cases": []}
+{"description": "描述如何用‘番茄工作法’来提高工作效率。", "test_cases": []}
+{"description": "假设你是银行客服，客户说‘我昨天在ATM取钱时忘记拿走银行卡了’，请给出标准回应。", "test_cases": []}
+{"description": "生成一个五言绝句，主题为‘秋日山景’。", "test_cases": []}
+{"description": "请评价以下论证的有效性：‘如果明天不下雨，我们就去爬山。结果明天下雨了，所以我们没去爬山。’", "test_cases": []}
+{"description": "用Python实现一个简单的链表节点类，包含插入和删除方法。", "test_cases": []}
+{"description": "解释‘通货膨胀’对普通消费者的具体影响。", "test_cases": []}
+{"description": "写一个小故事，关于一个机器人意外获得人类情感。 开头：机器人编号X7-032在完成第100万次搬运任务后，突然停下了脚步。", "test_cases": []}
+{"description": "列出三种常见的数据结构，并说明各自适合的应用场景。", "test_cases": []}
+{"description": "请为以下数字进行四舍五入，保留三位小数： 3.1415926535", "test_cases": []}
+{"description": "设计一个简单的实验来测试植物的向光性。", "test_cases": []}
+{"description": "用英文写一段关于‘如何学好一门外语’的建议，50词左右。", "test_cases": []}
+{"description": "将下列二进制数转换为十进制：110101", "test_cases": []}
+{"description": "简述‘区块链’的基本工作原理，并指出其核心优势。", "test_cases": []}
+{"description": "写一封求职信的开头段落，目标职位是数据分析师。 应聘公司：ABC科技有限公司，招聘岗位：数据分析师。", "test_cases": []}
+{"description": "给出一个生活中可以用‘贝叶斯定理’解决的例子。", "test_cases": []}
+{"description": "分析下面句子中使用了哪些修辞手法：‘春风又绿江南岸，明月何时照我还？’", "test_cases": []}
+{"description": "编写一个简单的正则表达式，匹配中国大陆的手机号码（11位，以1开头）。", "test_cases": []}
+{"description": "如果有一个边长为4的正方形，内接一个最大的圆，求圆的面积。", "test_cases": []}
+{"description": "请用‘因为……所以……虽然……但是……’造句。", "test_cases": []}
+{"description": "给出三个提高阅读速度的具体技巧。", "test_cases": []}
+{"description": "假设你是心理咨询师，来访者说‘我最近总是失眠，白天没精神’，请给出一个初步建议。", "test_cases": []}
+{"description": "用图表形式描述以下信息（文字描述）：2023年某公司营收：Q1 120万，Q2 150万，Q3 130万，Q4 200万。", "test_cases": []}
+{"description": "解释‘蝴蝶效应’的混沌理论，并给出一个现实中的例子。", "test_cases": []}
+{"description": "将以下中文翻译成文言文：‘太阳从东方升起，在西方落下。’", "test_cases": []}
+{"description": "写一段代码（任意语言）生成斐波那契数列的前20项。", "test_cases": []}
+{"description": "写出化学方程式：氢气与氧气反应生成水。", "test_cases": []}
+{"description": "给一个经济学概念‘机会成本’的定义，并举例说明。", "test_cases": []}
+{"description": "请你扮演一位中世纪骑士，向国王写一封简短的战况报告。 战斗地点：黑森林，敌军数量约3000，我方兵力1500，已获小胜。", "test_cases": []}
+{"description": "算一算：如果每天存10元，年利率3%复利，5年后有多少钱？", "test_cases": []}
+{"description": "简述光合作用的过程，并指出其发生的部位。", "test_cases": []}

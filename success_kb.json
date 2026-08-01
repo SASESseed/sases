@@ -1,0 +1,962 @@
+[
+  {
+    "task": "写一个Python函数，接收一个整数列表，返回所有偶数的和。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def sum_even_numbers(numbers):\n    return sum(n for n in numbers if n % 2 == 0)",
+    "verified": true,
+    "id": "78a400e7-c9ab-4220-8c2d-13e2ca1a897e"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "# 枚举所有可能的真值情况，找出满足条件的解\nfor a in [True, False]:  # a: 甲说真话\n    for b in [True, False]:  # b: 乙说真话\n        for c in [True, False]:  # c: 丙说真话\n            # 甲说：乙在说谎 → a 等价于 not b\n            # 乙说：丙在说谎 → b 等价于 not c\n            # 丙说：甲和乙都在说谎 → c 等价于 (not a and not b)\n            if (a == (not b)) and (b == (not c)) and (c == (not a and not b)):\n                # 输出结果\n                speakers = [\"甲\", \"乙\", \"丙\"]\n                truths = [a, b, c]\n                for speaker, truth in zip(speakers, truths):\n                    if truth:\n                        print(f\"{speaker}说真话\")",
+    "verified": true,
+    "id": "18f5dee8-e38a-4516-8782-da710f94aaf1"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在SQL注入安全漏洞。",
+    "verified": true,
+    "id": "27bed37d-375b-4920-a756-7fe232810eaa"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，可用于药物研发和材料科学，成果发表于《自然》。",
+    "verified": true,
+    "id": "7e3c5729-dadb-45d8-82ae-4ad3ccb1b0e0"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "nums = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]\navg = sum(nums) / len(nums)\nsorted_nums = sorted(nums)\nn = len(sorted_nums)\nif n % 2 == 0:\n    median = (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2\nelse:\n    median = sorted_nums[n//2]\nprint(avg, median)",
+    "verified": true,
+    "id": "84b9ea60-b871-411b-a2b9-62afc496c0d8"
+  },
+  {
+    "task": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def is_palindrome(s: str) -> bool:\n    left, right = 0, len(s) - 1\n    while left < right:\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        if s[left].lower() != s[right].lower():\n            return False\n        left += 1\n        right -= 1\n    return True",
+    "verified": true,
+    "id": "c4d5b14c-868f-423a-8581-86db3670720e"
+  },
+  {
+    "task": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "从贴着“混合”标签的箱子中取出一个水果。如果取出的是苹果，则这个箱子实际是苹果箱，那么贴“橘子”标签的箱子是混合箱，贴“苹果”标签的箱子是橘子箱；如果取出的是橘子，则这个箱子实际是橘子箱，那么贴“苹果”标签的箱子是混合箱，贴“橘子”标签的箱子是苹果箱。",
+    "verified": true,
+    "id": "131b3bb1-f192-4370-9f6c-10c7d3f1f800"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在XSS漏洞。",
+    "verified": true,
+    "id": "776a6902-4f9e-4374-9fab-7f65fee51027"
+  },
+  {
+    "task": "请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "Gin是一个基于Go语言的轻量级高性能HTTP Web框架，采用httprouter作为默认路由器，支持中间件、路由分组和JSON验证，广泛应用于微服务与RESTful API开发。",
+    "verified": true,
+    "id": "eab65ab3-fbf2-4039-b9f3-f87e4ffda9dd"
+  },
+  {
+    "task": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "1",
+    "verified": true,
+    "id": "54084fd3-aa88-420d-9c35-84a8fd647896"
+  },
+  {
+    "task": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "# 枚举所有可能的身份组合\nfor a in [True, False]:\n    for b in [True, False]:\n        for c in [True, False]:\n            # 根据陈述：A说B是无赖，B说A和C是同类，C说A是骑士\n            a_says = (b == False)\n            b_says = (a == c)\n            c_says = (a == True)\n            # 检查是否与身份一致：骑士说真话，无赖说假话\n            if (a == a_says) and (b == b_says) and (c == c_says):\n                print(f\"A: {'knight' if a else 'knave'}, B: {'knight' if b else 'knave'}, C: {'knight' if c else 'knave'}\")",
+    "verified": true,
+    "id": "7b71c42c-3802-4a29-9789-373516b1f462"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞（路径遍历）",
+    "verified": true,
+    "id": "d84e238f-d211-4100-ab3e-d32b52b248ee"
+  },
+  {
+    "task": "请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "用户询问购买的手机屏幕碎裂能否退换，客服确认其订单后告知人为损坏不在保修范围，但可提供换屏服务。",
+    "verified": true,
+    "id": "422d9cd5-feb4-4622-be6a-fc11740c394f"
+  },
+  {
+    "task": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "import numpy as np\nfrom sklearn.linear_model import LinearRegression\n\nages = np.array([25,30,35,40,45,50,55,60,65,70]).reshape(-1,1)\nincomes = np.array([30,40,45,50,55,60,65,70,75,80])\n\nmodel = LinearRegression()\nmodel.fit(ages, incomes)\nr_squared = model.score(ages, incomes)\nprint(r_squared)",
+    "verified": true,
+    "id": "358fd1ed-e908-4561-8fb3-41a7424af917"
+  },
+  {
+    "task": "实现一个函数，将两个有序升序列表合并为一个有序升序列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def merge_sorted_lists(list1, list2):\n    merged = []\n    i = j = 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] <= list2[j]:\n            merged.append(list1[i])\n            i += 1\n        else:\n            merged.append(list2[j])\n            j += 1\n    if i < len(list1):\n        merged.extend(list1[i:])\n    if j < len(list2):\n        merged.extend(list2[j:])\n    return merged",
+    "verified": true,
+    "id": "5e61150b-bf1c-4dd3-93c4-6adbf12eafd6"
+  },
+  {
+    "task": "证明三角形内角和等于180度。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "三角形内角和等于180度可以通过以下方式证明：\n\n在三角形ABC中，过顶点A作直线DE平行于边BC。根据平行线性质，∠DAB = ∠ABC（内错角相等），∠EAC = ∠ACB（内错角相等）。由于∠DAB + ∠BAC + ∠EAC = 180°（平角），因此∠ABC + ∠BAC + ∠ACB = 180°。得证。",
+    "verified": true,
+    "id": "8eca29bb-d930-4084-9077-7bfb6658aad3"
+  },
+  {
+    "task": "如果下雨则地湿。现在地没湿，你能得出什么结论？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "没下雨",
+    "verified": true,
+    "id": "a94f7493-45ea-4925-8ede-46fbb9c34c19"
+  },
+  {
+    "task": "以下代码是否存在CSRF漏洞？\n```\n<form action=\"/transfer\" method=\"POST\">\n  <input name=\"amount\" value=\"1000\">\n  <input type=\"submit\">\n</form>\n```\n假设用户已登录并有转账权限。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在CSRF漏洞。",
+    "verified": true,
+    "id": "25e9e22f-e4b2-4791-a6ee-3f9789926b2a"
+  },
+  {
+    "task": "请总结以下法律条文：\n\"根据《中华人民共和国合同法》第94条，有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）在履行期限届满之前，当事人一方明确表示或者以自己的行为表明不履行主要债务；（三）当事人一方迟延履行主要债务，经催告后在合理期限内仍未履行；（四）当事人一方迟延履行债务或者有其他违约行为致使不能实现合同目的；（五）法律规定的其他情形。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "该法律条文规定了当事人可以单方解除合同的五种法定情形：因不可抗力导致合同目的无法实现；一方在履行期满前明确表示或以行为表明不履行主要债务；一方迟延履行主要债务，经催告后合理期限内仍未履行；一方迟延履行或其他违约行为导致合同目的无法实现；以及法律规定的其他情形。",
+    "verified": true,
+    "id": "e87b83b3-eddf-42a5-a659-61df863b02cb"
+  },
+  {
+    "task": "给定一个包含缺失值的数据集：[1, None, 3, 4, None, 6, 7, 8, None, 10]。请用均值填充缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [1, None, 3, 4, None, 6, 7, 8, None, 10]\nvalid = [x for x in data if x is not None]\nmean = sum(valid) / len(valid)\nfilled = [x if x is not None else mean for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "47454bbc-5f88-4861-ba2f-39809fe6a718"
+  },
+  {
+    "task": "证明欧拉公式 e^(iπ) + 1 = 0。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "欧拉公式 e^(iπ) + 1 = 0 的证明如下：\n\n由欧拉公式 e^(ix) = cos x + i sin x，令 x = π，得  \ne^(iπ) = cos π + i sin π = -1 + i·0 = -1，  \n因此 e^(iπ) + 1 = 0。",
+    "verified": true,
+    "id": "c9d4a443-2f7f-4cdc-90b3-212740b49e63"
+  },
+  {
+    "task": "写一个Python函数，接收一个整数列表，返回所有偶数的和。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def sum_even(numbers):\n    return sum(x for x in numbers if x % 2 == 0)",
+    "verified": true,
+    "id": "aef18e7f-46ef-47f0-8353-6ab4af339d27"
+  },
+  {
+    "task": "证明√2是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "假设√2是有理数，则可表示为最简分数√2 = p/q，其中p和q互质且q≠0。两边平方得2 = p²/q²，即p² = 2q²。因此p²是偶数，故p也是偶数。设p=2k，代入得4k²=2q²，即q²=2k²，所以q²是偶数，q也是偶数。这与p和q互质矛盾。因此假设不成立，√2是无理数。",
+    "verified": true,
+    "id": "ebe31928-f321-4c4b-b4a1-d57b22a9daf8"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "乙说真话",
+    "verified": true,
+    "id": "1bb697da-202e-44f8-984c-a4e672df5773"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞，因为直接拼接用户输入到SQL查询语句中，容易导致SQL注入攻击。",
+    "verified": true,
+    "id": "0fde3caf-c16a-4096-90ae-e6a2a912436d"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，可用于药物研发和材料科学，成果发表在《自然》杂志上。",
+    "verified": true,
+    "id": "57c0e053-2867-4729-8584-ce9a6ba1b17f"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "平均值 = 11，中位数 = 11",
+    "verified": true,
+    "id": "b306aabf-a604-4635-bb0b-033f8c5cac1e"
+  },
+  {
+    "task": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def isPalindrome(s: str) -> bool:\n    left, right = 0, len(s) - 1\n    while left < right:\n        # 跳过非字母数字字符\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        # 忽略大小写比较\n        if s[left].lower() != s[right].lower():\n            return False\n        left += 1\n        right -= 1\n    return True",
+    "verified": true,
+    "id": "04e728df-1f8d-4342-b8a7-000838ef665d"
+  },
+  {
+    "task": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "从标有“苹果和橘子混合”的箱子中取出一个水果。由于所有标签都贴错了，这个箱子实际装的要么全是苹果，要么全是橘子。如果取出的是苹果，则这个箱子是苹果箱；那么标有“橘子”的箱子不可能是橘子（标签错），也不可能是苹果（已确定），所以它是混合箱；剩下的标有“苹果”的箱子就是橘子箱。同理，如果取出的是橘子，则这个箱子是橘子箱，标有“苹果”的箱子是混合箱，标有“橘子”的箱子是苹果箱。这样只需一次抽取即可确定所有箱子的内容。",
+    "verified": true,
+    "id": "b7358ff7-276c-4346-b03c-cfc6a123baa7"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在XSS漏洞",
+    "verified": true,
+    "id": "4ff1fe93-bf8c-4a95-994b-0c4d95d3ca9d"
+  },
+  {
+    "task": "请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "Gin是一个用Go语言编写的轻量级、高性能HTTP Web框架，支持中间件、路由分组和JSON验证，使用httprouter作为默认路由器，速度快，广泛应用于微服务和RESTful API开发。",
+    "verified": true,
+    "id": "9320da72-39ba-4871-9ae2-49c6860891bc"
+  },
+  {
+    "task": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "import numpy as np\nA = np.array([1, 2, 3, 4, 5])\nB = np.array([2, 4, 6, 8, 10])\nr = np.corrcoef(A, B)[0, 1]\nprint(r)",
+    "verified": true,
+    "id": "75f03880-d330-42e0-97d9-1a160ef3a75d"
+  },
+  {
+    "task": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。",
+    "branch_a": "假设骑士为真（True），无赖为假（False）。枚举A、B、C所有8种真假组合。对于每种组合，分别验证A的陈述（B是无赖即B为False）、B的陈述（A和C同类即A==C）、C的陈述（A是骑士即A为True）是否与各自的身份一致。最后找出同时满足所有陈述与身份一致的那组解。",
+    "branch_b": "先假设A是骑士，则其陈述“B是无赖”为真，故B是无赖；再由B是无赖，其陈述“A和C同类”为假，即A与C不同类，所以C是无赖；但C说“A是骑士”为假，与A是骑士矛盾。故假设不成立。再假设A是无赖，则其陈述“B是无赖”为假，故B是骑士；由B是骑士，其陈述“A和C同类”为真，即A与C同类，所以C也是无赖；此时C说“A是骑士”为假，符合C是无赖。综上，A是无赖，B是骑士，C是无赖。",
+    "solution": "A是无赖，B是骑士，C是无赖。",
+    "verified": true,
+    "id": "fd7d8480-6b9f-488a-b090-e7204c7b4229"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在路径遍历安全漏洞，因为 `filename` 未经过滤，可能包含 `../` 等字符导致越权访问其他文件。",
+    "verified": true,
+    "id": "81ac8525-a0d5-4f2e-9751-7739faca0109"
+  },
+  {
+    "task": "请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "用户反映昨天购买的手机屏幕碎了，询问能否退换。客服确认是官网购买后，告知人为损坏不在保修范围内，但提供换屏服务作为解决方案。",
+    "verified": true,
+    "id": "6afb7fa8-1a67-4792-a5d3-b009c6b85413"
+  },
+  {
+    "task": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "# 数据\nages = [25, 30, 35, 40, 45, 50, 55, 60, 65, 70]\nincomes = [30, 40, 45, 50, 55, 60, 65, 70, 75, 80]\n\nn = len(ages)\nmean_x = sum(ages) / n\nmean_y = sum(incomes) / n\n\n# 计算回归系数\nnum = sum((ages[i] - mean_x) * (incomes[i] - mean_y) for i in range(n))\nden = sum((ages[i] - mean_x) ** 2 for i in range(n))\nbeta1 = num / den\nbeta0 = mean_y - beta1 * mean_x\n\n# 计算R方\nss_tot = sum((incomes[i] - mean_y) ** 2 for i in range(n))\nss_res = sum((incomes[i] - (beta0 + beta1 * ages[i])) ** 2 for i in range(n))\nr_squared = 1 - (ss_res / ss_tot)\n\nprint(f\"R方 = {r_squared}\")",
+    "verified": true,
+    "id": "d81aedbf-8e5e-48d7-b1ac-63287150606b"
+  },
+  {
+    "task": "实现一个函数，将两个有序升序列表合并为一个有序升序列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def merge_sorted_lists(list1, list2):\n    merged = []\n    i = j = 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] <= list2[j]:\n            merged.append(list1[i])\n            i += 1\n        else:\n            merged.append(list2[j])\n            j += 1\n    merged.extend(list1[i:])\n    merged.extend(list2[j:])\n    return merged",
+    "verified": true,
+    "id": "48c2cbc0-6b3f-4f1f-a774-5eb578a63298"
+  },
+  {
+    "task": "证明三角形内角和等于180度。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "180°",
+    "verified": true,
+    "id": "bec96b24-15bc-4cf7-b952-ca46dfe38f4e"
+  },
+  {
+    "task": "如果下雨则地湿。现在地没湿，你能得出什么结论？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "没下雨。",
+    "verified": true,
+    "id": "5718c4bb-9dd9-4934-b4f0-88b6ab82b197"
+  },
+  {
+    "task": "以下代码是否存在CSRF漏洞？\n```\n<form action=\"/transfer\" method=\"POST\">\n  <input name=\"amount\" value=\"1000\">\n  <input type=\"submit\">\n</form>\n```\n假设用户已登录并有转账权限。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在CSRF漏洞。",
+    "verified": true,
+    "id": "0b7d316f-ac51-4af1-9a5f-d2e23bd1c21d"
+  },
+  {
+    "task": "请总结以下法律条文：\n\"根据《中华人民共和国合同法》第94条，有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）在履行期限届满之前，当事人一方明确表示或者以自己的行为表明不履行主要债务；（三）当事人一方迟延履行主要债务，经催告后在合理期限内仍未履行；（四）当事人一方迟延履行债务或者有其他违约行为致使不能实现合同目的；（五）法律规定的其他情形。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "根据《中华人民共和国合同法》第94条，当事人可以解除合同的情形包括：因不可抗力导致合同目的无法实现；一方在履行期限届满前明确表示或以行为表明不履行主要债务；一方迟延履行主要债务，经催告后在合理期限内仍未履行；一方迟延履行或其他违约行为致使合同目的无法实现；以及法律规定的其他情形。",
+    "verified": true,
+    "id": "b6138b39-9ecd-4163-b6d4-724b43fa2ccd"
+  },
+  {
+    "task": "给定一个包含缺失值的数据集：[1, None, 3, 4, None, 6, 7, 8, None, 10]。请用均值填充缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [1, None, 3, 4, None, 6, 7, 8, None, 10]\nnon_null = [x for x in data if x is not None]\nmean = sum(non_null) / len(non_null)\nfilled = [mean if x is None else x for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "49911bd0-fc96-4bd4-8009-b63f7b1d56e1"
+  },
+  {
+    "task": "证明欧拉公式 e^(iπ) + 1 = 0。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "欧拉公式证明：由欧拉恒等式 e^(ix) = cos(x) + i sin(x)，令 x = π，得 e^(iπ) = cos(π) + i sin(π) = -1 + 0i = -1，因此 e^(iπ) + 1 = 0。",
+    "verified": true,
+    "id": "484b3958-2d6d-4384-bba3-e8bef0766922"
+  },
+  {
+    "task": "写一个Python函数，接收一个整数列表，返回所有偶数的和。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def sum_even(numbers):\n    return sum(x for x in numbers if x % 2 == 0)",
+    "verified": true,
+    "id": "13cab5a3-f14d-4611-8295-7d71d8a5ab07"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "# 枚举所有真假情况\nfor a in [True, False]:\n    for b in [True, False]:\n        for c in [True, False]:\n            # 甲说乙在说谎：a 为真当且仅当 not b\n            if a != (not b):\n                continue\n            # 乙说丙在说谎：b 为真当且仅当 not c\n            if b != (not c):\n                continue\n            # 丙说甲和乙都在说谎：c 为真当且仅当 (not a and not b)\n            if c != (not a and not b):\n                continue\n            # 输出结果\n            if a:\n                print(\"甲说真话\")\n            if b:\n                print(\"乙说真话\")\n            if c:\n                print(\"丙说真话\")",
+    "verified": true,
+    "id": "edbb8e51-c429-4629-8a9b-84526baa9910"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在SQL注入漏洞。",
+    "verified": true,
+    "id": "9dea6b6d-7191-4413-adcd-a6f4840dd0c7"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，可用于药物研发和材料科学，成果发表于《自然》杂志。",
+    "verified": true,
+    "id": "7d98f4a6-6392-4bc5-bf06-d09cd79aaea0"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "nums = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]\navg = sum(nums) / len(nums)\nn = len(nums)\nmid = n // 2\nif n % 2 == 0:\n    median = (nums[mid-1] + nums[mid]) / 2\nelse:\n    median = nums[mid]\nprint(f\"平均值: {avg}, 中位数: {median}\")",
+    "verified": true,
+    "id": "2e18de0f-3a8b-4f66-82ed-1d9d4dd5c4b4"
+  },
+  {
+    "task": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def isPalindrome(s: str) -> bool:\n    left, right = 0, len(s) - 1\n    while left < right:\n        # 跳过非字母数字字符\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        # 忽略大小写比较\n        if s[left].lower() != s[right].lower():\n            return False\n        left += 1\n        right -= 1\n    return True",
+    "verified": true,
+    "id": "0325373f-a975-45dd-b685-c679fa4812af"
+  },
+  {
+    "task": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "从标有“苹果和橘子”的箱子中取出一个水果。由于所有标签都贴错，该箱子实际只含有一种水果。若取出的是苹果，则此箱为苹果，那么标有“橘子”的箱子不能是橘子，也不能是苹果（因为苹果已被确定），所以它是混合，标有“苹果”的箱子就是橘子。若取出的是橘子，则此箱为橘子，那么标有“苹果”的箱子不能是苹果，也不能是橘子，所以它是混合，标有“橘子”的箱子就是苹果。",
+    "verified": true,
+    "id": "a4899717-588c-4e07-b00d-190fd23b95de"
+  },
+  {
+    "task": "写一个Python函数，接收一个整数列表，返回所有偶数的和。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def sum_even(numbers):\n    return sum(x for x in numbers if x % 2 == 0)",
+    "verified": true,
+    "id": "400360a6-7bc2-4fef-93ce-c8556fbae199"
+  },
+  {
+    "task": "证明√2是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "假设√2是有理数，则存在互质的整数 \\(p,q\\)（\\(q\\neq 0\\)），使得\n\n\\[\n\\sqrt2=\\frac pq\n\\]\n\n两边平方得：\n\n\\[\n2=\\frac{p^2}{q^2}\n\\]\n\n即：\n\n\\[\np^2=2q^2\n\\]\n\n所以 \\(p^2\\) 是偶数，因此 \\(p\\) 也是偶数。\n\n设 \\(p=2k\\)，代入得：\n\n\\[\n(2k)^2=2q^2\n\\]\n\n\\[\n4k^2=2q^2\n\\]\n\n\\[\nq^2=2k^2\n\\]\n\n所以 \\(q^2\\) 也是偶数，因此 \\(q\\) 也是偶数。\n\n这样 \\(p\\) 和 \\(q\\) 都是偶数，与 \\(p,q\\) 互质矛盾。\n\n因此假设不成立，所以：\n\n\\[\n\\boxed{\\sqrt2\\text{ 是无理数}}\n\\]",
+    "verified": true,
+    "id": "8d8eec67-4818-43d7-b6e4-ec2c08c8a72b"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "乙说真话。",
+    "verified": true,
+    "id": "f43a77d1-cb18-48b7-a146-6a4669564e1e"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞：该代码将用户输入 `username` 直接拼接到 SQL 查询中，导致 SQL 注入。应使用参数化查询。",
+    "verified": true,
+    "id": "98e4e206-d7af-41b0-80eb-eff262a32c91"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，可用于药物研发和材料科学等领域，成果已发表于《自然》杂志。",
+    "verified": true,
+    "id": "4d7f61e9-0b88-4b48-84cd-22258d945ed9"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "nums = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]\navg = sum(nums) / len(nums)\nsorted_nums = sorted(nums)\nn = len(sorted_nums)\nif n % 2 == 0:\n    median = (sorted_nums[n//2 - 1] + sorted_nums[n//2]) / 2\nelse:\n    median = sorted_nums[n//2]\nprint(avg, median)",
+    "verified": true,
+    "id": "0e510a0f-a0e7-41dc-8083-f2ad80df694a"
+  },
+  {
+    "task": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def isPalindrome(s: str) -> bool:\n    left, right = 0, len(s) - 1\n    while left < right:\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        if left < right:\n            if s[left].lower() != s[right].lower():\n                return False\n            left += 1\n            right -= 1\n    return True",
+    "verified": true,
+    "id": "c63ea1bf-f7e4-4d71-b023-96d8f89d11b0"
+  },
+  {
+    "task": "证明勾股定理（直角三角形两直角边平方和等于斜边平方）。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "设直角三角形两直角边为 \\(a,b\\)，斜边为 \\(c\\)。\n\n用四个全等的直角三角形拼成一个边长为 \\(a+b\\) 的大正方形。\n\n- 大正方形面积：\\((a+b)^2\\)\n- 四个直角三角形总面积：\\(4\\times \\frac12 ab=2ab\\)\n- 中间围成的四边形是边长为 \\(c\\) 的正方形，面积为 \\(c^2\\)\n\n因此：\n\n\\[\n(a+b)^2=2ab+c^2\n\\]\n\n展开左边：\n\n\\[\na^2+2ab+b^2=2ab+c^2\n\\]\n\n两边同时减去 \\(2ab\\)：\n\n\\[\na^2+b^2=c^2\n\\]\n\n所以勾股定理得证。",
+    "verified": true,
+    "id": "1eaf7173-2709-4eb6-befb-6f0cfce99d64"
+  },
+  {
+    "task": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "从标有“苹果和橘子”（混合）的箱子中取出一个水果。\n\n- 如果取出的是苹果：  \n  这个箱子实际是苹果箱。  \n  因为所有标签都贴错，标“橘子”的箱子不能是橘子，也不能是苹果，所以它只能是混合箱；剩下标“苹果”的箱子就是橘子箱。\n\n- 如果取出的是橘子：  \n  这个箱子实际是橘子箱。  \n  因为所有标签都贴错，标“苹果”的箱子不能是苹果，也不能是橘子，所以它只能是混合箱；剩下标“橘子”的箱子就是苹果箱。\n\n这样只取一次水果，就能确定三个箱子的内容。",
+    "verified": true,
+    "id": "8aace935-fb06-46d9-ab3a-3741511463c2"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "...>`等绕过简单过滤的向量，因此只要输入可控且未消毒，就存在XSS漏洞。",
+    "solution": "存在XSS漏洞。`userInput` 被直接赋值给 `innerHTML`，若内容可控且未经过消毒，浏览器会将其解析为 HTML/JavaScript。",
+    "verified": true,
+    "id": "a72fb34a-587a-4f3d-9674-bf8cd7dc14fc"
+  },
+  {
+    "task": "请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "Gin是一个用Go语言编写的轻量级、高性能HTTP Web框架，采用httprouter作为默认路由器，速度快；支持中间件、路由分组和JSON验证，被广泛应用于微服务与RESTful API开发。",
+    "verified": true,
+    "id": "ffbbaadb-af32-4923-bcbf-fa21d40f9c26"
+  },
+  {
+    "task": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "import numpy as np\nA = np.array([1, 2, 3, 4, 5])\nB = np.array([2, 4, 6, 8, 10])\nr = np.corrcoef(A, B)[0, 1]\nprint(r)",
+    "verified": true,
+    "id": "089a3870-e70c-47e2-a001-5dd7fd2b9167"
+  },
+  {
+    "task": "证明质数有无穷多个。",
+    "branch_a": "默认算法A",
+    "branch_b": "\\[ \\prod_{i=1}^r\\left(1-\\frac1{p_i}\\right)^{-1} = \\prod_{i=1}^r\\sum_{e_i=0}^\\infty \\frac1{p_i^{e_i}} = \\sum_{n=1}^\\infty \\frac1n, \\] 但左边是有限乘积，右边调和级数发散，矛盾。故质数无穷多。",
+    "solution": "反设质数只有有限多个，设为  \n\\[\np_1,p_2,\\dots,p_r\n\\]\n那么每个正整数 \\(n\\) 的质因数分解都只能包含这些质数。\n\n考虑有限乘积\n\\[\n\\prod_{i=1}^r\\left(1-\\frac1{p_i}\\right)^{-1}.\n\\]\n\n由等比级数公式，\n\\[\n\\left(1-\\frac1{p_i}\\right)^{-1}\n=\\sum_{e_i=0}^{\\infty}\\frac1{p_i^{e_i}}.\n\\]\n\n因此\n\\[\n\\prod_{i=1}^r\\left(1-\\frac1{p_i}\\right)^{-1}\n=\n\\prod_{i=1}^r\\sum_{e_i=0}^{\\infty}\\frac1{p_i^{e_i}}\n=\n\\sum_{e_1,\\dots,e_r\\ge0}\n\\frac1{p_1^{e_1}\\cdots p_r^{e_r}}.\n\\]\n\n由于 \\(p_1,\\dots,p_r\\) 是所有质数，由算术基本定理，每个正整数 \\(n\\) 都可以唯一表示为\n\\[\nn=p_1^{e_1}\\cdots p_r^{e_r},\n\\]\n所以上式右边就是调和级数\n\\[\n\\sum_{n=1}^{\\infty}\\frac1n.\n\\]\n\n但左边是有限乘积，必然有限；而右边调和级数发散，矛盾。\n\n所以质数不能只有有限多个，故质数有无穷多个。",
+    "verified": true,
+    "id": "8e86d349-2e5b-4844-bfbe-7cb8ca41a597"
+  },
+  {
+    "task": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "A是无赖，B是骑士，C是无赖。",
+    "verified": true,
+    "id": "788dab11-5e0b-4089-96b4-02799059a56c"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞（路径遍历）。`filename` 未经过滤，可能包含 `../` 等字符，导致越权读取 `data/` 目录之外的文件。",
+    "verified": true,
+    "id": "f01526f2-eff2-431c-8b6d-d3648bf12aef"
+  },
+  {
+    "task": "请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "用户询问昨天购买的手机屏幕碎裂能否退换，客服确认其在官网购买（订单号12345）后，告知人为损坏不在保修范围内，但可提供付费换屏服务作为解决方案。",
+    "verified": true,
+    "id": "ba70d10c-7e08-492f-b06d-b9c1c23efb5a"
+  },
+  {
+    "task": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "import numpy as np\nfrom sklearn.linear_model import LinearRegression\n\nages = np.array([25, 30, 35, 40, 45, 50, 55, 60, 65, 70]).reshape(-1, 1)\nincomes = np.array([30, 40, 45, 50, 55, 60, 65, 70, 75, 80])\n\nmodel = LinearRegression()\nmodel.fit(ages, incomes)\n\nr2 = model.score(ages, incomes)\nprint(f\"R^2 = {r2:.4f}\")",
+    "verified": true,
+    "id": "0bb5e5f8-b116-4ce3-8204-0ce5bad989a8"
+  },
+  {
+    "task": "实现一个函数，将两个有序升序列表合并为一个有序升序列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def merge_sorted_lists(list1, list2):\n    merged = []\n    i = j = 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] <= list2[j]:\n            merged.append(list1[i])\n            i += 1\n        else:\n            merged.append(list2[j])\n            j += 1\n    while i < len(list1):\n        merged.append(list1[i])\n        i += 1\n    while j < len(list2):\n        merged.append(list2[j])\n        j += 1\n    return merged",
+    "verified": true,
+    "id": "d89c8fb9-e759-45ae-8461-f2dc9d2cd510"
+  },
+  {
+    "task": "证明三角形内角和等于180度。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "证明：在三角形ABC中，过顶点A作直线DE平行于边BC。由平行线性质，得：\n\n∠DAB = ∠ABC（内错角相等）  \n∠EAC = ∠ACB（内错角相等）\n\n因为 DE 是直线，所以 ∠DAB + ∠BAC + ∠EAC = 180°（平角）。\n\n将前两个等式代入，得：\n\n∠ABC + ∠BAC + ∠ACB = 180°\n\n所以三角形内角和等于180°。证毕。",
+    "verified": true,
+    "id": "74eee233-526a-4c56-92c1-4f6149995dde"
+  },
+  {
+    "task": "如果下雨则地湿。现在地没湿，你能得出什么结论？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "没下雨。",
+    "verified": true,
+    "id": "b7344da2-1b48-4b6d-acb4-d81cb0c58a51"
+  },
+  {
+    "task": "以下代码是否存在CSRF漏洞？\n```\n<form action=\"/transfer\" method=\"POST\">\n  <input name=\"amount\" value=\"1000\">\n  <input type=\"submit\">\n</form>\n```\n假设用户已登录并有转账权限。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在CSRF漏洞。该表单没有包含 CSRF Token，用户登录后攻击者可诱导其自动提交恶意表单，导致非自愿转账。",
+    "verified": true,
+    "id": "77d8e7af-4245-4895-affb-e321a84d9cac"
+  },
+  {
+    "task": "请总结以下法律条文：\n\"根据《中华人民共和国合同法》第94条，有下列情形之一的，当事人可以解除合同：（一）因不可抗力致使不能实现合同目的；（二）在履行期限届满之前，当事人一方明确表示或者以自己的行为表明不履行主要债务；（三）当事人一方迟延履行主要债务，经催告后在合理期限内仍未履行；（四）当事人一方迟延履行债务或者有其他违约行为致使不能实现合同目的；（五）法律规定的其他情形。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "根据《中华人民共和国合同法》第94条，当事人可以解除合同的法定情形包括：因不可抗力致使合同目的无法实现；一方在履行期限届满前明确表示或以行为表明不履行主要债务；一方迟延履行主要债务，经催告后在合理期限内仍未履行；一方迟延履行债务或有其他违约行为致使合同目的无法实现；以及法律规定的其他情形。",
+    "verified": true,
+    "id": "fae4f7f1-3e01-4555-80e8-7b01d8919653"
+  },
+  {
+    "task": "给定一个包含缺失值的数据集：[1, None, 3, 4, None, 6, 7, 8, None, 10]。请用均值填充缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [1, None, 3, 4, None, 6, 7, 8, None, 10]\nnon_null = [x for x in data if x is not None]\nmean = sum(non_null) / len(non_null)\nfilled = [mean if x is None else x for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "3e4e7b24-6568-4d09-a5fd-3baac3f9bcd2"
+  },
+  {
+    "task": "证明欧拉公式 e^(iπ) + 1 = 0。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "由欧拉恒等式：\n\n\\[\ne^{ix}=\\cos x+i\\sin x\n\\]\n\n令 \\(x=\\pi\\)，得：\n\n\\[\ne^{i\\pi}=\\cos\\pi+i\\sin\\pi\n\\]\n\n而：\n\n\\[\n\\cos\\pi=-1,\\qquad \\sin\\pi=0\n\\]\n\n所以：\n\n\\[\ne^{i\\pi}=-1+0i=-1\n\\]\n\n因此：\n\n\\[\ne^{i\\pi}+1=0\n\\]\n\n证毕。",
+    "verified": true,
+    "id": "5cd11701-78c9-42f4-ad3a-f843172beae4"
+  },
+  {
+    "task": "以下JavaScript代码是否存在SQL注入漏洞？\nconst query = \"SELECT * FROM products WHERE id = \" + productId;",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在SQL注入漏洞。`productId` 直接拼接到 SQL 查询中，若其来自用户输入，攻击者可以构造恶意值操纵查询。应使用参数化查询或预编译语句。",
+    "verified": true,
+    "id": "38bb4aa5-405b-4ece-8571-cfe244cc7075"
+  },
+  {
+    "task": "证明根号2是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "假设 \\(\\sqrt{2}\\) 是有理数，则存在互质的整数 \\(p,q\\)（\\(q\\neq 0\\)），使得\n\n\\[\n\\sqrt{2}=\\frac{p}{q}\n\\]\n\n两边平方得：\n\n\\[\n2=\\frac{p^2}{q^2}\n\\]\n\n即：\n\n\\[\np^2=2q^2\n\\]\n\n所以 \\(p^2\\) 是偶数，因此 \\(p\\) 也是偶数。设 \\(p=2k\\)，代入得：\n\n\\[\n(2k)^2=2q^2\n\\]\n\n\\[\n4k^2=2q^2\n\\]\n\n\\[\nq^2=2k^2\n\\]\n\n所以 \\(q^2\\) 也是偶数，因此 \\(q\\) 也是偶数。\n\n这样 \\(p\\) 和 \\(q\\) 都是偶数，与它们互质矛盾。\n\n因此假设不成立，所以：\n\n\\[\n\\sqrt{2}\n\\]\n\n是无理数。",
+    "verified": true,
+    "id": "2ee887d3-ccd1-4afe-8843-ea0748d168ef"
+  },
+  {
+    "task": "证明三角形任意两边之和大于第三边。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "最终答案：\n\n设三角形为 \\(ABC\\)，证明 \\(AB+AC>BC\\)。\n\n在射线 \\(BA\\) 上取点 \\(D\\)，使 \\(AD=AC\\)，连接 \\(CD\\)。\n\n因为 \\(AD=AC\\)，所以  \n\\[\n\\angle ACD=\\angle ADC.\n\\]\n\n又因为 \\(A\\) 在 \\(BD\\) 上，所以 \\(CA\\) 在 \\(\\angle BCD\\) 内部，因此  \n\\[\n\\angle BCD>\\angle ACD.\n\\]\n\n于是  \n\\[\n\\angle BCD>\\angle ADC=\\angle BDC.\n\\]\n\n在三角形 \\(BCD\\) 中，大角对大边，所以  \n\\[\nBD>BC.\n\\]\n\n而  \n\\[\nBD=BA+AD=AB+AC,\n\\]\n\n因此  \n\\[\nAB+AC>BC.\n\\]\n\n同理可得  \n\\[\nAB+BC>AC,\\qquad AC+BC>AB.\n\\]\n\n所以三角形任意两边之和大于第三边。",
+    "verified": true,
+    "id": "e0c9f5cb-2ca2-4c0d-8fd4-1a3887c65e9d"
+  },
+  {
+    "task": "给定列表 [2, None, 5, 6, None, 8]，用非缺失值的中位数填充所有缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [2, None, 5, 6, None, 8]\nnon_null = [x for x in data if x is not None]\nnon_null.sort()\nn = len(non_null)\nif n % 2 == 1:\n    median = non_null[n // 2]\nelse:\n    median = (non_null[n // 2 - 1] + non_null[n // 2]) / 2\nfilled = [median if x is None else x for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "b221333c-f53d-4726-8f66-85d861f0caa9"
+  },
+  {
+    "task": "计算两组数据 A=[1,2,3,4,5] 和 B=[2,4,6,8,10] 的斯皮尔曼相关系数（Spearman's rank correlation coefficient）。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "from scipy.stats import spearmanr\nA = [1, 2, 3, 4, 5]\nB = [2, 4, 6, 8, 10]\nrho, _ = spearmanr(A, B)\nprint(rho)",
+    "verified": true,
+    "id": "4ce76c8c-c4f2-4358-8ddc-bcfa367c48fc"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？\ndocument.write(userInput);",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在XSS漏洞。\n\n`document.write(userInput)` 会将 `userInput` 的内容作为 HTML 直接写入页面并解析；如果 `userInput` 来自用户且未经过转义或消毒，攻击者可以注入 `<script>`、`<img onerror>` 等载荷执行任意 JavaScript。",
+    "verified": true,
+    "id": "3035b16a-2d22-4696-85ac-09239abcc96c"
+  },
+  {
+    "task": "证明调和级数 1 + 1/2 + 1/3 + ... 发散。",
+    "branch_a": "\\[ 1+\\frac12+\\left(\\frac13+\\frac14\\right)+\\left(\\frac15+\\cdots+\\frac18\\right)+\\cdots \\] 第 \\(k\\) 个括号内都有 \\(2^{k-1}\\) 项，且每项不小于 \\(\\frac1{2^k}\\)，所以每个括号的和不小于 \\(\\frac12\\)。因此部分和可任意大，级数发散。",
+    "branch_b": "\\[ \\frac1k \\ge \\int_k^{k+1}\\frac1x\\,dx. \\] 于是 \\[ 1+\\frac12+\\cdots+\\frac1n \\ge \\int_1^{n+1}\\frac1x\\,dx=\\ln(n+1)\\to\\infty. \\] 因此调和级数发散。",
+    "solution": "调和级数\n\n\\[\n1+\\frac12+\\frac13+\\frac14+\\cdots\n\\]\n\n是发散的。\n\n**思路A（分组比较）：**\n\n将级数分组为\n\n\\[\n1+\\left(\\frac12\\right)+\\left(\\frac13+\\frac14\\right)+\\left(\\frac15+\\cdots+\\frac18\\right)+\\cdots\n\\]\n\n第 \\(k\\) 组有 \\(2^{k-1}\\) 项，且每一项都不小于 \\(\\frac1{2^k}\\)，所以每组之和不小于\n\n\\[\n2^{k-1}\\cdot \\frac1{2^k}=\\frac12\n\\]\n\n因此前若干组的部分和至少为\n\n\\[\n1+\\frac m2\n\\]\n\n当 \\(m\\to\\infty\\) 时趋于无穷，所以调和级数发散。\n\n**思路B（积分比较）：**\n\n因为\n\n\\[\n\\frac1k\\ge \\int_k^{k+1}\\frac1x\\,dx\n\\]\n\n所以\n\n\\[\n1+\\frac12+\\cdots+\\frac1n\n\\ge \\int_1^{n+1}\\frac1x\\,dx\n=\\ln(n+1)\n\\]\n\n而\n\n\\[\n\\ln(n+1)\\to \\infty\n\\]\n\n因此调和级数发散。\n\n\\[\n\\boxed{\\text{调和级数 } \\sum_{n=1}^\\infty \\frac1n \\text{ 发散}}\n\\]",
+    "verified": true,
+    "id": "020f7919-518c-4a49-b8da-69d5894ed0fb"
+  },
+  {
+    "task": "计算列表 [1, 3, 5, 7, 9] 的总体方差和标准差。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "总体方差：8  \n总体标准差：√8 ≈ 2.8284",
+    "verified": true,
+    "id": "4cf8ba34-9f05-4445-8e54-1a223d44ddc7"
+  },
+  {
+    "task": "已知随机变量X的分布：P(X=1)=0.2, P(X=2)=0.3, P(X=3)=0.5。求X的期望值。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "2.3",
+    "verified": true,
+    "id": "533fe638-fab2-4cee-8684-55fa9759f492"
+  },
+  {
+    "task": "某种疾病在人群中的发病率为1%。有一种检测方法，如果患病，检测阳性的概率为99%；如果未患病，检测阳性的概率为2%。现随机抽取一人，检测结果为阳性，求此人实际患病的概率。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "约 **33.33%**（即 1/3）。",
+    "verified": true,
+    "id": "b807a4a7-a070-4f22-b9e1-667bd41e15e8"
+  },
+  {
+    "task": "计算两组数据 A=[1,2,3,4,5] 和 B=[5,4,3,2,1] 的斯皮尔曼相关系数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "-1.0",
+    "verified": true,
+    "id": "25d44cd6-f25b-4cbf-9656-563cd2940fde"
+  },
+  {
+    "task": "给定列表 [1, None, 2, None, 3, None]，用非缺失值的平均值填充所有缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [1, None, 2, None, 3, None]\nnon_null = [x for x in data if x is not None]\nmean = sum(non_null) / len(non_null)\nfilled = [mean if x is None else x for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "2f2d6515-18b0-422b-95c6-d05fd0b2c37f"
+  },
+  {
+    "task": "给定列表 [4, None, 1, None, 9, None]，用非缺失值的中位数填充所有缺失值，并输出填充后的列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "data = [4, None, 1, None, 9, None]\nnon_null = [x for x in data if x is not None]\nnon_null.sort()\nn = len(non_null)\nif n % 2 == 1:\n    median = non_null[n // 2]\nelse:\n    median = (non_null[n // 2 - 1] + non_null[n // 2]) / 2\nfilled = [median if x is None else x for x in data]\nprint(filled)",
+    "verified": true,
+    "id": "94242ed4-a54e-4ffc-bb47-f0c58a20ab21"
+  },
+  {
+    "task": "证明任意三角形两边之差小于第三边。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "设三角形三边为 \\(a,b,c\\)。  \n由三角形两边之和大于第三边，有：\n\n\\[\na+b>c,\\quad b+c>a,\\quad a+c>b\n\\]\n\n要证两边之差小于第三边，例如证：\n\n\\[\n|a-b|<c\n\\]\n\n由 \\(b+c>a\\) 得：\n\n\\[\nc>a-b\n\\]\n\n由 \\(a+c>b\\) 得：\n\n\\[\nc>b-a\n\\]\n\n所以：\n\n\\[\nc>|a-b|\n\\]\n\n即：\n\n\\[\n|a-b|<c\n\\]\n\n同理可得：\n\n\\[\n|a-c|<b,\\quad |b-c|<a\n\\]\n\n因此，任意三角形两边之差小于第三边。",
+    "verified": true,
+    "id": "1dcdf90a-ed48-40b7-9e79-ed0da7cfcc10"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？ document.getElementById('output').innerHTML = userInput;",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在XSS漏洞。`userInput` 被直接赋值给 `innerHTML`，浏览器会将其当作 HTML 解析执行，如果内容可控且未经过消毒，攻击者可注入恶意脚本。",
+    "verified": true,
+    "id": "fb610525-ca1f-4cfc-9edf-ad80cf9ffa88"
+  },
+  {
+    "task": "证明根号3是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "假设 \\(\\sqrt{3}\\) 是有理数，则存在互素整数 \\(p,q\\)（\\(q\\neq 0\\)），使得\n\n\\[\n\\sqrt{3}=\\frac{p}{q}\n\\]\n\n两边平方得：\n\n\\[\n3=\\frac{p^2}{q^2}\n\\]\n\n即：\n\n\\[\np^2=3q^2\n\\]\n\n所以 \\(p^2\\) 能被 3 整除，因此 \\(p\\) 也能被 3 整除。设 \\(p=3k\\)，代入得：\n\n\\[\n(3k)^2=3q^2\n\\]\n\n\\[\n9k^2=3q^2\n\\]\n\n\\[\nq^2=3k^2\n\\]\n\n所以 \\(q^2\\) 也能被 3 整除，因此 \\(q\\) 也能被 3 整除。\n\n这与 \\(p,q\\) 互素矛盾。\n\n因此假设不成立，所以：\n\n\\[\n\\sqrt{3}\n\\]\n\n是无理数。",
+    "verified": true,
+    "id": "e56bbe16-0bc9-4489-b22d-3663ffe00d91"
+  },
+  {
+    "task": "以下SQL代码是否存在注入漏洞？ const sql = `SELECT * FROM users WHERE name = '${userInput}'`;",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在SQL注入漏洞。`userInput` 直接拼接到 SQL 查询中，若其来自用户输入，攻击者可构造恶意值操纵查询。应使用参数化查询或预编译语句。",
+    "verified": true,
+    "id": "06abb1fb-4a7b-48ea-ac18-ada664c42ddb"
+  },
+  {
+    "task": "计算向量 A=[1,2,3] 和 B=[4,5,6] 的余弦相似度。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "余弦相似度 = 32 / (√14 × √77) = 32 / (7√22) ≈ 0.97463",
+    "verified": true,
+    "id": "28a1db49-9067-4c5b-a9ef-c8d1620d3951"
+  },
+  {
+    "task": "给定列表 [2, 5, 1, 8, 3, 7, 4, 6]，计算其总体方差。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "import statistics\ndata = [2, 5, 1, 8, 3, 7, 4, 6]\nprint(statistics.pvariance(data))",
+    "verified": true,
+    "id": "401955f6-331e-44cd-b17c-cb9eff0e9771"
+  },
+  {
+    "task": "写一个Python函数，接收一个整数列表，返回所有偶数的和。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def sum_even(numbers):\n    return sum(x for x in numbers if x % 2 == 0)",
+    "verified": true,
+    "id": "84fbc66b-c450-4c30-bb0f-25eb865d6963"
+  },
+  {
+    "task": "证明√2是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "假设 √2 是有理数，则存在互质的整数 \\(p,q\\)（\\(q\\neq 0\\)），使得\n\n\\[\n\\sqrt2=\\frac pq\n\\]\n\n两边平方得：\n\n\\[\n2=\\frac{p^2}{q^2}\n\\]\n\n即：\n\n\\[\np^2=2q^2\n\\]\n\n所以 \\(p^2\\) 是偶数，因此 \\(p\\) 也是偶数。\n\n设 \\(p=2k\\)，代入得：\n\n\\[\n(2k)^2=2q^2\n\\]\n\n\\[\n4k^2=2q^2\n\\]\n\n\\[\nq^2=2k^2\n\\]\n\n所以 \\(q^2\\) 是偶数，因此 \\(q\\) 也是偶数。\n\n这样 \\(p\\) 和 \\(q\\) 都是偶数，与 \\(p,q\\) 互质矛盾。\n\n因此假设不成立，所以：\n\n\\[\n\\sqrt2 \\text{ 是无理数。}\n\\]",
+    "verified": true,
+    "id": "74b08f16-85de-48dd-b4fe-265fd67d6b27"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "乙说真话；甲和丙在说谎。\n\n所以最终答案：**乙在说真话**。",
+    "verified": true,
+    "id": "197a7d93-a9dc-433e-84c5-86f6a9e9dfe7"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞，存在SQL注入风险。",
+    "verified": true,
+    "id": "61d13bb3-86c4-4a35-87c1-48ee65b9a739"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，可用于药物研发和材料科学等领域，成果已发表在《自然》杂志上。",
+    "verified": true,
+    "id": "065068cb-cf25-429f-8049-d8487f7b31b2"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "平均值：11，中位数：11",
+    "verified": true,
+    "id": "60b3d464-f810-41be-a841-9f0cfd7a50b4"
+  },
+  {
+    "task": "实现一个函数，判断一个字符串是否为有效的回文字符串，忽略大小写和非字母数字字符。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def is_palindrome(s: str) -> bool:\n    left, right = 0, len(s) - 1\n    while left < right:\n        while left < right and not s[left].isalnum():\n            left += 1\n        while left < right and not s[right].isalnum():\n            right -= 1\n        if left < right:\n            if s[left].lower() != s[right].lower():\n                return False\n            left += 1\n            right -= 1\n    return True",
+    "verified": true,
+    "id": "10bba0cf-2638-4dd7-bc98-509c697a1157"
+  },
+  {
+    "task": "证明勾股定理（直角三角形两直角边平方和等于斜边平方）。",
+    "branch_a": "\\[ (a+b)^2=2ab+c^2 \\] 展开并化简： \\[ a^2+2ab+b^2=2ab+c^2 \\] 故 \\[ a^2+b^2=c^2 \\]",
+    "branch_b": "\\[ \\frac{AC}{AB}=\\frac{AH}{AC} \\] 即 \\[ \\frac{b}{c}=\\frac{m}{b} \\] 所以 \\(b^2=mc\\)。又因为 \\(\\triangle BCH\\sim\\triangle BAC\\)，有 \\[ \\frac{BC}{AB}=\\frac{BH}{BC} \\] 即 \\[ \\frac{a}{c}=\\frac{n}{a} \\] 所以 \\(a^2=nc\\)。两式相加： \\[ a^2+b^2=mc+nc=(m+n)c=c^2 \\] 故 \\(a^2+b^2=c^2\\)。",
+    "solution": "设直角三角形两直角边分别为 \\(a,b\\)，斜边为 \\(c\\)。\n\n用四个全等的直角三角形拼成一个边长为 \\(a+b\\) 的大正方形。\n\n大正方形面积为：\n\n\\[\n(a+b)^2\n\\]\n\n四个直角三角形总面积为：\n\n\\[\n4 \\times \\frac12 ab = 2ab\n\\]\n\n中间围成的四边形是边长为 \\(c\\) 的正方形，面积为：\n\n\\[\nc^2\n\\]\n\n因此：\n\n\\[\n(a+b)^2 = 2ab + c^2\n\\]\n\n展开左边：\n\n\\[\na^2 + 2ab + b^2 = 2ab + c^2\n\\]\n\n两边同时消去 \\(2ab\\)，得：\n\n\\[\na^2 + b^2 = c^2\n\\]\n\n所以勾股定理得证。",
+    "verified": true,
+    "id": "e35e5dbe-971a-44ea-a5d1-f2d38b98e4c1"
+  },
+  {
+    "task": "证明√2是无理数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "证明：假设 \\(\\sqrt2\\) 是有理数，则存在互质整数 \\(p,q\\)（\\(q>0\\)），使得\n\n\\[\n\\sqrt2=\\frac pq\n\\]\n\n两边平方得：\n\n\\[\n2=\\frac{p^2}{q^2}\\Rightarrow p^2=2q^2\n\\]\n\n所以 \\(p^2\\) 是偶数，因此 \\(p\\) 也是偶数。设 \\(p=2k\\)，代入得：\n\n\\[\n(2k)^2=2q^2\n\\]\n\n\\[\n4k^2=2q^2\n\\]\n\n\\[\nq^2=2k^2\n\\]\n\n所以 \\(q^2\\) 也是偶数，因此 \\(q\\) 也是偶数。\n\n这样 \\(p\\) 和 \\(q\\) 都是偶数，与 \\(p,q\\) 互质矛盾。\n\n因此假设不成立，所以：\n\n\\[\n\\sqrt2\n\\]\n\n是无理数。",
+    "verified": true,
+    "id": "1afd2662-2686-43df-9539-f0bd8a1d7333"
+  },
+  {
+    "task": "甲说乙在说谎，乙说丙在说谎，丙说甲和乙都在说谎。问谁在说真话？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "乙说真话。",
+    "verified": true,
+    "id": "dd2540fe-75a7-4c4f-9ff1-8aed3bf069b7"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞：SQL 注入。用户输入 `username` 直接拼接进 SQL 查询，攻击者可注入恶意 SQL。",
+    "verified": true,
+    "id": "81f9726b-1d7d-41bd-bb6e-019a512a2cef"
+  },
+  {
+    "task": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "中国科学家成功研制出计算速度比现有超算快百万倍的新型量子计算机，成果已发表于《自然》杂志。",
+    "verified": true,
+    "id": "c63f0c68-bb66-4be5-9178-e82bdd41312d"
+  },
+  {
+    "task": "给定一组数字 [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]，计算其平均值和中位数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "平均值：11；中位数：11",
+    "verified": true,
+    "id": "14186ef7-d588-4205-ac4d-7b9314b8dc7b"
+  },
+  {
+    "task": "证明勾股定理（直角三角形两直角边平方和等于斜边平方）。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "设直角三角形两条直角边分别为 \\(a,b\\)，斜边为 \\(c\\)。\n\n用面积法证明：\n\n构造一个边长为 \\(a+b\\) 的大正方形，把四个与上述直角三角形全等的三角形放入其中，使它们的斜边围成一个边长为 \\(c\\) 的小正方形。\n\n大正方形面积为：\n\n\\[\n(a+b)^2\n\\]\n\n另一方面，它等于四个三角形面积加上中间小正方形面积：\n\n\\[\n4 \\times \\frac12 ab + c^2 = 2ab + c^2\n\\]\n\n所以：\n\n\\[\n(a+b)^2 = 2ab + c^2\n\\]\n\n展开左边：\n\n\\[\na^2+2ab+b^2 = 2ab+c^2\n\\]\n\n两边消去 \\(2ab\\)，得：\n\n\\[\na^2+b^2=c^2\n\\]\n\n因此，直角三角形两直角边的平方和等于斜边平方。勾股定理得证。",
+    "verified": true,
+    "id": "dc59d13e-eb70-4e2f-bac5-5268240debfa"
+  },
+  {
+    "task": "有三个箱子，一个装苹果，一个装橘子，一个装苹果和橘子混合物。所有标签都贴错了。你只能从其中一个箱子中取出一个水果，如何确定所有箱子的内容？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "最终答案：从标签为“苹果和橘子混合物”的箱子中取一个水果。\n\n因为所有标签都贴错，所以这个箱子不可能真是混合物，只能全是苹果或全是橘子。\n\n- 如果取出的是苹果：则这个箱子是苹果；标签为“橘子”的箱子是混合物；标签为“苹果”的箱子是橘子。\n- 如果取出的是橘子：则这个箱子是橘子；标签为“苹果”的箱子是混合物；标签为“橘子”的箱子是苹果。",
+    "verified": true,
+    "id": "67d59b7b-9a71-4e88-b10e-d1c11e588593"
+  },
+  {
+    "task": "以下JavaScript代码是否存在XSS漏洞？\n```\ndocument.getElementById('output').innerHTML = userInput;\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在XSS漏洞。`innerHTML` 会将 `userInput` 解析为 HTML，若其中包含恶意脚本或事件属性，可能被执行。应使用 `textContent` 或进行严格转义。",
+    "verified": true,
+    "id": "657e4ff3-585d-420a-8977-5b24fecaf32b"
+  },
+  {
+    "task": "请总结以下技术文档段落：\n\"Gin是一个用Go语言编写的HTTP Web框架。它具有轻量级、高性能的特点，支持中间件、路由分组、JSON验证等功能。Gin使用httprouter作为默认路由器，速度非常快。它被广泛应用于微服务和RESTful API的开发中。\"",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "Gin是一个基于Go语言的高性能HTTP Web框架，以轻量级著称，支持中间件、路由分组和JSON验证等功能，默认使用httprouter路由器，速度极快，常用于微服务和RESTful API开发。",
+    "verified": true,
+    "id": "d3ded2d0-e929-4466-a64f-1f28499600be"
+  },
+  {
+    "task": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "1",
+    "verified": true,
+    "id": "f584bcf0-3d10-4348-b920-a6310f61e7e6"
+  },
+  {
+    "task": "证明质数有无穷多个。",
+    "branch_a": "\\[ N=p_1p_2\\cdots p_r+1 \\] 则 \\(N>1\\)，所以 \\(N\\) 必有一个质因数 \\(q\\)。如果 \\(q\\) 是某个 \\(p_i\\)，那么 \\(q\\mid p_1p_2\\cdots p_r\\)，又 \\(q\\mid N\\)，于是 \\(q\\mid N-p_1p_2\\cdots p_r=1\\)，矛盾。因此 \\(q\\) 不在原来的质数列表中，是一个新质数。所以质数不可能只有有限多个。",
+    "branch_b": "\\[ \\frac1{1-1/p_i}=\\sum_{k=0}^{\\infty}\\frac1{p_i^k}. \\] 把这些式子相乘，利用算术基本定理，每个正整数 \\(n\\) 唯一对应一组 \\((k_1,\\dots,k_r)\\)，使得 \\[ n=p_1^{k_1}p_2^{k_2}\\cdots p_r^{k_r}. \\] 于是有限乘积 \\[ \\prod_{i=1}^r\\frac1{1-1/p_i} \\] 等于全体正整数的倒数和，即调和级数 \\[ \\sum_{n=1}^{\\infty}\\frac1n. \\] 但左边是有限数，右边却发散到无穷，矛盾。因此质数有无穷多个。",
+    "solution": "假设质数只有有限多个，设为 \\(p_1,p_2,\\dots,p_r\\)。\n\n令  \n\\[\nN=p_1p_2\\cdots p_r+1\n\\]\n则 \\(N>1\\)，所以 \\(N\\) 必有一个质因数 \\(q\\)。\n\n如果 \\(q\\) 等于某个 \\(p_i\\)，那么\n\\[\nq\\mid p_1p_2\\cdots p_r\n\\]\n又因为\n\\[\nq\\mid N\n\\]\n所以\n\\[\nq\\mid N-p_1p_2\\cdots p_r=1\n\\]\n矛盾。\n\n因此 \\(q\\) 不在 \\(p_1,p_2,\\dots,p_r\\) 中，这说明原来的质数列表不完整。所以质数不可能只有有限多个，质数有无穷多个。",
+    "verified": true,
+    "id": "4e6d9410-3529-4a48-91d9-de55e444d96d"
+  },
+  {
+    "task": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "最终答案：**A是无赖，B是骑士，C是无赖。**\n\n验证：C说“A是骑士”，所以C和A是同一类人；因此B说“A和C是同一类人”为真，B是骑士。那么A说“B是无赖”是假，所以A是无赖；C也与A同类，所以C是无赖。",
+    "verified": true,
+    "id": "879f0581-6821-45d2-87ad-cebfde48cf03"
+  },
+  {
+    "task": "以下代码是否存在安全漏洞？\n```\nwith open('data/' + filename, 'r') as f:\n    content = f.read()\n```",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在安全漏洞：`filename` 如果来自用户输入，可能包含 `../` 等路径穿越序列，导致读取 `data/` 目录之外的任意文件。应校验 `filename` 并限制在 `data/` 目录内。",
+    "verified": true,
+    "id": "2808f90e-517a-44d7-b26a-1137755d3659"
+  },
+  {
+    "task": "请总结以下对话：\n客服：您好，请问有什么可以帮您？\n用户：我昨天买的手机屏幕碎了，能退换吗？\n客服：请问是在我们官网上购买的吗？\n用户：是的，订单号12345。\n客服：根据政策，人为损坏不在保修范围内，但您可以购买换屏服务。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "客服确认用户是在官网购买后，告知人为损坏的屏幕不在保修范围内，不能退换，但可提供付费换屏服务。",
+    "verified": true,
+    "id": "39c23af2-f1b1-4b21-a2c9-e62166892bb9"
+  },
+  {
+    "task": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "最终答案：\\(\\hat{收入}=6.9091+1.0545\\times 年龄\\)（千元），  \n\\(R^2=\\frac{841}{847}\\approx0.9929\\)。",
+    "verified": true,
+    "id": "5cb98db4-8eda-437c-8f51-21dd1ec5cedf"
+  },
+  {
+    "task": "实现一个函数，将两个有序升序列表合并为一个有序升序列表。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "def merge_sorted_lists(a, b):\n    i = j = 0\n    merged = []\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            merged.append(a[i])\n            i += 1\n        else:\n            merged.append(b[j])\n            j += 1\n    if i < len(a):\n        merged.extend(a[i:])\n    if j < len(b):\n        merged.extend(b[j:])\n    return merged",
+    "verified": true,
+    "id": "a9b03263-f514-4873-8db3-f3b9168e1520"
+  },
+  {
+    "task": "证明三角形内角和等于180度。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "最终答案：\n\n在欧氏平面几何中，证明三角形内角和等于 \\(180^\\circ\\)。\n\n**思路A：过顶点作对边的平行线**\n\n设三角形为 \\(\\triangle ABC\\)，过点 \\(A\\) 作直线 \\(DE \\parallel BC\\)，其中 \\(D,A,E\\) 共线。\n\n因为 \\(DE \\parallel BC\\)，所以：\n\n- \\(\\angle DAB = \\angle ABC\\)（内错角相等）\n- \\(\\angle EAC = \\angle ACB\\)（内错角相等）\n\n又因为 \\(D,A,E\\) 三点共线，所以：\n\n\\[\n\\angle DAB + \\angle BAC + \\angle CAE = 180^\\circ\n\\]\n\n而 \\(\\angle CAE = \\angle EAC\\)，代入得：\n\n\\[\n\\angle ABC + \\angle BAC + \\angle ACB = 180^\\circ\n\\]\n\n所以三角形内角和等于 \\(180^\\circ\\)。\n\n**思路B：延长一边作平行线**\n\n延长 \\(BC\\) 到 \\(D\\)，过 \\(C\\) 作 \\(CE \\parallel AB\\)。\n\n因为 \\(CE \\parallel AB\\)，所以：\n\n- \\(\\angle ACE = \\angle A\\)（内错角相等）\n- \\(\\angle ECD = \\angle B\\)（同位角相等）\n\n又因为 \\(B,C,D\\) 共线，所以：\n\n\\[\n\\angle ACB + \\angle ACE + \\angle ECD = 180^\\circ\n\\]\n\n代入得：\n\n\\[\n\\angle C + \\angle A + \\angle B = 180^\\circ\n\\]\n\n因此，三角形内角和等于 \\(180^\\circ\\)。",
+    "verified": true,
+    "id": "8c7523d8-8c22-4748-b7b0-ef0254931e7c"
+  },
+  {
+    "task": "如果下雨则地湿。现在地没湿，你能得出什么结论？",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "结论：地没湿，所以可以推出：没有下雨。",
+    "verified": true,
+    "id": "a5fbed1d-baa9-4599-80f8-749b1588c5c9"
+  },
+  {
+    "task": "以下代码是否存在CSRF漏洞？\n```\n<form action=\"/transfer\" method=\"POST\">\n  <input name=\"amount\" value=\"1000\">\n  <input type=\"submit\">\n</form>\n```\n假设用户已登录并有转账权限。",
+    "branch_a": "默认算法A",
+    "branch_b": "默认算法B",
+    "solution": "存在 CSRF 漏洞。表单未包含 CSRF Token，也没有其他来源校验，攻击者可诱导已登录用户提交该表单完成转账。",
+    "verified": true,
+    "id": "6d29f206-73fa-434d-ad8e-7540f4b360eb"
+  }
+]

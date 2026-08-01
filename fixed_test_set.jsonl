@@ -1,0 +1,20 @@
+{"description": "简述‘区块链’的基本工作原理，并指出其核心优势。", "test_cases": []}
+{"task_id": "SEED-LOGIC-0015", "category": "logic_reasoning", "difficulty": "hard", "description": "一个岛上住着骑士（只说真话）和无赖（只说假话）。你遇到三个人A、B、C。A说：“B是无赖。” B说：“A和C是同一类人。” C说：“A是骑士。” 请判断每个人的身份。", "test_cases": [{"input": ["推理"], "expected_output": "A是骑士，B是无赖，C是无赖"}], "reference_answer": "假设A是骑士，则B是无赖（真），那么B的话为假，即A和C不是同一类，A是骑士，故C是无赖，符合C说假话（C说A是骑士，假，因为A是骑士，所以C的话是假的，矛盾？注意C说A是骑士，如果A是骑士，C的话为真，但C是无赖应说假，矛盾。所以A不可能是骑士。因此A是无赖，则B是骑士（因为A说假话，说B是无赖为假，即B是骑士）。B为骑士，其话真：A和C同一类，A无赖，则C也是无赖。C说A是骑士为假，符合。因此A无赖，B骑士，C无赖。"}
+{"task_id": "SEED-SEC-0004", "category": "security_judgment", "difficulty": "easy", "description": "以下代码是否存在安全漏洞？\n```\nusername = request.GET.get('username')\nquery = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\ncursor.execute(query)\n```", "test_cases": [{"input": ["代码片段"], "expected_output": "存在SQL注入漏洞"}], "reference_answer": "存在SQL注入漏洞。用户输入直接拼接进SQL语句，攻击者可通过输入' OR 1=1 -- 等绕过。应使用参数化查询，如cursor.execute(\"SELECT * FROM users WHERE name = %s\", (username,))"}
+{"description": "写出化学方程式：氢气与氧气反应生成水。", "test_cases": []}
+{"description": "根据以下数据，画出饼图的大致分布：A类33%，B类25%，C类20%，D类22%。", "test_cases": []}
+{"description": "分析以下论点中的逻辑谬误：\"大多数人都支持这个政策，所以这个政策一定是对的。\"", "test_cases": []}
+{"description": "计算下面表达式的值：(3+5)×2^3 - 7÷(4-1)", "test_cases": []}
+{"task_id": "SEED-DATA-0018", "category": "data_analysis", "difficulty": "hard", "description": "给定一个数据集，包含10个样本的年龄和收入如下：\n年龄：25,30,35,40,45,50,55,60,65,70\n收入：30,40,45,50,55,60,65,70,75,80（单位千元）。\n建立收入对年龄的线性回归模型，并计算R方值。", "test_cases": [{"input": ["年龄和收入数据"], "expected_output": "R方≈0.967"}], "reference_answer": "使用最小二乘法：计算平均值 age_mean=47.5, income_mean=57。计算斜率b = Σ((x_i-x̄)(y_i-ȳ))/Σ((x_i-x̄)^2) = ( (25-47.5)*(30-57)+... ) / Σ(x_i-x̄)^2。经计算分子=4187.5，分母=4125，b≈1.015。截距a=ȳ-b*x̄=57-1.015*47.5≈57-48.2=8.8。模型: income=8.8+1.015*age。总平方和SST= Σ(y_i-ȳ)^2=2720，残差平方和SSE= Σ(y_i - (8.8+1.015*x_i))^2≈91.2，R方=1-SSE/SST=1-91.2/2720≈0.9665。"}
+{"task_id": "SEED-MATH-0014", "category": "math_proof", "difficulty": "easy", "description": "证明质数有无穷多个。", "test_cases": [{"input": ["证明质数无限"], "expected_output": "欧几里得证法"}], "reference_answer": "假设质数有限，设为p1,p2,...,pn。构造数N=p1*p2*...*pn+1。N不能被任何已知质数整除，余1，故N要么是质数，要么有新的质因子，与假设矛盾。因此质数有无穷多个。"}
+{"description": "如果有一个边长为4的正方形，内接一个最大的圆，求圆的面积。", "test_cases": []}
+{"description": "描述如何用‘番茄工作法’来提高工作效率。", "test_cases": []}
+{"task_id": "SEED-DATA-0012", "category": "data_analysis", "difficulty": "medium", "description": "给定两组数据：A=[1,2,3,4,5], B=[2,4,6,8,10]。计算皮尔逊相关系数。", "test_cases": [{"input": [[1, 2, 3, 4, 5], [2, 4, 6, 8, 10]], "expected_output": "1.0"}], "reference_answer": "计算均值：A_mean=3, B_mean=6。协方差=((1-3)*(2-6)+(2-3)*(4-6)+(3-3)*(6-6)+(4-3)*(8-6)+(5-3)*(10-6))/4 = (8+2+0+2+8)/4=20/4=5。A标准差=√((4+1+0+1+4)/4)=√2.5≈1.581, B标准差=√((16+4+0+4+16)/4)=√10≈3.162。相关系数=5/(1.581*3.162)=5/5=1.0。"}
+{"description": "写一个小故事，关于一个机器人意外获得人类情感。 开头：机器人编号X7-032在完成第100万次搬运任务后，突然停下了脚步。", "test_cases": []}
+{"description": "根据给出的上下文，续写一段话：\"她推开门，发现房间里空无一人，只有桌上的咖啡还冒着热气。\"", "test_cases": []}
+{"task_id": "SEED-TEXT-0005", "category": "text_summarization", "difficulty": "easy", "description": "请对以下新闻进行一句话摘要：\n\"北京时间3月15日，中国科学家宣布成功研制出新型量子计算机，其计算速度比现有超算快百万倍，可用于药物研发、材料科学等领域。该成果已发表在《自然》杂志上。\"", "test_cases": [{"input": ["新闻文本"], "expected_output": "中国科学家研制出新型量子计算机，速度比超算快百万倍，应用于药物研发等领域。"}], "reference_answer": "中国科学家成功研发新型量子计算机，速度超现有超算百万倍，应用于药物研发和材料科学，成果发表于《自然》。"}
+{"description": "写一篇150字以内的短文，描述一个未来城市的一天早晨。 背景：2124年，地球城市化率99%，交通全自动驾驶，食物由合成工厂生产。", "test_cases": []}
+{"description": "将以下英文句子翻译成中文：\"The early bird catches the worm.\"", "test_cases": []}
+{"description": "说明什么是‘奥卡姆剃刀’原则，并给一个应用例子。", "test_cases": []}
+{"description": "请为以下数字进行四舍五入，保留三位小数： 3.1415926535", "test_cases": []}
+{"description": "生成一个五言绝句，主题为‘秋日山景’。", "test_cases": []}
