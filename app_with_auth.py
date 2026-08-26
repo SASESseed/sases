@@ -7,7 +7,7 @@ from rank_bm25 import BM25Okapi
 
 import auth
 
-app = FastAPI(title="SASES Web API with Auth", version="0.2.0")
+app = FastAPI(title="SASES Web API with Auth", version="0.2.1")
 
 KB_FILE = "success_kb.json"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -55,6 +55,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     source: str
+
+class AwardRequest(BaseModel):
+    user_id: int
+    amount: int
+    reason: str = ""
 
 # ---------- 认证路由 ----------
 @app.post("/register")
@@ -116,6 +121,14 @@ async def stats():
         "total_success": len(kb),
         "model_distribution": model_counts
     }
+
+# ---------- 积分发放 ----------
+@app.post("/award_credits")
+async def award_credits(req: AwardRequest, current_user=Depends(get_current_user)):
+    # 简单权限：当前版本允许登录用户调用
+    # 后续可改为仅管理员或高信誉用户可调用
+    auth.add_credits(req.user_id, req.amount, req.reason)
+    return {"message": f"已为用户 {req.user_id} 增加 {req.amount} 积分"}
 
 if __name__ == "__main__":
     import uvicorn
