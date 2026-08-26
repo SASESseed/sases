@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SASES 控制台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>SASES 控制台</h1>
+
+        <div id="auth-section">
+            <h2>登录</h2>
+            <input type="text" id="login-username" placeholder="用户名" />
+            <input type="password" id="login-password" placeholder="密码" />
+            <button onclick="login()">登录</button>
+            <button onclick="showRegister()">注册新用户</button>
+
+            <div id="register-section" style="display:none;">
+                <h3>注册</h3>
+                <input type="text" id="reg-username" placeholder="用户名" />
+                <input type="email" id="reg-email" placeholder="邮箱" />
+                <input type="password" id="reg-password" placeholder="密码" />
+                <button onclick="register()">注册</button>
+            </div>
+        </div>
+
+        <div id="main-section" style="display:none;">
+            <p>欢迎，<span id="username-display"></span>（积分：<span id="credits-display"></span>）</p>
+            <button onclick="logout()">退出登录</button>
+
+            <h2>聊天</h2>
+            <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
+            <button onclick="chat()">发送</button>
+            <div id="chat-result"></div>
+
+            <h2>提交种子</h2>
+            <textarea id="seed-desc" placeholder="任务描述，如：写一个Python函数，判断一个字符串是否是回文"></textarea>
+            <input type="text" id="seed-testcases" placeholder='测试用例JSON，如：[{"input":"racecar","expected_output":true}]' />
+            <button onclick="submitSeed()">提交种子</button>
+
+            <h2>排行榜</h2>
+            <button onclick="loadLeaderboard()">刷新排行榜</button>
+            <ul id="leaderboard"></ul>
+
+            <h2>统计</h2>
+            <button onclick="loadStats()">刷新统计</button>
+            <pre id="stats"></pre>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
