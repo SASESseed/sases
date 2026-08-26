@@ -1,4 +1,4 @@
-import json, os, re
+app_content = '''import json, os, re
 from fastapi import FastAPI
 from pydantic import BaseModel
 from rank_bm25 import BM25Okapi
@@ -24,7 +24,7 @@ def load_kb():
             return []
 
 def tokenize(text):
-    return re.findall(r"\w+", text.lower())
+    return re.findall(r"\\w+", text.lower())
 
 @app.get("/stats")
 async def stats():
@@ -52,9 +52,15 @@ async def chat(req: ChatRequest):
     best_idx = scores.argmax()
     if scores[best_idx] > 0:
         best = kb[best_idx]
-        answer = f"找到相似任务：{best['task']}\n解决方案：\n{best['solution'][:500]}"
+        answer = f"找到相似任务：{best['task']}\\n解决方案：\\n{best['solution'][:500]}"
         source = "local_kb"
     else:
         answer = "未找到相似任务，请先运行种子迭代积累知识库。"
         source = "none"
     return ChatResponse(answer=answer, source=source)
+'''
+
+with open("app.py", "w", encoding="utf-8") as f:
+    f.write(app_content)
+
+print("app.py 已完整替换为 BM25 版本。")

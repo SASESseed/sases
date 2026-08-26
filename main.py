@@ -141,10 +141,7 @@ knowledge_base = load_kb()
 
 def add_to_kb(task, branch_a, branch_b, synthesis, model_id=MODEL, user_id="system", backtrack_count=0):
     # 安全扫描：拦截恶意或高风险内容
-    if not safety_scan.before_add_to_kb(synthesis):
-        print("  安全扫描拦截，拒绝入库。")
-        return
-    # 安全扫描：拦截恶意或高风险内容
+    import safety_scan
     if not safety_scan.before_add_to_kb(synthesis):
         print("  安全扫描拦截，拒绝入库。")
         return
@@ -162,7 +159,6 @@ def add_to_kb(task, branch_a, branch_b, synthesis, model_id=MODEL, user_id="syst
     })
     save_kb(knowledge_base)
 
-# ========== 工具函数 ==========
 def is_python_code(text):
     return bool(re.search(r'\bdef\s+\w+\s*\(', text)) or bool(re.search(r'\bclass\s+\w+', text))
 
