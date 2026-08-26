@@ -1,0 +1,1 @@
+{"id": "ac672730-82e1-4ca3-b7f3-e69c344c526f", "description": "写一个Python函数，判断一个字符串是否是回文", "test_cases": [{"input": "racecar", "expected_output": true}, {"input": "hello", "expected_output": false}], "source": "external_api", "user_id": 1, "timestamp": "2026-08-26 23:04:21"}
