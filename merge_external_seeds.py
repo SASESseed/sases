@@ -1,8 +1,10 @@
 import json, os
+import auth
 
 EXTERNAL_FILE = "seed_tasks_external.jsonl"
 MAIN_FILE = "seed_tasks_new.jsonl"
 MERGED_FILE = "seed_tasks_new_merged.jsonl"
+KB_FILE = "success_kb.json"
 
 def load_jsonl(path):
     if not os.path.exists(path):
@@ -16,6 +18,17 @@ def load_jsonl(path):
                 pass
     return items
 
+def load_kb_descriptions():
+    """加载知识库中所有已存在的任务描述"""
+    if not os.path.exists(KB_FILE):
+        return set()
+    with open(KB_FILE, "r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except:
+            return set()
+    return {item.get("task", "") for item in data}
+
 def main():
     external = load_jsonl(EXTERNAL_FILE)
     existing = load_jsonl(MAIN_FILE)
@@ -24,20 +37,42 @@ def main():
         print("没有外部种子需要合并。")
         return
     
-    # 去重：使用 description 作为去重键
+    # 加载知识库已有任务，用于去重
+    kb_descs = load_kb_descriptions()
+    
     existing_descs = {item.get("description", "") for item in existing}
+    existing_descs.update(kb_descs)
+    
     new_items = []
+    skipped = 0
     for seed in external:
         desc = seed.get("description", "")
-        if desc and desc not in existing_descs:
-            # 确保有 test_cases 字段
-            if "test_cases" not in seed:
-                seed["test_cases"] = []
-            new_items.append(seed)
-            existing_descs.add(desc)
+        if not desc:
+            continue
+        user_id = seed.get("user_id")
+        if desc in existing_descs:
+            print(f"跳过重复任务（已存在于知识库或种子池）：{desc[:50]}...")
+            # 向用户发送系统消息，感谢贡献并说明无需重复提交
+            if user_id is not None:
+                try:
+                    auth.add_system_message(
+                        int(user_id),
+                        f"感谢你的贡献！你的种子已存在于知识库或待处理池中，无需重复提交：{desc[:100]}...",
+                        "SASES助手"
+                    )
+                except Exception as e:
+                    print(f"发送系统消息失败: {e}")
+            skipped += 1
+            continue
+        if "test_cases" not in seed:
+            seed["test_cases"] = []
+        new_items.append(seed)
+        existing_descs.add(desc)
     
     if not new_items:
-        print("外部种子均已存在于主种子池，无需合并。")
+        print("所有外部种子均为重复任务，已全部跳过。")
+        with open(EXTERNAL_FILE, "w", encoding="utf-8") as f:
+            pass
         return
     
     # 合并写入新文件
@@ -46,22 +81,36 @@ def main():
         for item in merged:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
     
-    print(f"合并完成：原主池 {len(existing)} 条，外部新增 {len(new_items)} 条，合计 {len(merged)} 条。")
-    print(f"已写入 {MERGED_FILE}")
+    print(f"合并完成：原主池 {len(existing)} 条，外部新增 {len(new_items)} 条，跳过重复 {skipped} 条，合计 {len(merged)} 条。")
     
-    # 备份原主池
     if os.path.exists(MAIN_FILE):
         os.replace(MAIN_FILE, MAIN_FILE + ".bak")
         print(f"原主池已备份为 {MAIN_FILE}.bak")
-    
-    # 用合并后的文件替换原主池
     os.replace(MERGED_FILE, MAIN_FILE)
-    print(f"主种子池已更新为合并后的 {MAIN_FILE}")
+    print(f"主种子池已更新为 {MAIN_FILE}")
     
-    # 清空外部种子池（已合并）
+    # 自动奖励外部种子提交者，并发送感谢消息
+    rewarded = 0
+    for seed in new_items:
+        user_id = seed.get("user_id")
+        if user_id is not None:
+            try:
+                auth.add_credits(int(user_id), 10, "外部种子被采纳")
+                auth.add_system_message(
+                    int(user_id),
+                    f"感谢你的贡献！你的种子已进入处理队列，将尽快处理。任务：{seed['description'][:100]}...",
+                    "SASES助手"
+                )
+                rewarded += 1
+            except Exception as e:
+                print(f"奖励用户 {user_id} 失败: {e}")
+        else:
+            print("发现无 user_id 的外部种子，跳过奖励。")
+    print(f"已为 {rewarded} 个用户各奖励 10 积分。")
+    
     with open(EXTERNAL_FILE, "w", encoding="utf-8") as f:
         pass
-    print(f"外部种子池已清空，等待新提交。")
+    print(f"外部种子池已清空。")
 
 if __name__ == "__main__":
     main()
