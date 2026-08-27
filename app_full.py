@@ -7,8 +7,9 @@ from jose import JWTError, jwt
 from rank_bm25 import BM25Okapi
 
 import auth
+import safety_scan  # 导入安全扫描模块
 
-app = FastAPI(title="SASES Full Web Service", version="0.3.2")
+app = FastAPI(title="SASES Full Web Service", version="0.3.3")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
@@ -26,6 +27,10 @@ def load_kb():
             return json.load(f)
         except:
             return []
+
+def save_kb(entries):
+    with open(KB_FILE, "w", encoding="utf-8") as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
 
 def tokenize(text):
     return re.findall(r"\w+", text.lower())
@@ -68,6 +73,11 @@ class SeedSubmitRequest(BaseModel):
 
 class SettingsUpdateRequest(BaseModel):
     auto_pollinate_enabled: bool
+
+class ManualPollinateRequest(BaseModel):
+    task: str
+    solution: str
+    test_cases: list = []
 
 # ---------- 认证路由 ----------
 @app.post("/register")
@@ -185,6 +195,39 @@ async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_u
     with open(SEED_POOL_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(seed, ensure_ascii=False) + "\n")
     return {"message": "种子已提交，等待处理", "seed": seed}
+
+# ---------- 手动授粉 ----------
+@app.post("/pollinate/manual")
+async def manual_pollinate(req: ManualPollinateRequest, current_user=Depends(get_current_user)):
+    # 安全扫描
+    try:
+        if not safety_scan.before_add_to_kb(req.solution):
+            raise HTTPException(status_code=400, detail="安全扫描未通过，内容被拦截")
+    except Exception as e:
+        # 若安全扫描模块异常，记录并继续（可后续调整）
+        print(f"安全扫描异常: {e}")
+
+    # 写入知识库
+    kb = load_kb()
+    new_entry = {
+        "task": req.task,
+        "branch_a": "",
+        "branch_b": "",
+        "solution": req.solution,
+        "verified": True,
+        "id": str(uuid.uuid4()),
+        "model_id": "manual_pollinate",
+        "user_id": current_user["id"],
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "backtrack_count": 0
+    }
+    kb.append(new_entry)
+    save_kb(kb)
+
+    # 奖励积分（手动授粉按基础价值 +3）
+    auth.add_credits(current_user["id"], 3, "手动授粉")
+
+    return {"message": "授粉成功，获得 3 积分"}
 
 # ---------- 防篡改锚点（预留） ----------
 @app.get("/protocol_version")

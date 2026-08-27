@@ -28,7 +28,15 @@
 
         <div id="main-section" style="display:none;">
             <p>欢迎，<span id="username-display"></span>（积分：<span id="credits-display"></span>）</p>
+            <button onclick="showLedger()">查看积分流水</button>
+            <div id="ledger" style="display:none;"></div>
             <button onclick="logout()">退出登录</button>
+
+            <h2>授粉设置</h2>
+            <label>
+                <input type="checkbox" id="auto-pollinate-toggle" onchange="toggleAutoPollinate()">
+                自动授粉（默认开启，关闭后查询将消耗积分）
+            </label>
 
             <h2>聊天</h2>
             <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
@@ -36,9 +44,20 @@
             <div id="chat-result"></div>
 
             <h2>提交种子</h2>
+            <div id="seed-risk-warning">
+                <p style="color:#b8860b;">提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。</p>
+                <label><input type="checkbox" id="no-risk-remind"> 今后不再提醒</label>
+            </div>
             <textarea id="seed-desc" placeholder="任务描述，如：写一个Python函数，判断一个字符串是否是回文"></textarea>
             <input type="text" id="seed-testcases" placeholder='测试用例JSON，如：[{"input":"racecar","expected_output":true}]' />
             <button onclick="submitSeed()">提交种子</button>
+
+            <h2>手动授粉</h2>
+            <textarea id="pollinate-task" placeholder="任务描述，如：写一个Python函数，判断一个数字是否为质数"></textarea>
+            <textarea id="pollinate-solution" placeholder="解决方案代码或文本"></textarea>
+            <input type="text" id="pollinate-testcases" placeholder='测试用例JSON（可选），如：[{"input":17,"expected_output":true}]' />
+            <button onclick="manualPollinate()">提交授粉</button>
+            <div id="pollinate-result"></div>
 
             <h2>排行榜</h2>
             <button onclick="loadLeaderboard()">刷新排行榜</button>
