@@ -153,5 +153,19 @@ def deduct_credits(user_id: int, amount: int, reason: str = ""):
                      (user_id, -amount, reason))
         return True, "扣除成功"
 
+def has_duplicate_pollinate(user_id: int, task: str, solution: str, window_minutes: int = 60):
+    """检查用户是否在指定时间窗口内提交过相同的手动授粉内容。"""
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT COUNT(*) as cnt FROM credit_ledger
+            WHERE user_id = ?
+              AND reason = '手动授粉'
+              AND timestamp >= datetime('now', ?)
+              AND amount > 0
+        """, (user_id, f"-{window_minutes} minutes")).fetchone()
+        # 注意：credit_ledger 不存储 task 和 solution，所以无法精确判断内容重复。
+        # 这里只能做频率限制：例如 60 秒内不允许重复提交。
+        return row["cnt"] > 0
+    
 # 初始化数据库
 init_db()

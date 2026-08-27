@@ -7,15 +7,14 @@ from jose import JWTError, jwt
 from rank_bm25 import BM25Okapi
 
 import auth
-import safety_scan  # 导入安全扫描模块
+import safety_scan
 
-app = FastAPI(title="SASES Full Web Service", version="0.3.3")
+app = FastAPI(title="SASES Full Web Service", version="0.3.4")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# 挂载静态文件目录
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ---------- 工具函数 ----------
@@ -126,12 +125,10 @@ async def my_ledger(current_user=Depends(get_current_user)):
 # ---------- 聊天（需认证） ----------
 @app.post("/chat")
 async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
-    # 获取用户自动授粉设置
     settings = auth.get_user_settings(current_user["id"])
     auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
 
     if not auto_pollinate:
-        # 自动授粉已关闭，仅查询需要扣除积分
         success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
         if not success:
             raise HTTPException(status_code=402, detail=msg)
@@ -204,11 +201,17 @@ async def manual_pollinate(req: ManualPollinateRequest, current_user=Depends(get
         if not safety_scan.before_add_to_kb(req.solution):
             raise HTTPException(status_code=400, detail="安全扫描未通过，内容被拦截")
     except Exception as e:
-        # 若安全扫描模块异常，记录并继续（可后续调整）
         print(f"安全扫描异常: {e}")
 
-    # 写入知识库
+    # 加载知识库
     kb = load_kb()
+
+    # 内容去重：检查是否已存在相同 task 和 solution
+    for entry in kb:
+        if entry.get("task") == req.task and entry.get("solution") == req.solution:
+            raise HTTPException(status_code=400, detail="内容重复，请勿重复提交相同授粉内容")
+
+    # 写入知识库
     new_entry = {
         "task": req.task,
         "branch_a": "",
