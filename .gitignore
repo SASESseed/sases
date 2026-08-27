@@ -5,10 +5,17 @@ api_key.txt
 # 知识库本地数据（可后期改为共享方式）
 kb/
 
+# 数据库（本地用户/积分数据，不应提交）
+users.db
+
 # Python 缓存
 __pycache__/
 *.pyc
+*.pyo
 
 # 系统文件
 .DS_Store
-Thumbs.db".env" 
+Thumbs.db
+
+# 环境变量
+.env
