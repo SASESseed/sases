@@ -95,7 +95,7 @@ def main():
         user_id = seed.get("user_id")
         if user_id is not None:
             try:
-                auth.add_credits(int(user_id), 10, "外部种子被采纳")
+                auth.add_credits(int(user_id), 5, "外部种子被采纳")   # 改为 +5
                 auth.add_system_message(
                     int(user_id),
                     f"感谢你的贡献！你的种子已进入处理队列，将尽快处理。任务：{seed['description'][:100]}...",
@@ -106,7 +106,7 @@ def main():
                 print(f"奖励用户 {user_id} 失败: {e}")
         else:
             print("发现无 user_id 的外部种子，跳过奖励。")
-    print(f"已为 {rewarded} 个用户各奖励 10 积分。")
+    print(f"已为 {rewarded} 个用户各奖励 5 积分。")
     
     with open(EXTERNAL_FILE, "w", encoding="utf-8") as f:
         pass
