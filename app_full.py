@@ -8,7 +8,7 @@ from rank_bm25 import BM25Okapi
 
 import auth
 
-app = FastAPI(title="SASES Full Web Service", version="0.3.0")
+app = FastAPI(title="SASES Full Web Service", version="0.3.1")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
@@ -66,7 +66,10 @@ class SeedSubmitRequest(BaseModel):
     description: str
     test_cases: list = []
 
-# ---------- 路由 ----------
+class SettingsUpdateRequest(BaseModel):
+    auto_pollinate_enabled: bool
+
+# ---------- 认证路由 ----------
 @app.post("/register")
 async def register(req: RegisterRequest):
     success, msg = auth.create_user(req.username, req.email, req.password)
@@ -86,10 +89,31 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def read_users_me(current_user=Depends(get_current_user)):
     return {"id": current_user["id"], "username": current_user["username"], "credits": current_user["credits"]}
 
+# ---------- 授粉设置 ----------
+@app.get("/me/settings")
+async def get_my_settings(current_user=Depends(get_current_user)):
+    settings = auth.get_user_settings(current_user["id"])
+    if settings is None:
+        raise HTTPException(status_code=404, detail="用户设置不存在")
+    return settings
+
+@app.patch("/me/settings")
+async def update_my_settings(req: SettingsUpdateRequest, current_user=Depends(get_current_user)):
+    auth.update_user_settings(current_user["id"], req.auto_pollinate_enabled)
+    return {"message": "设置已更新", "auto_pollinate_enabled": req.auto_pollinate_enabled}
+
+# ---------- 排行榜 ----------
 @app.get("/leaderboard")
 async def leaderboard(top_n: int = 10):
     return auth.get_leaderboard(top_n)
 
+# ---------- 积分流水 ----------
+@app.get("/my_ledger")
+async def my_ledger(current_user=Depends(get_current_user)):
+    ledger = auth.get_credit_ledger(current_user["id"])
+    return {"ledger": ledger}
+
+# ---------- 聊天（需认证） ----------
 @app.post("/chat")
 async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     kb = load_kb()
@@ -112,6 +136,7 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             source = "none"
     return {"answer": answer, "source": source}
 
+# ---------- 统计（公开） ----------
 @app.get("/stats")
 async def stats():
     kb = load_kb()
@@ -124,11 +149,13 @@ async def stats():
         "model_distribution": model_counts
     }
 
+# ---------- 积分发放 ----------
 @app.post("/award_credits")
 async def award_credits(req: AwardRequest, current_user=Depends(get_current_user)):
     auth.add_credits(req.user_id, req.amount, req.reason)
     return {"message": f"已为用户 {req.user_id} 增加 {req.amount} 积分"}
 
+# ---------- 种子提交 ----------
 @app.post("/submit_seed")
 async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_user)):
     if not req.description or len(req.description) < 10:
@@ -145,6 +172,21 @@ async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_u
         f.write(json.dumps(seed, ensure_ascii=False) + "\n")
     return {"message": "种子已提交，等待处理", "seed": seed}
 
+# ---------- 防篡改锚点（预留） ----------
+@app.get("/protocol_version")
+async def protocol_version():
+    return {"version": "1.0.0"}
+
+@app.post("/sync_state")
+async def sync_state(current_user=Depends(get_current_user)):
+    return {
+        "user_id": current_user["id"],
+        "credits": current_user["credits"],
+        "tampered": False,
+        "server_time": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+# ---------- 根路由 ----------
 @app.get("/")
 async def root():
     return {"message": "SASES Full Web Service is running. Visit /static/index.html for UI."}

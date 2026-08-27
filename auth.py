@@ -1,6 +1,6 @@
-import sqlite3, os, json
+import sqlite3, os, json, time
 from datetime import datetime, timedelta
-import bcrypt
+from passlib.context import CryptContext
 from jose import JWTError, jwt
 
 DB_FILE = "users.db"
@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get("SASES_SECRET_KEY", "sases-dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1天
 
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_db():
     conn = sqlite3.connect(DB_FILE)
@@ -37,11 +37,24 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
+        # 预留防篡改字段
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN state_hash TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN last_sync_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN tampered_flag INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
 
 def create_user(username: str, email: str, password: str):
     with get_db() as conn:
         try:
-            hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            hash = pwd_context.hash(password)
             conn.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
                          (username, email, hash))
             return True, "注册成功"
@@ -51,7 +64,7 @@ def create_user(username: str, email: str, password: str):
 def authenticate_user(username: str, password: str):
     with get_db() as conn:
         user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        if user and bcrypt.checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8')):
+        if user and pwd_context.verify(password, user["password_hash"]):
             return user
     return None
 
@@ -75,6 +88,52 @@ def get_leaderboard(top_n=10):
     with get_db() as conn:
         rows = conn.execute("SELECT username, credits FROM users ORDER BY credits DESC LIMIT ?", (top_n,)).fetchall()
         return [{"username": r["username"], "credits": r["credits"]} for r in rows]
+
+def get_credit_ledger(user_id: int, limit: int = 20):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT amount, reason, timestamp FROM credit_ledger WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+            (user_id, limit)
+        ).fetchall()
+        return [{"amount": r["amount"], "reason": r["reason"], "timestamp": r["timestamp"]} for r in rows]
+
+# ========== 授粉设置 ==========
+def get_user_settings(user_id: int):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT auto_pollinate_enabled FROM users WHERE id = ?",
+            (user_id,)
+        ).fetchone()
+        if row:
+            return {"auto_pollinate_enabled": bool(row["auto_pollinate_enabled"])}
+        return None
+
+def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET auto_pollinate_enabled = ? WHERE id = ?",
+            (1 if auto_pollinate_enabled else 0, user_id)
+        )
+        return True
+
+# ========== 防篡改锚点（预留） ==========
+def generate_state_signature(user_id: int):
+    """预留：未来对用户状态生成签名。当前返回空字符串。"""
+    return ""
+
+def verify_state_signature(user_id: int, signature: str):
+    """预留：未来验证用户提交的签名。当前始终返回 True。"""
+    return True
+
+def log_tamper_event(user_id: int, detail: str):
+    """预留：未来记录篡改事件。当前只写入本地文件，不参与业务。"""
+    entry = {
+        "user_id": user_id,
+        "detail": detail,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    with open("tamper_log.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 # 初始化数据库
 init_db()
