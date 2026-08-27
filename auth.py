@@ -50,6 +50,11 @@ def init_db():
             conn.execute("ALTER TABLE users ADD COLUMN tampered_flag INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
+        # 自动授粉开关字段
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN auto_pollinate_enabled INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass
 
 def create_user(username: str, email: str, password: str):
     with get_db() as conn:
@@ -134,6 +139,19 @@ def log_tamper_event(user_id: int, detail: str):
     }
     with open("tamper_log.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+def deduct_credits(user_id: int, amount: int, reason: str = ""):
+    """扣除用户积分。返回 (成功布尔, 错误消息)。"""
+    with get_db() as conn:
+        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            return False, "用户不存在"
+        if user["credits"] < amount:
+            return False, "积分不足"
+        conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
+        conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
+                     (user_id, -amount, reason))
+        return True, "扣除成功"
 
 # 初始化数据库
 init_db()

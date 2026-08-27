@@ -8,7 +8,7 @@ from rank_bm25 import BM25Okapi
 
 import auth
 
-app = FastAPI(title="SASES Full Web Service", version="0.3.1")
+app = FastAPI(title="SASES Full Web Service", version="0.3.2")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
@@ -116,6 +116,16 @@ async def my_ledger(current_user=Depends(get_current_user)):
 # ---------- 聊天（需认证） ----------
 @app.post("/chat")
 async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
+    # 获取用户自动授粉设置
+    settings = auth.get_user_settings(current_user["id"])
+    auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
+
+    if not auto_pollinate:
+        # 自动授粉已关闭，仅查询需要扣除积分
+        success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
+        if not success:
+            raise HTTPException(status_code=402, detail=msg)
+
     kb = load_kb()
     query = req.query
     if not kb:
@@ -134,7 +144,11 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
         else:
             answer = "未找到相似任务。"
             source = "none"
-    return {"answer": answer, "source": source}
+
+    result = {"answer": answer, "source": source}
+    if not auto_pollinate:
+        result["deducted"] = 2
+    return result
 
 # ---------- 统计（公开） ----------
 @app.get("/stats")
