@@ -1,4 +1,4 @@
-import sqlite3, os, json, time
+import sqlite3, os, json, time, hmac, hashlib
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -8,7 +8,33 @@ SECRET_KEY = os.environ.get("SASES_SECRET_KEY", "sases-dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1天
 
+# 状态签名密钥文件
+SIGN_KEY_FILE = "secret_key.bin"
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _load_or_create_sign_key():
+    """加载或创建 HMAC 签名密钥。"""
+    if os.path.exists(SIGN_KEY_FILE):
+        with open(SIGN_KEY_FILE, "rb") as f:
+            return f.read()
+    else:
+        key = os.urandom(32)
+        with open(SIGN_KEY_FILE, "wb") as f:
+            f.write(key)
+        return key
+
+SIGN_KEY = _load_or_create_sign_key()
+
+def sign_state(user_id: int, credits: int) -> str:
+    """对用户积分状态生成 HMAC 签名。"""
+    message = f"{user_id}:{credits}".encode()
+    return hmac.new(SIGN_KEY, message, hashlib.sha256).hexdigest()
+
+def verify_state(user_id: int, credits: int, signature: str) -> bool:
+    """验证用户积分状态签名是否有效。"""
+    expected = sign_state(user_id, credits)
+    return hmac.compare_digest(expected, signature)
 
 def get_db():
     conn = sqlite3.connect(DB_FILE)
@@ -78,6 +104,11 @@ def create_user(username: str, email: str, password: str):
             hash = pwd_context.hash(password)
             conn.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
                          (username, email, hash))
+            # 为新用户生成初始状态签名
+            user = conn.execute("SELECT id, credits FROM users WHERE username = ?", (username,)).fetchone()
+            if user:
+                conn.execute("UPDATE users SET state_hash = ? WHERE id = ?",
+                             (sign_state(user["id"], user["credits"]), user["id"]))
             return True, "注册成功"
         except sqlite3.IntegrityError:
             return False, "用户名或邮箱已存在"
@@ -99,11 +130,23 @@ def get_user_by_id(user_id: int):
     with get_db() as conn:
         return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
+def _update_state_hash(user_id: int):
+    """根据当前积分更新用户状态哈希。"""
+    with get_db() as conn:
+        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
+        if user:
+            new_hash = sign_state(user_id, user["credits"])
+            conn.execute("UPDATE users SET state_hash = ? WHERE id = ?", (new_hash, user_id))
+            return True
+        return False
+
 def add_credits(user_id: int, amount: int, reason: str = ""):
     with get_db() as conn:
         conn.execute("UPDATE users SET credits = credits + ? WHERE id = ?", (amount, user_id))
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, amount, reason))
+    # 更新状态签名
+    _update_state_hash(user_id)
 
 def deduct_credits(user_id: int, amount: int, reason: str = ""):
     """扣除用户积分。返回 (成功布尔, 错误消息)。"""
@@ -116,7 +159,27 @@ def deduct_credits(user_id: int, amount: int, reason: str = ""):
         conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, -amount, reason))
-        return True, "扣除成功"
+    # 更新状态签名
+    _update_state_hash(user_id)
+    return True, "扣除成功"
+
+def verify_user_integrity(user_id: int) -> bool:
+    """检查用户积分与状态哈希是否匹配。"""
+    with get_db() as conn:
+        user = conn.execute("SELECT credits, state_hash FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            return False
+        return verify_state(user_id, user["credits"], user["state_hash"])
+
+def check_all_users_integrity():
+    """扫描所有用户，返回积分被篡改的用户ID列表。"""
+    tampered = []
+    with get_db() as conn:
+        users = conn.execute("SELECT id, credits, state_hash FROM users").fetchall()
+        for u in users:
+            if not verify_state(u["id"], u["credits"], u["state_hash"]):
+                tampered.append(u["id"])
+    return tampered
 
 def get_leaderboard(top_n=10):
     with get_db() as conn:
@@ -133,7 +196,6 @@ def get_credit_ledger(user_id: int, limit: int = 20):
 
 # ========== 系统消息（SASES助手） ==========
 def add_system_message(user_id: int, content: str, title: str = "SASES助手"):
-    """向用户发送系统消息。"""
     with get_db() as conn:
         conn.execute(
             "INSERT INTO system_messages (user_id, title, content) VALUES (?, ?, ?)",
@@ -141,7 +203,6 @@ def add_system_message(user_id: int, content: str, title: str = "SASES助手"):
         )
 
 def get_system_messages(user_id: int, limit: int = 50):
-    """获取用户系统消息，返回未读数量。"""
     with get_db() as conn:
         rows = conn.execute(
             "SELECT id, title, content, is_read, timestamp FROM system_messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
@@ -161,7 +222,6 @@ def get_system_messages(user_id: int, limit: int = 50):
         return messages, unread_count
 
 def mark_messages_read(user_id: int):
-    """标记所有消息为已读。"""
     with get_db() as conn:
         conn.execute(
             "UPDATE system_messages SET is_read = 1 WHERE user_id = ? AND is_read = 0",
@@ -189,7 +249,6 @@ def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
 
 # ========== 管理员 ==========
 def is_admin(user_id: int) -> bool:
-    """检查用户是否为管理员。"""
     with get_db() as conn:
         row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
         if row and row["is_admin"] == 1:
@@ -197,7 +256,6 @@ def is_admin(user_id: int) -> bool:
         return False
 
 def set_admin(user_id: int, admin: bool = True):
-    """设置或取消用户的管理员身份。"""
     with get_db() as conn:
         conn.execute(
             "UPDATE users SET is_admin = ? WHERE id = ?",
@@ -207,12 +265,18 @@ def set_admin(user_id: int, admin: bool = True):
 
 # ========== 防篡改锚点（预留） ==========
 def generate_state_signature(user_id: int):
-    """预留：未来对用户状态生成签名。当前返回空字符串。"""
+    """返回当前用户状态签名。"""
+    user = get_user_by_id(user_id)
+    if user:
+        return sign_state(user_id, user["credits"])
     return ""
 
 def verify_state_signature(user_id: int, signature: str):
-    """预留：未来验证用户提交的签名。当前始终返回 True。"""
-    return True
+    """验证用户提交的签名是否与当前状态一致。"""
+    user = get_user_by_id(user_id)
+    if not user:
+        return False
+    return verify_state(user_id, user["credits"], signature)
 
 def log_tamper_event(user_id: int, detail: str):
     """预留：未来记录篡改事件。当前只写入本地文件，不参与业务。"""

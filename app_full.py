@@ -11,7 +11,7 @@ import safety_scan
 import sandbox
 import contribution_log
 
-app = FastAPI(title="SASES Full Web Service", version="0.4.4")
+app = FastAPI(title="SASES Full Web Service", version="0.4.6")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
@@ -58,7 +58,6 @@ def find_pending_pollinate(user_id):
     kb = load_kb()
     shared_ids = load_shared_ids()
     for entry in reversed(kb):
-        # 只允许手动授粉的记录进入待分享流程
         if entry.get("model_id") != "manual_pollinate":
             continue
         if entry.get("id") not in shared_ids and entry.get("user_id") == user_id:
@@ -256,7 +255,6 @@ async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_u
 # ---------- 待授粉内容（仅管理员） ----------
 @app.get("/pollinate/pending")
 async def pollinate_pending(current_user=Depends(get_current_user)):
-    # 管理员校验
     if not auth.is_admin(current_user["id"]):
         raise HTTPException(status_code=403, detail="仅管理员可用")
     entry = find_pending_pollinate(current_user["id"])
@@ -272,7 +270,6 @@ async def pollinate_pending(current_user=Depends(get_current_user)):
 
 @app.post("/pollinate/confirm")
 async def pollinate_confirm(current_user=Depends(get_current_user)):
-    # 管理员校验
     if not auth.is_admin(current_user["id"]):
         raise HTTPException(status_code=403, detail="仅管理员可用")
 
@@ -281,7 +278,14 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="没有待授粉的内容")
 
     test_cases = entry.get("test_cases", [])
-    if len(test_cases) >= 3:
+    task = entry.get("task", "")
+    solution = entry.get("solution", "")
+
+    cond1 = len(test_cases) >= 3
+    cond2 = len(solution.split('\n')) >= 4
+    cond3 = len(task) >= 15
+
+    if cond1 and cond2 and cond3:
         reward = 10
         reason = "手动授粉（专业领域价值）"
     else:
@@ -296,24 +300,31 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
         user_id=current_user["id"],
         event_type="manual_pollinate",
         target_id=entry["id"],
-        metadata={"task": entry["task"][:100], "reward": reward, "test_cases_count": len(test_cases)}
+        metadata={"task": task[:100], "reward": reward, "test_cases_count": len(test_cases), "solution_lines": len(solution.split('\n'))}
     )
 
     return {"message": f"授粉成功，获得 {reward} 积分", "reward": reward, "reason": reason}
 
-# ---------- 防篡改锚点（预留） ----------
-@app.get("/protocol_version")
-async def protocol_version():
-    return {"version": "1.0.0"}
-
+# ---------- 防篡改校验 ----------
 @app.post("/sync_state")
 async def sync_state(current_user=Depends(get_current_user)):
+    # 校验用户积分状态签名
+    is_valid = auth.verify_user_integrity(current_user["id"])
+    if not is_valid:
+        auth.log_tamper_event(current_user["id"], "state hash mismatch during sync")
     return {
         "user_id": current_user["id"],
         "credits": current_user["credits"],
-        "tampered": False,
+        "tampered": not is_valid,
         "server_time": time.strftime("%Y-%m-%d %H:%M:%S")
     }
+
+@app.get("/admin/check_integrity")
+async def admin_check_integrity(current_user=Depends(get_current_user)):
+    if not auth.is_admin(current_user["id"]):
+        raise HTTPException(status_code=403, detail="仅管理员可用")
+    tampered_ids = auth.check_all_users_integrity()
+    return {"tampered_user_ids": tampered_ids}
 
 # ---------- 根路由 ----------
 @app.get("/")
