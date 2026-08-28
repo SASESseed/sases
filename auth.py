@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
-DB_FILE = "users.db"
-SECRET_KEY = os.environ.get("SASES_SECRET_KEY", "sases-dev-secret-key")
+from core import config
+
+DB_FILE = config.DB_FILE
+SECRET_KEY = config.SASES_SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1天
-
-# 状态签名密钥文件
-SIGN_KEY_FILE = "secret_key.bin"
+SIGN_KEY_FILE = config.SIGN_KEY_FILE
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -87,12 +87,10 @@ def init_db():
             conn.execute("ALTER TABLE users ADD COLUMN tampered_flag INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
-        # 自动授粉开关字段
         try:
             conn.execute("ALTER TABLE users ADD COLUMN auto_pollinate_enabled INTEGER DEFAULT 1")
         except sqlite3.OperationalError:
             pass
-        # 管理员字段
         try:
             conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
@@ -104,7 +102,6 @@ def create_user(username: str, email: str, password: str):
             hash = pwd_context.hash(password)
             conn.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
                          (username, email, hash))
-            # 为新用户生成初始状态签名
             user = conn.execute("SELECT id, credits FROM users WHERE username = ?", (username,)).fetchone()
             if user:
                 conn.execute("UPDATE users SET state_hash = ? WHERE id = ?",
@@ -131,7 +128,6 @@ def get_user_by_id(user_id: int):
         return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
 def _update_state_hash(user_id: int):
-    """根据当前积分更新用户状态哈希。"""
     with get_db() as conn:
         user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
         if user:
@@ -145,11 +141,9 @@ def add_credits(user_id: int, amount: int, reason: str = ""):
         conn.execute("UPDATE users SET credits = credits + ? WHERE id = ?", (amount, user_id))
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, amount, reason))
-    # 更新状态签名
     _update_state_hash(user_id)
 
 def deduct_credits(user_id: int, amount: int, reason: str = ""):
-    """扣除用户积分。返回 (成功布尔, 错误消息)。"""
     with get_db() as conn:
         user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
@@ -159,12 +153,10 @@ def deduct_credits(user_id: int, amount: int, reason: str = ""):
         conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, -amount, reason))
-    # 更新状态签名
     _update_state_hash(user_id)
     return True, "扣除成功"
 
 def verify_user_integrity(user_id: int) -> bool:
-    """检查用户积分与状态哈希是否匹配。"""
     with get_db() as conn:
         user = conn.execute("SELECT credits, state_hash FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
@@ -172,7 +164,6 @@ def verify_user_integrity(user_id: int) -> bool:
         return verify_state(user_id, user["credits"], user["state_hash"])
 
 def check_all_users_integrity():
-    """扫描所有用户，返回积分被篡改的用户ID列表。"""
     tampered = []
     with get_db() as conn:
         users = conn.execute("SELECT id, credits, state_hash FROM users").fetchall()
@@ -265,21 +256,18 @@ def set_admin(user_id: int, admin: bool = True):
 
 # ========== 防篡改锚点（预留） ==========
 def generate_state_signature(user_id: int):
-    """返回当前用户状态签名。"""
     user = get_user_by_id(user_id)
     if user:
         return sign_state(user_id, user["credits"])
     return ""
 
 def verify_state_signature(user_id: int, signature: str):
-    """验证用户提交的签名是否与当前状态一致。"""
     user = get_user_by_id(user_id)
     if not user:
         return False
     return verify_state(user_id, user["credits"], signature)
 
 def log_tamper_event(user_id: int, detail: str):
-    """预留：未来记录篡改事件。当前只写入本地文件，不参与业务。"""
     entry = {
         "user_id": user_id,
         "detail": detail,

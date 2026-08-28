@@ -11,12 +11,13 @@ import safety_scan
 import sandbox
 import contribution_log
 from core import knowledge_base
+from core import config
 
-app = FastAPI(title="SASES Full Web Service", version="0.4.7")
+app = FastAPI(title="SASES Full Web Service", version="0.4.8")
 
-KB_FILE = "success_kb.json"
-SEED_POOL_FILE = "seed_tasks_external.jsonl"
-SHARED_LOG_FILE = "shared_pollinate_log.jsonl"
+KB_FILE = config.KB_FILE
+SEED_POOL_FILE = config.SEED_POOL_FILE
+SHARED_LOG_FILE = config.SHARED_LOG_FILE
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -156,13 +157,13 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             answer = "未找到相似任务。"
 
     if source == "local_kb" and not auto_pollinate:
-        success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
+        success, msg = auth.deduct_credits(current_user["id"], config.QUERY_DEDUCTION, "仅查询不回流")
         if success:
-            auth.add_system_message(current_user["id"], "本次查询已扣除2积分（自动授粉关闭）。", "SASES助手")
+            auth.add_system_message(current_user["id"], f"本次查询已扣除{config.QUERY_DEDUCTION}积分（自动授粉关闭）。", "SASES助手")
 
     result = {"answer": answer, "source": source}
     if source == "local_kb" and not auto_pollinate:
-        result["deducted"] = 2
+        result["deducted"] = config.QUERY_DEDUCTION
     return result
 
 # ---------- 统计（公开） ----------
@@ -248,10 +249,10 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
     cond3 = len(task) >= 15
 
     if cond1 and cond2 and cond3:
-        reward = 10
+        reward = config.MANUAL_POLLINATE_EXPERT_REWARD
         reason = "手动授粉（专业领域价值）"
     else:
-        reward = 3
+        reward = config.MANUAL_POLLINATE_BASIC_REWARD
         reason = "手动授粉（基础）"
 
     knowledge_base.add_shared_id(entry["id"])
