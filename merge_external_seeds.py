@@ -4,6 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 import auth
 from core import config
+from core import similarity
 
 EXTERNAL_FILE = config.SEED_POOL_FILE          # seed_tasks_external.jsonl
 MAIN_FILE = config.MAIN_SEED_FILE              # seed_tasks_new.jsonl
@@ -34,21 +35,6 @@ def load_kb_descriptions():
         except:
             return []
     return [item.get("task", "") for item in data]
-
-def is_similar(new_desc, existing_descs, threshold=SIMILARITY_THRESHOLD):
-    """使用字符级 TF-IDF 余弦相似度判断是否重复"""
-    if not existing_descs:
-        return False
-    corpus = existing_descs + [new_desc]
-    vectorizer = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
-    try:
-        existing_vecs = vectorizer.fit_transform(existing_descs)
-        new_vec = vectorizer.transform([new_desc])
-        sims = cosine_similarity(new_vec, existing_vecs).flatten()
-        return bool((sims > threshold).any())
-    except Exception as e:
-        print(f"相似度计算异常: {e}")
-        return False
 
 def main():
     external = load_jsonl(EXTERNAL_FILE)
@@ -88,7 +74,7 @@ def main():
             continue
 
         # 再检查语义相似
-        if is_similar(desc, existing_descs):
+        if similarity.is_similar(desc, existing_descs, threshold=SIMILARITY_THRESHOLD):
             print(f"跳过重复任务（语义相似）：{desc[:50]}...")
             if user_id is not None:
                 try:
