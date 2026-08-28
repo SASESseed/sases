@@ -3,13 +3,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 import auth
+from core import config
 
-EXTERNAL_FILE = "seed_tasks_external.jsonl"
-MAIN_FILE = "seed_tasks_new.jsonl"
-MERGED_FILE = "seed_tasks_new_merged.jsonl"
-KB_FILE = "success_kb.json"
+EXTERNAL_FILE = config.SEED_POOL_FILE          # seed_tasks_external.jsonl
+MAIN_FILE = config.MAIN_SEED_FILE              # seed_tasks_new.jsonl
+MERGED_FILE = config.MAIN_SEED_FILE + ".merged"
+KB_FILE = config.KB_FILE
 
-SIMILARITY_THRESHOLD = 0.30  # 相似度超过此值视为重复
+SIMILARITY_THRESHOLD = config.SIMILARITY_THRESHOLD
 
 def load_jsonl(path):
     if not os.path.exists(path):
@@ -57,7 +58,10 @@ def main():
         print("没有外部种子需要合并。")
         return
 
+    # 加载知识库已有任务描述
     kb_descs = load_kb_descriptions()
+
+    # 当前所有已存在描述（主池 + 知识库）
     existing_descs = [item.get("description", "") for item in existing] + kb_descs
 
     new_items = []
@@ -68,6 +72,7 @@ def main():
             continue
         user_id = seed.get("user_id")
 
+        # 先检查完全相同
         if desc in existing_descs:
             print(f"跳过重复任务（完全相同）：{desc[:50]}...")
             if user_id is not None:
@@ -82,6 +87,7 @@ def main():
             skipped += 1
             continue
 
+        # 再检查语义相似
         if is_similar(desc, existing_descs):
             print(f"跳过重复任务（语义相似）：{desc[:50]}...")
             if user_id is not None:
@@ -107,6 +113,7 @@ def main():
             pass
         return
 
+    # 合并写入新文件
     merged = existing + new_items
     with open(MERGED_FILE, "w", encoding="utf-8") as f:
         for item in merged:
@@ -119,6 +126,8 @@ def main():
         print(f"原主池已备份为 {MAIN_FILE}.bak")
     os.replace(MERGED_FILE, MAIN_FILE)
     print(f"主种子池已更新为 {MAIN_FILE}")
+
+    # 不在此处奖励积分，积分奖励在 process_seeds.py 成功处理后发放
 
     with open(EXTERNAL_FILE, "w", encoding="utf-8") as f:
         pass

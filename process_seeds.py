@@ -1,54 +1,18 @@
 import openai, ast, re, uuid, time, random, json, os, subprocess, tempfile, inspect, datetime
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from collections import defaultdict
 
-import auth  # 新增：用于发放积分
+import auth
+from core import config
+from core import knowledge_base
 
 # ========== 配置 ==========
 client = openai.OpenAI(
-    api_key=os.environ["DEEPSEEK_API_KEY"],
-    base_url="https://api.deepseek.com/v1",
+    api_key=config.DEEPSEEK_API_KEY,
+    base_url=config.DEEPSEEK_BASE_URL,
     timeout=120,
     max_retries=2
 )
-MODEL = "deepseek-v4-flash"
-KB_FILE = "success_kb.json"
-SEED_FILE = "seed_tasks_new.jsonl"
-
-# ========== 知识库 ==========
-def load_kb():
-    if not os.path.exists(KB_FILE):
-        return []
-    with open(KB_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
-            return []
-
-def save_kb(entries):
-    with open(KB_FILE, "w", encoding="utf-8") as f:
-        json.dump(entries, f, ensure_ascii=False, indent=2)
-
-knowledge_base = load_kb()
-
-def add_to_kb(task, branch_a, branch_b, synthesis, model_id=MODEL, user_id="system", backtrack_count=0, test_cases=None):
-    entry = {
-        "task": task,
-        "branch_a": branch_a,
-        "branch_b": branch_b,
-        "solution": synthesis,
-        "verified": True,
-        "id": str(uuid.uuid4()),
-        "model_id": model_id,
-        "user_id": user_id,
-        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
-        "backtrack_count": backtrack_count
-    }
-    if test_cases is not None:
-        entry["test_cases"] = test_cases
-    knowledge_base.append(entry)
-    save_kb(knowledge_base)
+MODEL = config.MODEL_NAME
+SEED_FILE = config.MAIN_SEED_FILE
 
 # ========== 工具函数 ==========
 def is_python_code(text):
@@ -208,19 +172,27 @@ def process_seed(task):
         passed, msg, _ = safe_run_tests(synthesis, test_cases)
         if passed:
             print("  ✓ 通过，入库。")
-            add_to_kb(desc, branch_a, branch_b, synthesis, model_id=MODEL, user_id=seed_user_id, test_cases=test_cases)
+            knowledge_base.add_to_kb(
+                task=desc,
+                branch_a=branch_a,
+                branch_b=branch_b,
+                synthesis=synthesis,
+                model_id=MODEL,
+                user_id=seed_user_id,
+                test_cases=test_cases
+            )
 
-            # 发放积分：仅对真实用户，且不是 system
+            # 发放积分：仅对真实用户
             if seed_user_id != "system":
                 try:
                     uid = int(seed_user_id)
-                    auth.add_credits(uid, 5, "外部种子被采纳")
+                    auth.add_credits(uid, config.EXTERNAL_SEED_REWARD, "外部种子被采纳")
                     auth.add_system_message(
                         uid,
-                        f"感谢你的贡献！你提交的种子已成功处理并加入知识库，获得 5 积分。任务：{desc[:100]}...",
+                        f"感谢你的贡献！你提交的种子已成功处理并加入知识库，获得 {config.EXTERNAL_SEED_REWARD} 积分。任务：{desc[:100]}...",
                         "SASES助手"
                     )
-                    print(f"  已为用户 {uid} 发放 5 积分。")
+                    print(f"  已为用户 {uid} 发放 {config.EXTERNAL_SEED_REWARD} 积分。")
                 except Exception as e:
                     print(f"  发放积分失败: {e}")
 
@@ -254,7 +226,7 @@ def main():
 
     print(f"\n处理完成：成功 {success}/{len(tasks)}")
 
-    # 处理完成后清空种子池，防止下次重复处理
+    # 处理完成后清空种子池
     with open(SEED_FILE, "w", encoding="utf-8") as f:
         pass
     print(f"种子池 {SEED_FILE} 已清空，避免重复处理。")
