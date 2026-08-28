@@ -9,7 +9,7 @@ from rank_bm25 import BM25Okapi
 import auth
 import safety_scan
 import sandbox
-import contribution_log
+from core import contribution_log
 from core import knowledge_base
 from core import config
 
@@ -267,6 +267,14 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
     )
 
     return {"message": f"授粉成功，获得 {reward} 积分", "reward": reward, "reason": reason}
+
+
+@app.get("/admin/contribution_logs")
+async def admin_contribution_logs(limit: int = 50, current_user=Depends(get_current_user)):
+    if not auth.is_admin(current_user["id"]):
+        raise HTTPException(status_code=403, detail="仅管理员可用")
+    logs = contribution_log.get_all_logs(limit)
+    return {"logs": logs}
 
 # ---------- 防篡改校验 ----------
 @app.post("/sync_state")
