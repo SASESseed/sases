@@ -72,3 +72,31 @@ def count_logs():
     init_log_table()
     with _get_conn() as conn:
         return conn.execute("SELECT COUNT(*) FROM contribution_log").fetchone()[0]
+
+def get_contrib_leaderboard(top_n=10):
+    """
+    计算贡献指数排行榜。
+    不同事件类型赋予不同权重：
+      - seed_submit: 1.0
+      - manual_pollinate: 3.0
+      - credit_award: 0.5
+      - 其他: 1.0
+    返回列表: [{"user_id": int, "score": float}]
+    """
+    init_log_table()
+    with _get_conn() as conn:
+        rows = conn.execute("""
+            SELECT user_id, SUM(
+                CASE
+                    WHEN event_type = 'seed_submit' THEN 1.0
+                    WHEN event_type = 'manual_pollinate' THEN 3.0
+                    WHEN event_type = 'credit_award' THEN 0.5
+                    ELSE 1.0
+                END
+            ) as score
+            FROM contribution_log
+            GROUP BY user_id
+            ORDER BY score DESC
+            LIMIT ?
+        """, (top_n,)).fetchall()
+        return [{"user_id": r["user_id"], "score": r["score"]} for r in rows]

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import auth
-import contribution_log
+from core import contribution_log
 from core import knowledge_base
 from core import config
 from core.api_routes.auth_routes import get_current_user
@@ -31,10 +31,25 @@ async def update_my_settings(req: SettingsUpdateRequest, current_user=Depends(ge
     auth.update_user_settings(current_user["id"], req.auto_pollinate_enabled)
     return {"message": "设置已更新", "auto_pollinate_enabled": req.auto_pollinate_enabled}
 
-# ---------- 排行榜 ----------
+# ---------- 积分排行榜（保留，作为经济参考） ----------
 @router.get("/leaderboard")
 async def leaderboard(top_n: int = 10):
     return auth.get_leaderboard(top_n)
+
+# ---------- 贡献度排行榜（新增，核心声誉榜） ----------
+@router.get("/contrib_leaderboard")
+async def contrib_leaderboard(top_n: int = 10):
+    ranking = contribution_log.get_contrib_leaderboard(top_n)
+    result = []
+    for item in ranking:
+        user = auth.get_user_by_id(item["user_id"])
+        username = user["username"] if user else f"user_{item['user_id']}"
+        result.append({
+            "user_id": item["user_id"],
+            "username": username,
+            "score": item["score"]
+        })
+    return result
 
 # ---------- 积分流水 ----------
 @router.get("/my_ledger")
