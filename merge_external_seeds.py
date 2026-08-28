@@ -89,24 +89,8 @@ def main():
     os.replace(MERGED_FILE, MAIN_FILE)
     print(f"主种子池已更新为 {MAIN_FILE}")
     
-    # 自动奖励外部种子提交者，并发送感谢消息
-    rewarded = 0
-    for seed in new_items:
-        user_id = seed.get("user_id")
-        if user_id is not None:
-            try:
-                auth.add_credits(int(user_id), 5, "外部种子被采纳")   # 改为 +5
-                auth.add_system_message(
-                    int(user_id),
-                    f"感谢你的贡献！你的种子已进入处理队列，将尽快处理。任务：{seed['description'][:100]}...",
-                    "SASES助手"
-                )
-                rewarded += 1
-            except Exception as e:
-                print(f"奖励用户 {user_id} 失败: {e}")
-        else:
-            print("发现无 user_id 的外部种子，跳过奖励。")
-    print(f"已为 {rewarded} 个用户各奖励 5 积分。")
+    # 不再在此处发放积分，只发送感谢消息
+    # 积分奖励将在 process_seeds.py 成功处理后发放
     
     with open(EXTERNAL_FILE, "w", encoding="utf-8") as f:
         pass
