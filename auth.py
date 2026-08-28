@@ -37,6 +37,17 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS system_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT DEFAULT 'SASES助手',
+            content TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """)
         # 预留防篡改字段
         try:
             conn.execute("ALTER TABLE users ADD COLUMN state_hash TEXT DEFAULT ''")
@@ -53,6 +64,11 @@ def init_db():
         # 自动授粉开关字段
         try:
             conn.execute("ALTER TABLE users ADD COLUMN auto_pollinate_enabled INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass
+        # 管理员字段
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
 
@@ -89,6 +105,19 @@ def add_credits(user_id: int, amount: int, reason: str = ""):
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, amount, reason))
 
+def deduct_credits(user_id: int, amount: int, reason: str = ""):
+    """扣除用户积分。返回 (成功布尔, 错误消息)。"""
+    with get_db() as conn:
+        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            return False, "用户不存在"
+        if user["credits"] < amount:
+            return False, "积分不足"
+        conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
+        conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
+                     (user_id, -amount, reason))
+        return True, "扣除成功"
+
 def get_leaderboard(top_n=10):
     with get_db() as conn:
         rows = conn.execute("SELECT username, credits FROM users ORDER BY credits DESC LIMIT ?", (top_n,)).fetchall()
@@ -101,6 +130,43 @@ def get_credit_ledger(user_id: int, limit: int = 20):
             (user_id, limit)
         ).fetchall()
         return [{"amount": r["amount"], "reason": r["reason"], "timestamp": r["timestamp"]} for r in rows]
+
+# ========== 系统消息（SASES助手） ==========
+def add_system_message(user_id: int, content: str, title: str = "SASES助手"):
+    """向用户发送系统消息。"""
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO system_messages (user_id, title, content) VALUES (?, ?, ?)",
+            (user_id, title, content)
+        )
+
+def get_system_messages(user_id: int, limit: int = 50):
+    """获取用户系统消息，返回未读数量。"""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, title, content, is_read, timestamp FROM system_messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+            (user_id, limit)
+        ).fetchall()
+        messages = [{
+            "id": r["id"],
+            "title": r["title"],
+            "content": r["content"],
+            "is_read": r["is_read"],
+            "timestamp": r["timestamp"]
+        } for r in rows]
+        unread_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM system_messages WHERE user_id = ? AND is_read = 0",
+            (user_id,)
+        ).fetchone()["cnt"]
+        return messages, unread_count
+
+def mark_messages_read(user_id: int):
+    """标记所有消息为已读。"""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE system_messages SET is_read = 1 WHERE user_id = ? AND is_read = 0",
+            (user_id,)
+        )
 
 # ========== 授粉设置 ==========
 def get_user_settings(user_id: int):
@@ -118,6 +184,24 @@ def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
         conn.execute(
             "UPDATE users SET auto_pollinate_enabled = ? WHERE id = ?",
             (1 if auto_pollinate_enabled else 0, user_id)
+        )
+        return True
+
+# ========== 管理员 ==========
+def is_admin(user_id: int) -> bool:
+    """检查用户是否为管理员。"""
+    with get_db() as conn:
+        row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
+        if row and row["is_admin"] == 1:
+            return True
+        return False
+
+def set_admin(user_id: int, admin: bool = True):
+    """设置或取消用户的管理员身份。"""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET is_admin = ? WHERE id = ?",
+            (1 if admin else 0, user_id)
         )
         return True
 
@@ -140,32 +224,5 @@ def log_tamper_event(user_id: int, detail: str):
     with open("tamper_log.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-def deduct_credits(user_id: int, amount: int, reason: str = ""):
-    """扣除用户积分。返回 (成功布尔, 错误消息)。"""
-    with get_db() as conn:
-        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
-        if not user:
-            return False, "用户不存在"
-        if user["credits"] < amount:
-            return False, "积分不足"
-        conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
-        conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
-                     (user_id, -amount, reason))
-        return True, "扣除成功"
-
-def has_duplicate_pollinate(user_id: int, task: str, solution: str, window_minutes: int = 60):
-    """检查用户是否在指定时间窗口内提交过相同的手动授粉内容。"""
-    with get_db() as conn:
-        row = conn.execute("""
-            SELECT COUNT(*) as cnt FROM credit_ledger
-            WHERE user_id = ?
-              AND reason = '手动授粉'
-              AND timestamp >= datetime('now', ?)
-              AND amount > 0
-        """, (user_id, f"-{window_minutes} minutes")).fetchone()
-        # 注意：credit_ledger 不存储 task 和 solution，所以无法精确判断内容重复。
-        # 这里只能做频率限制：例如 60 秒内不允许重复提交。
-        return row["cnt"] > 0
-    
 # 初始化数据库
 init_db()
