@@ -10,8 +10,9 @@ import auth
 import safety_scan
 import sandbox
 import contribution_log
+from core import knowledge_base
 
-app = FastAPI(title="SASES Full Web Service", version="0.4.6")
+app = FastAPI(title="SASES Full Web Service", version="0.4.7")
 
 KB_FILE = "success_kb.json"
 SEED_POOL_FILE = "seed_tasks_external.jsonl"
@@ -21,48 +22,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ---------- 工具函数 ----------
-def load_kb():
-    if not os.path.exists(KB_FILE):
-        return []
-    with open(KB_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
-            return []
-
-def save_kb(entries):
-    with open(KB_FILE, "w", encoding="utf-8") as f:
-        json.dump(entries, f, ensure_ascii=False, indent=2)
-
 def tokenize(text):
+    """文本分词（用于 BM25）"""
     return re.findall(r"\w+", text.lower())
-
-def load_shared_ids():
-    if not os.path.exists(SHARED_LOG_FILE):
-        return set()
-    with open(SHARED_LOG_FILE, "r", encoding="utf-8") as f:
-        ids = set()
-        for line in f:
-            try:
-                data = json.loads(line)
-                ids.add(data.get("kb_id"))
-            except:
-                pass
-        return ids
-
-def add_shared_id(kb_id):
-    with open(SHARED_LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"kb_id": kb_id, "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}) + "\n")
-
-def find_pending_pollinate(user_id):
-    kb = load_kb()
-    shared_ids = load_shared_ids()
-    for entry in reversed(kb):
-        if entry.get("model_id") != "manual_pollinate":
-            continue
-        if entry.get("id") not in shared_ids and entry.get("user_id") == user_id:
-            return entry
-    return None
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -167,7 +129,7 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     settings = auth.get_user_settings(current_user["id"])
     auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
 
-    kb = load_kb()
+    kb = knowledge_base.load_kb()
     query = req.query
     source = "none"
     answer = ""
@@ -184,7 +146,6 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             best = kb[best_idx]
             answer = f"找到相似任务：{best['task']}\n解决方案：\n{best['solution'][:500]}"
             source = "local_kb"
-            # 记录知识库引用事件
             contribution_log.log_event(
                 user_id=current_user["id"],
                 event_type="chat_retrieval",
@@ -194,14 +155,10 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
         else:
             answer = "未找到相似任务。"
 
-    # 只有命中知识库且自动授粉关闭时，才扣积分
     if source == "local_kb" and not auto_pollinate:
         success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
         if success:
             auth.add_system_message(current_user["id"], "本次查询已扣除2积分（自动授粉关闭）。", "SASES助手")
-        else:
-            # 积分不足时不扣分，但也不返回结果（或仍返回结果？这里选择仍返回结果，但提示积分不足）
-            pass
 
     result = {"answer": answer, "source": source}
     if source == "local_kb" and not auto_pollinate:
@@ -211,7 +168,7 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
 # ---------- 统计（公开） ----------
 @app.get("/stats")
 async def stats():
-    kb = load_kb()
+    kb = knowledge_base.load_kb()
     model_counts = {}
     for item in kb:
         model = item.get("model_id", "unknown")
@@ -262,7 +219,7 @@ async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_u
 async def pollinate_pending(current_user=Depends(get_current_user)):
     if not auth.is_admin(current_user["id"]):
         raise HTTPException(status_code=403, detail="仅管理员可用")
-    entry = find_pending_pollinate(current_user["id"])
+    entry = knowledge_base.find_pending_pollinate(current_user["id"])
     if not entry:
         return {"has_pending": False}
     return {
@@ -278,7 +235,7 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
     if not auth.is_admin(current_user["id"]):
         raise HTTPException(status_code=403, detail="仅管理员可用")
 
-    entry = find_pending_pollinate(current_user["id"])
+    entry = knowledge_base.find_pending_pollinate(current_user["id"])
     if not entry:
         raise HTTPException(status_code=404, detail="没有待授粉的内容")
 
@@ -297,7 +254,7 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
         reward = 3
         reason = "手动授粉（基础）"
 
-    add_shared_id(entry["id"])
+    knowledge_base.add_shared_id(entry["id"])
 
     auth.add_credits(current_user["id"], reward, reason)
     auth.add_system_message(current_user["id"], f"你的知识成果已成功分享，获得 {reward} 积分。", "SASES助手")
@@ -310,20 +267,9 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
 
     return {"message": f"授粉成功，获得 {reward} 积分", "reward": reward, "reason": reason}
 
-
-
-# ---------- 贡献日志（管理员） ----------
-@app.get("/admin/contribution_logs")
-async def admin_contribution_logs(limit: int = 50, current_user=Depends(get_current_user)):
-    if not auth.is_admin(current_user["id"]):
-        raise HTTPException(status_code=403, detail="仅管理员可用")
-    logs = contribution_log.get_all_logs(limit)
-    return {"logs": logs}
-
 # ---------- 防篡改校验 ----------
 @app.post("/sync_state")
 async def sync_state(current_user=Depends(get_current_user)):
-    # 校验用户积分状态签名
     is_valid = auth.verify_user_integrity(current_user["id"])
     if not is_valid:
         auth.log_tamper_event(current_user["id"], "state hash mismatch during sync")
