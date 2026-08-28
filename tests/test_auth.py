@@ -1,14 +1,21 @@
 import os
-import tempfile
+import sys
 import pytest
+
+# 确保可以导入 core 模块
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import auth
+from core import db
 
 @pytest.fixture
 def temp_db(tmp_path):
     """使用临时数据库，避免污染真实 users.db"""
     db_file = tmp_path / "test_users.db"
-    auth.DB_FILE = str(db_file)
-    auth.init_db()
+    # 修改 core.db 使用的数据库路径
+    db.DB_FILE = str(db_file)
+    # 重新初始化数据库
+    db.init_db()
     return auth
 
 def test_create_user_and_initial_state(temp_db):
@@ -16,7 +23,6 @@ def test_create_user_and_initial_state(temp_db):
     assert success is True
     user = auth.authenticate_user("alice", "password123")
     assert user is not None
-    # 初始积分应为0，且状态哈希有效
     assert user["credits"] == 0
     assert auth.verify_user_integrity(user["id"]) is True
 
@@ -30,7 +36,6 @@ def test_add_credits_updates_balance_and_signature(temp_db):
     assert user_after["credits"] == 30
     assert auth.verify_user_integrity(uid) is True
 
-    # 检查流水
     ledger = auth.get_credit_ledger(uid)
     assert len(ledger) == 1
     assert ledger[0]["amount"] == 30
@@ -63,14 +68,12 @@ def test_tamper_detection(temp_db):
     user = auth.authenticate_user("eve", "password123")
     uid = user["id"]
 
-    # 模拟直接修改数据库中的积分
     import sqlite3
-    conn = sqlite3.connect(auth.DB_FILE)
+    conn = sqlite3.connect(db.DB_FILE)
     conn.execute("UPDATE users SET credits = 9999 WHERE id = ?", (uid,))
     conn.commit()
     conn.close()
 
-    # 状态校验应失败
     assert auth.verify_user_integrity(uid) is False
     tampered_ids = auth.check_all_users_integrity()
     assert uid in tampered_ids
