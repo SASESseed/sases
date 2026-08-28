@@ -167,17 +167,13 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     settings = auth.get_user_settings(current_user["id"])
     auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
 
-    if not auto_pollinate:
-        success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
-        if not success:
-            raise HTTPException(status_code=402, detail=msg)
-        auth.add_system_message(current_user["id"], "本次查询已扣除2积分（自动授粉关闭）。", "SASES助手")
-
     kb = load_kb()
     query = req.query
+    source = "none"
+    answer = ""
+
     if not kb:
         answer = "知识库为空，请先运行种子迭代积累知识库。"
-        source = "none"
     else:
         tasks = [item.get("task", "") for item in kb]
         tokenized_tasks = [tokenize(t) for t in tasks]
@@ -188,6 +184,7 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             best = kb[best_idx]
             answer = f"找到相似任务：{best['task']}\n解决方案：\n{best['solution'][:500]}"
             source = "local_kb"
+            # 记录知识库引用事件
             contribution_log.log_event(
                 user_id=current_user["id"],
                 event_type="chat_retrieval",
@@ -196,10 +193,18 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             )
         else:
             answer = "未找到相似任务。"
-            source = "none"
+
+    # 只有命中知识库且自动授粉关闭时，才扣积分
+    if source == "local_kb" and not auto_pollinate:
+        success, msg = auth.deduct_credits(current_user["id"], 2, "仅查询不回流")
+        if success:
+            auth.add_system_message(current_user["id"], "本次查询已扣除2积分（自动授粉关闭）。", "SASES助手")
+        else:
+            # 积分不足时不扣分，但也不返回结果（或仍返回结果？这里选择仍返回结果，但提示积分不足）
+            pass
 
     result = {"answer": answer, "source": source}
-    if not auto_pollinate:
+    if source == "local_kb" and not auto_pollinate:
         result["deducted"] = 2
     return result
 
@@ -304,6 +309,16 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
     )
 
     return {"message": f"授粉成功，获得 {reward} 积分", "reward": reward, "reason": reason}
+
+
+
+# ---------- 贡献日志（管理员） ----------
+@app.get("/admin/contribution_logs")
+async def admin_contribution_logs(limit: int = 50, current_user=Depends(get_current_user)):
+    if not auth.is_admin(current_user["id"]):
+        raise HTTPException(status_code=403, detail="仅管理员可用")
+    logs = contribution_log.get_all_logs(limit)
+    return {"logs": logs}
 
 # ---------- 防篡改校验 ----------
 @app.post("/sync_state")
