@@ -1,13 +1,19 @@
-import openai, os, json, time
+import openai
+import json
+import re
+import time
+import os
+
+from core import config
 
 client = openai.OpenAI(
-    api_key=os.environ["DEEPSEEK_API_KEY"],
-    base_url="https://api.deepseek.com/v1",
+    api_key=config.DEEPSEEK_API_KEY,
+    base_url=config.DEEPSEEK_BASE_URL,
     timeout=30,
     max_retries=2
 )
 
-MODEL = "deepseek-v4-flash"
+MODEL = config.MODEL_NAME
 SAFETY_LOG = "safety_log.jsonl"
 
 def scan_content(text):
@@ -39,7 +45,6 @@ def scan_content(text):
         )
         raw = resp.choices[0].message.content.strip()
         # 解析JSON
-        import re
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
             result = json.loads(match.group())

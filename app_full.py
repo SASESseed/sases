@@ -7,8 +7,8 @@ from jose import JWTError, jwt
 from rank_bm25 import BM25Okapi
 
 import auth
-import safety_scan
-import sandbox
+from core import safety_scan
+from core import sandbox
 from core import contribution_log
 from core import knowledge_base
 from core import config

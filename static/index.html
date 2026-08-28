@@ -30,6 +30,8 @@
             <p>欢迎，<span id="username-display"></span>（积分：<span id="credits-display"></span>）</p>
             <button onclick="showLedger()">查看积分流水</button>
             <div id="ledger" style="display:none;"></div>
+            <button onclick="showAssistant()">SASES助手 <span id="assistant-unread" style="color:red;"></span></button>
+            <div id="assistant-messages" style="display:none; background:#f0f0f0; padding:10px;"></div>
             <button onclick="logout()">退出登录</button>
 
             <h2>授粉设置</h2>
@@ -37,6 +39,14 @@
                 <input type="checkbox" id="auto-pollinate-toggle" onchange="toggleAutoPollinate()">
                 自动授粉（默认开启，关闭后查询将消耗积分）
             </label>
+
+            <h2>知识分享</h2>
+            <div id="pollinate-pending" style="display:none; background:#fff8e1; padding:10px; border:1px solid #ffcc80;">
+                <p>你有可分享的知识成果，是否上传知识库为SASES生态做出贡献？</p>
+                <button onclick="confirmPollinate()">确定</button>
+                <button onclick="dismissPollinate()">取消</button>
+            </div>
+            <div id="pollinate-result"></div>
 
             <h2>聊天</h2>
             <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
@@ -51,13 +61,6 @@
             <textarea id="seed-desc" placeholder="任务描述，如：写一个Python函数，判断一个字符串是否是回文"></textarea>
             <input type="text" id="seed-testcases" placeholder='测试用例JSON，如：[{"input":"racecar","expected_output":true}]' />
             <button onclick="submitSeed()">提交种子</button>
-
-            <h2>手动授粉</h2>
-            <textarea id="pollinate-task" placeholder="任务描述，如：写一个Python函数，判断一个数字是否为质数"></textarea>
-            <textarea id="pollinate-solution" placeholder="解决方案代码或文本"></textarea>
-            <input type="text" id="pollinate-testcases" placeholder='测试用例JSON（可选），如：[{"input":17,"expected_output":true}]' />
-            <button onclick="manualPollinate()">提交授粉</button>
-            <div id="pollinate-result"></div>
 
             <h2>排行榜</h2>
             <button onclick="loadLeaderboard()">刷新排行榜</button>

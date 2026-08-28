@@ -42,6 +42,7 @@ async function register() {
 async function showMain() {
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('main-section').style.display = 'block';
+
     const res = await fetch('/me', {
         headers: {'Authorization': `Bearer ${token}`}
     });
@@ -50,9 +51,12 @@ async function showMain() {
         document.getElementById('username-display').textContent = data.username;
         document.getElementById('credits-display').textContent = data.credits;
     }
+
     loadLeaderboard();
     loadStats();
     loadSettings();
+    checkPendingPollinate();
+    loadAssistantUnread();
 }
 
 function logout() {
@@ -77,6 +81,7 @@ async function chat() {
     if (data.deducted) {
         alert(`本次查询已扣除 ${data.deducted} 积分`);
         updateCreditsDisplay();
+        loadAssistantUnread();
     }
 }
 
@@ -121,50 +126,59 @@ async function submitSeed() {
     });
     if (res.ok) {
         alert('种子已提交');
+        loadAssistantUnread();
     } else {
         alert('提交失败');
     }
 }
 
-async function manualPollinate() {
-    const task = document.getElementById('pollinate-task').value.trim();
-    const solution = document.getElementById('pollinate-solution').value.trim();
-    const testcases_str = document.getElementById('pollinate-testcases').value.trim();
-    let test_cases = [];
-    if (testcases_str) {
-        try {
-            test_cases = JSON.parse(testcases_str) || [];
-        } catch(e) {
-            alert('测试用例 JSON 格式错误');
-            return;
+async function checkPendingPollinate() {
+    const settingsRes = await fetch('/me/settings', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    let autoPollinate = true;
+    if (settingsRes.ok) {
+        const settings = await settingsRes.json();
+        autoPollinate = settings.auto_pollinate_enabled;
+    }
+
+    if (autoPollinate) return;
+
+    if (localStorage.getItem('pollinate_auto_confirm') === 'true') return;
+
+    const res = await fetch('/pollinate/pending', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        if (data.has_pending) {
+            document.getElementById('pollinate-pending').style.display = 'block';
+            window._pendingPollinate = data;
         }
     }
+}
 
-    if (!task || !solution) {
-        alert('请填写任务描述和解决方案');
-        return;
-    }
-
-    const res = await fetch('/pollinate/manual', {
+async function confirmPollinate() {
+    const res = await fetch('/pollinate/confirm', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({task, solution, test_cases})
+        headers: {'Authorization': `Bearer ${token}`}
     });
-
     const resultDiv = document.getElementById('pollinate-result');
     if (res.ok) {
         const data = await res.json();
         resultDiv.textContent = data.message || '授粉成功';
-        alert(data.message || '授粉成功');
+        document.getElementById('pollinate-pending').style.display = 'none';
+        localStorage.setItem('pollinate_auto_confirm', 'true');
         updateCreditsDisplay();
+        loadAssistantUnread();
     } else {
         const err = await res.json();
         resultDiv.textContent = `失败：${err.detail || res.status}`;
-        alert(`失败：${err.detail || res.status}`);
     }
+}
+
+async function dismissPollinate() {
+    document.getElementById('pollinate-pending').style.display = 'none';
 }
 
 async function updateCreditsDisplay() {
@@ -217,8 +231,48 @@ async function toggleAutoPollinate() {
     });
     if (res.ok) {
         alert('设置已更新');
+        checkPendingPollinate();
     } else {
         alert('设置更新失败');
+    }
+}
+
+// ========== SASES 助手 ==========
+async function loadAssistantUnread() {
+    const res = await fetch('/assistant/messages', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        const badge = document.getElementById('assistant-unread');
+        if (data.unread > 0) {
+            badge.textContent = `（${data.unread}条未读）`;
+        } else {
+            badge.textContent = '';
+        }
+    }
+}
+
+async function showAssistant() {
+    const res = await fetch('/assistant/messages', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        const div = document.getElementById('assistant-messages');
+        div.style.display = 'block';
+        div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg => 
+            `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
+        ).join('') + '</ul>';
+
+        // 标记已读
+        await fetch('/assistant/read', {
+            method: 'POST',
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+        loadAssistantUnread();
+    } else {
+        alert('获取助手消息失败');
     }
 }
 
