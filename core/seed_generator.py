@@ -4,8 +4,6 @@ import random
 import re
 import time
 import openai
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 from core import config
 from core import similarity
@@ -114,8 +112,10 @@ def _build_seed_prompt(existing_descs, domains):
 - 任务背景可以涉及任何领域或生活场景。
 - domain 是一个字符串数组，表示涉及的一个或多个领域。
 - difficulty 是 easy/medium/hard 之一。
-- test_cases 至少包含2个用例，input 和 expected_output 使用纯Python字面量。
-- 只输出JSON对象，不要其他文字。"""
+- test_cases 至少包含1个用例，input 和 expected_output 使用纯Python字面量。
+- 只输出一个合法的JSON对象，不要包含任何额外文字、解释或代码块标记。
+- JSON 中所有字符串必须使用双引号包裹，不得使用单引号。
+- 确保 JSON 格式正确，可以被 Python 的 json.loads 直接解析。"""
     return prompt
 
 def _call_api(prompt):
@@ -123,29 +123,57 @@ def _call_api(prompt):
         api_key=config.DEEPSEEK_API_KEY,
         base_url=config.DEEPSEEK_BASE_URL,
         timeout=120,
-        max_retries=2
+        max_retries=3
     )
-    resp = client.chat.completions.create(
-        model=config.MODEL_NAME,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=1.0,
-        max_tokens=1000
-    )
-    return resp.choices[0].message.content.strip()
+    try:
+        resp = client.chat.completions.create(
+            model=config.MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=1.0,
+            max_tokens=1000,
+            response_format={"type": "json_object"}   # 强制 JSON 输出
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        # 如果 response_format 不支持，回退到普通调用
+        print(f"  JSON mode 调用失败，回退普通调用: {e}")
+        resp = client.chat.completions.create(
+            model=config.MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=1.0,
+            max_tokens=1000
+        )
+        return resp.choices[0].message.content.strip()
 
 def _parse_seed_response(raw):
+    """更稳健的 JSON 解析：处理 BOM、代码块、提取第一个完整 JSON 对象"""
+    if not raw:
+        return None
+    # 去除 BOM
+    raw = raw.lstrip('\ufeff').strip()
+    # 移除代码块标记
+    if raw.startswith("```"):
+        raw = re.sub(r'^```[a-zA-Z]*\s*', '', raw)
+        raw = re.sub(r'\s*```$', '', raw)
+    # 尝试直接解析
     try:
-        task = json.loads(raw)
+        return json.loads(raw)
     except:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if match:
-            try:
-                task = json.loads(match.group())
-            except:
-                return None
-        else:
+        pass
+    # 提取第一个 { 到最后一个 } 之间的内容，并尝试修复尾逗号等问题
+    match = re.search(r'\{.*\}', raw, re.DOTALL)
+    if match:
+        candidate = match.group()
+        # 移除尾逗号（简单处理）
+        candidate = re.sub(r',\s*}', '}', candidate)
+        candidate = re.sub(r',\s*]', ']', candidate)
+        try:
+            return json.loads(candidate)
+        except:
+            # 尝试替换单引号为双引号（但小心字符串内的单引号）
+            # 这里不做深入修复，返回 None
             return None
-    return task
+    return None
 
 def generate_single_seed(existing_descs, max_attempts=8):
     for attempt in range(max_attempts):
@@ -157,23 +185,37 @@ def generate_single_seed(existing_descs, max_attempts=8):
             raw = _call_api(prompt)
             task = _parse_seed_response(raw)
         except Exception as e:
-            print(f"种子请求异常: {e}")
+            print(f"  [尝试{attempt+1}] API调用失败: {e}")
             time.sleep(2)
             continue
 
-        if not task or "description" not in task or not task.get("test_cases"):
+        if not task:
+            print(f"  [尝试{attempt+1}] JSON解析失败")
             continue
 
-        desc = task["description"]
-        if any(word in desc for word in ["你", "我", "他", "编写一个"]):
+        desc = task.get("description")
+        if not desc:
+            print(f"  [尝试{attempt+1}] 缺少 description")
+            continue
+
+        test_cases = task.get("test_cases")
+        if not test_cases or not isinstance(test_cases, list) or len(test_cases) < 1:
+            print(f"  [尝试{attempt+1}] 缺少 test_cases 或为空")
+            continue
+
+        if desc.startswith("编写一个") or desc.startswith("请编写一个"):
+            print(f"  [尝试{attempt+1}] 机械开头，丢弃")
             continue
 
         if existing_descs and similarity.is_similar(desc, existing_descs, threshold=config.SIMILARITY_THRESHOLD):
+            print(f"  [尝试{attempt+1}] 语义相似，跳过")
             continue
 
         task["domain"] = _normalize_domains(task.get("domain"))
+        print(f"  [成功] {desc[:50]}...")
         return task
 
+    print("  多次尝试均失败，返回 None")
     return None
 
 def generate_new_seeds(num=10):
