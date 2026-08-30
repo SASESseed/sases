@@ -9,6 +9,7 @@ from core import knowledge_base
 from core import config
 from core import contribution_log
 from core import agi_coordinator
+from core import seed_store
 from core.api_routes.auth_routes import get_current_user
 
 router = APIRouter()
@@ -30,10 +31,9 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
 
     query = req.query
 
-    # ========== 新增：优先尝试 AGI 工具执行 ==========
+    # 优先尝试 AGI 快速执行
     agi_result = agi_coordinator.quick_execute(query)
     if agi_result and agi_result["success"]:
-        # AGI 工具执行成功，直接返回
         return {
             "answer": f"🧠 工具执行成功：{agi_result['result']}",
             "source": "agi",
@@ -41,7 +41,7 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
             "result": agi_result["result"]
         }
 
-    # ========== 原有知识库检索逻辑 ==========
+    # 知识库检索
     kb = knowledge_base.load_kb()
     source = "none"
     answer = ""
@@ -67,7 +67,6 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
         else:
             answer = "未找到相似任务。"
 
-    # 自动授粉关闭且命中知识库时，必须扣分成功才返回答案
     if source == "local_kb" and not auto_pollinate:
         if current_user["credits"] < config.QUERY_DEDUCTION:
             raise HTTPException(status_code=402, detail="积分不足，无法查询")
@@ -85,16 +84,14 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
 async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_user)):
     if not req.description or len(req.description) < 10:
         raise HTTPException(status_code=400, detail="任务描述过短")
-    seed = {
-        "id": str(uuid.uuid4()),
-        "description": req.description,
-        "test_cases": req.test_cases if req.test_cases else [],
-        "source": "external_api",
-        "user_id": current_user["id"],
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    with open(config.SEED_POOL_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(seed, ensure_ascii=False) + "\n")
+
+    # 写入外部种子池表
+    seed = seed_store.add_external_seed(
+        description=req.description,
+        test_cases=req.test_cases if req.test_cases else [],
+        user_id=str(current_user["id"])
+    )
+
     auth.add_system_message(current_user["id"], f"种子已收到，等待处理：{req.description[:100]}...", "SASES助手")
     contribution_log.log_event(
         user_id=current_user["id"],

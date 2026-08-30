@@ -101,6 +101,28 @@ def init_db():
             status TEXT DEFAULT 'unknown'
         )
         """)
+        # 外部种子池表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS external_seed_pool (
+            id TEXT PRIMARY KEY,
+            description TEXT NOT NULL,
+            test_cases TEXT,
+            source TEXT DEFAULT 'external_api',
+            user_id TEXT,
+            timestamp TEXT
+        )
+        """)
+        # 主种子池表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS main_seed_pool (
+            id TEXT PRIMARY KEY,
+            description TEXT NOT NULL,
+            test_cases TEXT,
+            source TEXT DEFAULT 'external_api',
+            user_id TEXT,
+            timestamp TEXT
+        )
+        """)
         # 为已有表添加可能缺失的字段（兼容旧库）
         for col, dtype in [
             ("state_hash", "TEXT DEFAULT ''"),
@@ -129,3 +151,6 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_contrib_event ON contribution_log(event_type)")
         # 空间节点索引
         conn.execute("CREATE INDEX IF NOT EXISTS idx_space_nodes_type ON space_nodes(node_type)")
+        # 种子池索引
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_external_seed_user ON external_seed_pool(user_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_main_seed_user ON main_seed_pool(user_id)")
