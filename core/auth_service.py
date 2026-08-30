@@ -90,7 +90,6 @@ def deduct_credits(user_id: int, amount: int, reason: str = "") -> tuple:
     if amount <= 0:
         return False, "扣减金额必须大于0"
     with get_db() as conn:
-        # 条件更新：只有余额 >= amount 时才会扣减
         cur = conn.execute(
             "UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?",
             (amount, user_id, amount)
@@ -164,15 +163,60 @@ def mark_messages_read(user_id: int):
             (user_id,)
         )
 
-def get_user_settings(user_id: int):
+# ========== 通用用户设置 ==========
+def get_all_user_settings(user_id: int) -> dict:
+    """获取用户的所有自定义设置（包含 auto_pollinate_enabled 在内）"""
+    settings = {}
     with get_db() as conn:
-        row = conn.execute(
-            "SELECT auto_pollinate_enabled FROM users WHERE id = ?",
+        rows = conn.execute(
+            "SELECT key, value FROM user_settings WHERE user_id = ?",
             (user_id,)
-        ).fetchone()
-        if row:
-            return {"auto_pollinate_enabled": bool(row["auto_pollinate_enabled"])}
-        return None
+        ).fetchall()
+        for r in rows:
+            try:
+                settings[r["key"]] = json.loads(r["value"])
+            except:
+                settings[r["key"]] = r["value"]
+    # 特殊处理 auto_pollinate_enabled，确保和 users 表同步
+    user = get_user_by_id(user_id)
+    if user:
+        settings["auto_pollinate_enabled"] = bool(user["auto_pollinate_enabled"])
+    return settings
+
+def update_all_user_settings(user_id: int, settings: dict) -> dict:
+    """批量更新用户设置，返回更新后的完整设置"""
+    with get_db() as conn:
+        # 处理 auto_pollinate_enabled 特殊字段
+        if "auto_pollinate_enabled" in settings:
+            val = settings.pop("auto_pollinate_enabled")
+            conn.execute(
+                "UPDATE users SET auto_pollinate_enabled = ? WHERE id = ?",
+                (1 if val else 0, user_id)
+            )
+        # 更新其他设置到 user_settings 表
+        for key, value in settings.items():
+            # 存储为 JSON 字符串
+            conn.execute("""
+                INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?)
+                ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value
+            """, (user_id, key, json.dumps(value, ensure_ascii=False)))
+    return get_all_user_settings(user_id)
+
+# ========== 知识库导出 ==========
+def export_kb():
+    """导出知识库为 JSON 列表，便于备份或迁移"""
+    kb_file = config.KB_FILE
+    if not os.path.exists(kb_file):
+        return []
+    with open(kb_file, "r", encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except:
+            return []
+
+# 兼容旧函数（保留现有 get_user_settings 和 update_user_settings）
+def get_user_settings(user_id: int):
+    return get_all_user_settings(user_id)
 
 def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
     with get_db() as conn:
@@ -182,6 +226,7 @@ def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
         )
         return True
 
+# ========== 管理员 ==========
 def is_admin(user_id: int) -> bool:
     with get_db() as conn:
         row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -197,6 +242,7 @@ def set_admin(user_id: int, admin: bool = True):
         )
         return True
 
+# ========== 防篡改锚点 ==========
 def generate_state_signature(user_id: int):
     user = get_user_by_id(user_id)
     if user:

@@ -10,7 +10,7 @@ def get_db():
     return conn
 
 def init_db():
-    """初始化数据库表结构，包括用户、流水、消息、日志等"""
+    """初始化数据库表结构，包括用户、流水、消息、日志、通用设置等"""
     with get_db() as conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -40,6 +40,16 @@ def init_db():
             content TEXT NOT NULL,
             is_read INTEGER DEFAULT 0,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """)
+        # 通用用户设置表（键值对，可存储 JSON）
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS user_settings (
+            user_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            PRIMARY KEY (user_id, key),
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)

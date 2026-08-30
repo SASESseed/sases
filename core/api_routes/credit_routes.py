@@ -1,6 +1,7 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from typing import Any, Dict
 
 import auth
 from core import contribution_log
@@ -18,7 +19,10 @@ class AwardRequest(BaseModel):
 class SettingsUpdateRequest(BaseModel):
     auto_pollinate_enabled: bool
 
-# ---------- 授粉设置 ----------
+class AllSettingsUpdateRequest(BaseModel):
+    settings: Dict[str, Any]
+
+# ---------- 授粉设置（兼容旧接口） ----------
 @router.get("/me/settings")
 async def get_my_settings(current_user=Depends(get_current_user)):
     settings = auth.get_user_settings(current_user["id"])
@@ -31,12 +35,21 @@ async def update_my_settings(req: SettingsUpdateRequest, current_user=Depends(ge
     auth.update_user_settings(current_user["id"], req.auto_pollinate_enabled)
     return {"message": "设置已更新", "auto_pollinate_enabled": req.auto_pollinate_enabled}
 
-# ---------- 积分排行榜 ----------
+# ---------- 通用设置 ----------
+@router.get("/me/settings/all")
+async def get_all_my_settings(current_user=Depends(get_current_user)):
+    return auth.get_all_user_settings(current_user["id"])
+
+@router.patch("/me/settings/all")
+async def update_all_my_settings(req: AllSettingsUpdateRequest, current_user=Depends(get_current_user)):
+    updated = auth.update_all_user_settings(current_user["id"], req.settings)
+    return {"message": "设置已更新", "settings": updated}
+
+# ---------- 排行榜 ----------
 @router.get("/leaderboard")
 async def leaderboard(top_n: int = 10):
     return auth.get_leaderboard(top_n)
 
-# ---------- 贡献度排行榜 ----------
 @router.get("/contrib_leaderboard")
 async def contrib_leaderboard(top_n: int = 10):
     ranking = contribution_log.get_contrib_leaderboard(top_n)
@@ -82,6 +95,12 @@ async def award_credits(req: AwardRequest, current_user=Depends(get_current_user
     )
     return {"message": f"已为用户 {req.user_id} 增加 {req.amount} 积分"}
 
+# ---------- 知识库导出 ----------
+@router.get("/kb/export")
+async def export_kb(current_user=Depends(get_current_user)):
+    kb = auth.export_kb()
+    return kb
+
 # ---------- 待授粉内容（仅管理员） ----------
 @router.get("/pollinate/pending")
 async def pollinate_pending(current_user=Depends(get_current_user)):
@@ -102,7 +121,6 @@ async def pollinate_pending(current_user=Depends(get_current_user)):
 async def pollinate_confirm(current_user=Depends(get_current_user)):
     if not auth.is_admin(current_user["id"]):
         raise HTTPException(status_code=403, detail="仅管理员可用")
-
     entry = knowledge_base.find_pending_pollinate(current_user["id"])
     if not entry:
         raise HTTPException(status_code=404, detail="没有待授粉的内容")
@@ -123,7 +141,6 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
         reason = "手动授粉（基础）"
 
     knowledge_base.add_shared_id(entry["id"])
-
     auth.add_credits(current_user["id"], reward, reason)
     auth.add_system_message(current_user["id"], f"你的知识成果已成功分享，获得 {reward} 积分。", "SASES助手")
     contribution_log.log_event(
@@ -132,7 +149,6 @@ async def pollinate_confirm(current_user=Depends(get_current_user)):
         target_id=entry["id"],
         metadata={"task": task[:100], "reward": reward, "test_cases_count": len(test_cases), "solution_lines": len(solution.split('\n'))}
     )
-
     return {"message": f"授粉成功，获得 {reward} 积分", "reward": reward, "reason": reason}
 
 # ---------- 防篡改校验 ----------
