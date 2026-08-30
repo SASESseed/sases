@@ -17,10 +17,8 @@ class SpaceService:
         self._lock = threading.RLock()
         self.nodes = self._load_nodes()
         self._register_self()
-        # 自动同步相关
         self._sync_thread = None
         self._stop_sync = threading.Event()
-        # 健康检查相关
         self._health_thread = None
         self._stop_health = threading.Event()
 
@@ -76,7 +74,6 @@ class SpaceService:
                     "icon": icon,
                     "owner_id": owner_id,
                     "registered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    # 保留状态和信誉
                     "status": existing.get("status", "unknown")
                 })
                 node = existing
@@ -127,7 +124,6 @@ class SpaceService:
             self._save_nodes()
 
     def update_node_status(self, node_id: str, status: str):
-        """更新节点在线状态：online/offline/unknown"""
         with self._lock:
             node = self.nodes.get(node_id)
             if node:
@@ -135,15 +131,17 @@ class SpaceService:
                 self._save_nodes()
 
     def check_node_health(self, node_id: str) -> bool:
-        """检查指定节点是否在线，返回 True/False"""
         node = self.get_node(node_id)
         if not node or not node.get("endpoint"):
             return False
         endpoint = node["endpoint"].rstrip("/")
         health_url = f"{endpoint}/space/health"
+        headers = {}
+        if config.NODE_TOKEN:
+            headers["X-Node-Token"] = config.NODE_TOKEN
         try:
             with httpx.Client(timeout=3) as client:
-                response = client.get(health_url)
+                response = client.get(health_url, headers=headers)
                 if response.status_code == 200:
                     self.update_node_status(node_id, "online")
                     return True
@@ -155,7 +153,6 @@ class SpaceService:
             return False
 
     def _update_all_nodes_health(self):
-        """更新所有有 endpoint 的节点的在线状态"""
         for node_id in list(self.nodes.keys()):
             if self.nodes[node_id].get("endpoint"):
                 self.check_node_health(node_id)
@@ -181,9 +178,12 @@ class SpaceService:
 
         url = f"{endpoint.rstrip('/')}/harness/invoke"
         payload = {"module_id": node_id, "params": params}
+        headers = {}
+        if config.NODE_TOKEN:
+            headers["X-Node-Token"] = config.NODE_TOKEN
         try:
             with httpx.Client(timeout=10) as client:
-                response = client.post(url, json=payload)
+                response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
                 success = data.get("success", False)
@@ -195,9 +195,12 @@ class SpaceService:
 
     def sync_from_peer(self, peer_url: str) -> dict:
         url = f"{peer_url.rstrip('/')}/space/nodes"
+        headers = {}
+        if config.NODE_TOKEN:
+            headers["X-Node-Token"] = config.NODE_TOKEN
         try:
             with httpx.Client(timeout=5) as client:
-                response = client.get(url)
+                response = client.get(url, headers=headers)
                 response.raise_for_status()
                 remote_nodes = response.json()
                 added = 0
@@ -212,7 +215,7 @@ class SpaceService:
                         node_id = node.get("node_id")
                         if node_id and node_id not in self.nodes:
                             self.nodes[node_id] = node
-                            self.nodes[node_id]["status"] = "unknown"  # 新节点初始状态
+                            self.nodes[node_id]["status"] = "unknown"
                             added += 1
                     self._save_nodes()
                 return {
@@ -240,17 +243,18 @@ class SpaceService:
             "icon": self_node.get("icon"),
             "owner_id": self_node.get("owner_id")
         }
+        headers = {}
+        if config.NODE_TOKEN:
+            headers["X-Node-Token"] = config.NODE_TOKEN
         try:
             with httpx.Client(timeout=5) as client:
-                response = client.post(url, json=payload)
+                response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    # ========== 自动同步 ==========
     def start_auto_sync(self, interval: int = 300):
-        """启动后台自动同步线程，默认每 300 秒同步一次"""
         if self._sync_thread and self._sync_thread.is_alive():
             return
         self._stop_sync.clear()
@@ -264,7 +268,6 @@ class SpaceService:
         print(f"自动同步线程已启动，间隔 {interval} 秒")
 
     def stop_auto_sync(self):
-        """停止自动同步线程"""
         self._stop_sync.set()
         if self._sync_thread:
             self._sync_thread.join(timeout=5)
@@ -277,7 +280,6 @@ class SpaceService:
             self._stop_sync.wait(interval)
 
     def sync_all_peers(self):
-        """对所有配置的 peer 执行同步和注册"""
         peers = config.PEER_NODES
         if not peers:
             return
@@ -293,9 +295,7 @@ class SpaceService:
             else:
                 print(f"向 {peer} 注册失败: {reg_result.get('error')}")
 
-    # ========== 健康检查 ==========
     def start_health_check(self, interval: int = 60):
-        """启动健康检查后台线程，默认每 60 秒检查一次"""
         if self._health_thread and self._health_thread.is_alive():
             return
         self._stop_health.clear()
@@ -309,7 +309,6 @@ class SpaceService:
         print(f"健康检查线程已启动，间隔 {interval} 秒")
 
     def stop_health_check(self):
-        """停止健康检查线程"""
         self._stop_health.set()
         if self._health_thread:
             self._health_thread.join(timeout=5)
@@ -321,5 +320,4 @@ class SpaceService:
             self._update_all_nodes_health()
             self._stop_health.wait(interval)
 
-# 全局单例
 space_service = SpaceService()

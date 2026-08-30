@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+import time  # 必须有这一行
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -32,8 +33,9 @@ class NodeInvokeRequest(BaseModel):
     params: Dict[str, Any] = {}
 
 @router.get("/space/health")
-async def health():
-    """健康检查端点，供其他节点 ping"""
+async def health(x_node_token: Optional[str] = Header(None)):
+    if config.NODE_TOKEN and x_node_token != config.NODE_TOKEN:
+        raise HTTPException(status_code=401, detail="无效的节点令牌")
     return {"status": "ok", "node_id": config.NODE_ID, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
 
 @router.post("/space/register_node")
@@ -51,7 +53,9 @@ async def register_node(req: NodeRegisterRequest, current_user=Depends(get_curre
     return {"message": "Node registered", "node": node}
 
 @router.post("/space/register_node_external")
-async def register_node_external(req: NodeRegisterExternalRequest):
+async def register_node_external(req: NodeRegisterExternalRequest, x_node_token: Optional[str] = Header(None)):
+    if config.NODE_TOKEN and x_node_token != config.NODE_TOKEN:
+        raise HTTPException(status_code=401, detail="无效的节点令牌")
     node = space_service.register_node(
         node_id=req.node_id,
         name=req.name,
