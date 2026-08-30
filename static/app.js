@@ -1,5 +1,16 @@
 let token = localStorage.getItem('sases_token');
 
+// ---------- HTML 转义函数（防止 XSS） ----------
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // ---------- 视图切换 ----------
 function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -85,6 +96,7 @@ async function chat() {
         body: JSON.stringify({query})
     });
     const data = await res.json();
+    // 使用 textContent 防止 XSS
     document.getElementById('chat-result').textContent = data.answer;
     if (data.deducted) {
         alert(`本次查询已扣除 ${data.deducted} 积分`);
@@ -102,9 +114,15 @@ async function showLedger() {
         const data = await res.json();
         const div = document.getElementById('ledger');
         div.style.display = 'block';
-        div.innerHTML = '<h3>积分流水</h3><ul>' + data.ledger.map(item =>
-            `<li>${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})</li>`
-        ).join('') + '</ul>';
+        // 使用 DOM API 构建列表，所有文本经 textContent 设置，避免 XSS
+        div.innerHTML = '<h3>积分流水</h3>';
+        const ul = document.createElement('ul');
+        data.ledger.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = `${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})`;
+            ul.appendChild(li);
+        });
+        div.appendChild(ul);
     } else {
         alert('获取积分流水失败');
     }
@@ -164,15 +182,21 @@ async function loadContribLeaderboard() {
     const res = await fetch('/contrib_leaderboard');
     const data = await res.json();
     const div = document.getElementById('discover-content');
-    div.innerHTML = '<h3>贡献榜</h3><ul>' + data.map(item =>
-        `<li>${item.username}: ${item.score}</li>`
-    ).join('') + '</ul>';
+    div.innerHTML = '<h3>贡献榜</h3>';
+    const ul = document.createElement('ul');
+    data.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.username}: ${item.score}`;
+        ul.appendChild(li);
+    });
+    div.appendChild(ul);
 }
 
 // ---------- 统计 ----------
 async function loadStats() {
     const res = await fetch('/stats');
     const data = await res.json();
+    // 使用 textContent 防止 XSS
     document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
 }
 
@@ -224,9 +248,15 @@ async function showAssistant() {
         const data = await res.json();
         const div = document.getElementById('assistant-messages');
         div.style.display = 'block';
-        div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg =>
-            `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
-        ).join('') + '</ul>';
+        div.innerHTML = '<h3>SASES助手</h3>';
+        const ul = document.createElement('ul');
+        data.messages.forEach(msg => {
+            const li = document.createElement('li');
+            // 使用 textContent 避免 XSS
+            li.textContent = `${msg.title}：${msg.content} (${msg.timestamp})`;
+            ul.appendChild(li);
+        });
+        div.appendChild(ul);
 
         await fetch('/assistant/read', {
             method: 'POST',
@@ -281,6 +311,7 @@ async function invokeTool() {
         body: JSON.stringify({ module_id: moduleId, params })
     });
     const data = await res.json();
+    // 使用 textContent
     document.getElementById('tool-result').textContent = JSON.stringify(data, null, 2);
 }
 
@@ -301,9 +332,16 @@ async function loadNodeList() {
 
             const statusText = node.status || 'unknown';
             const statusColor = statusText === 'online' ? 'green' : statusText === 'offline' ? 'red' : 'gray';
-            const statusHtml = `<span style="color:${statusColor}; margin-right:5px;">●</span> ${statusText}`;
+            const statusSpan = document.createElement('span');
+            statusSpan.style.color = statusColor;
+            statusSpan.style.marginRight = '5px';
+            statusSpan.textContent = '●';
+            li.appendChild(statusSpan);
+            // 节点名称和 ID 使用 textContent
+            const textSpan = document.createElement('span');
+            textSpan.textContent = `${statusText} ${node.name} (${node.node_id})`;
+            li.appendChild(textSpan);
 
-            li.innerHTML = `<span>${statusHtml} ${node.name} (${node.node_id})</span>`;
             const btn = document.createElement('button');
             btn.textContent = '调用';
             btn.onclick = () => invokeNode(node.node_id);
@@ -457,7 +495,11 @@ async function loadApiKeys() {
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
             li.style.alignItems = 'center';
-            li.innerHTML = `<span>${k.provider} - ${k.masked_key} (优先级:${k.priority})</span>`;
+            // 使用 textContent 而非 innerHTML
+            const span = document.createElement('span');
+            span.textContent = `${k.provider} - ${k.masked_key} (优先级:${k.priority})`;
+            li.appendChild(span);
+
             const btnPriority = document.createElement('button');
             btnPriority.textContent = '设优先';
             btnPriority.onclick = () => setApiKeyPriority(k.id);
