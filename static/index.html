@@ -2,73 +2,105 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SASES 控制台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SASES</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>SASES 控制台</h1>
-
-        <div id="auth-section">
-            <h2>登录</h2>
-            <input type="text" id="login-username" placeholder="用户名" />
-            <input type="password" id="login-password" placeholder="密码" />
-            <button onclick="login()">登录</button>
-            <button onclick="showRegister()">注册新用户</button>
-
-            <div id="register-section" style="display:none;">
-                <h3>注册</h3>
+    <!-- 登录/注册界面 -->
+    <div id="auth-section" class="auth-container">
+        <div class="auth-box">
+            <h1>SASES</h1>
+            <div id="login-form">
+                <input type="text" id="login-username" placeholder="用户名" />
+                <input type="password" id="login-password" placeholder="密码" />
+                <button onclick="login()">登录</button>
+                <button class="link-btn" onclick="showRegister()">注册新用户</button>
+            </div>
+            <div id="register-form" style="display:none;">
                 <input type="text" id="reg-username" placeholder="用户名" />
                 <input type="email" id="reg-email" placeholder="邮箱" />
                 <input type="password" id="reg-password" placeholder="密码" />
                 <button onclick="register()">注册</button>
+                <button class="link-btn" onclick="showLogin()">返回登录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用界面 -->
+    <div id="main-app" style="display:none;">
+        <!-- 顶部栏 -->
+        <div class="top-bar">
+            <div class="top-title" id="page-title">聊天</div>
+            <div class="top-assets">
+                <span>🪙 <span id="credits-display">0</span></span>
             </div>
         </div>
 
-        <div id="main-section" style="display:none;">
-            <p>欢迎，<span id="username-display"></span>（积分：<span id="credits-display"></span>）</p>
-            <button onclick="showLedger()">查看积分流水</button>
-            <div id="ledger" style="display:none;"></div>
-            <button onclick="showAssistant()">SASES助手 <span id="assistant-unread" style="color:red;"></span></button>
-            <div id="assistant-messages" style="display:none; background:#f0f0f0; padding:10px;"></div>
-            <button onclick="logout()">退出登录</button>
-
-            <h2>授粉设置</h2>
-            <label>
-                <input type="checkbox" id="auto-pollinate-toggle" onchange="toggleAutoPollinate()">
-                自动授粉（默认开启，关闭后查询将消耗积分）
-            </label>
-
-            <h2>知识分享</h2>
-            <div id="pollinate-pending" style="display:none; background:#fff8e1; padding:10px; border:1px solid #ffcc80;">
-                <p>你有可分享的知识成果，是否上传知识库为SASES生态做出贡献？</p>
-                <button onclick="confirmPollinate()">确定</button>
-                <button onclick="dismissPollinate()">取消</button>
+        <!-- 页面内容 -->
+        <div class="page-container">
+            <!-- 聊天页 -->
+            <div id="page-chat" class="page active">
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-bar">
+                    <input type="text" id="chat-input" placeholder="输入消息..." />
+                    <button onclick="sendChat()">发送</button>
+                </div>
             </div>
-            <div id="pollinate-result"></div>
 
-            <h2>聊天</h2>
-            <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
-            <button onclick="chat()">发送</button>
-            <div id="chat-result"></div>
-
-            <h2>提交种子</h2>
-            <div id="seed-risk-warning">
-                <p style="color:#b8860b;">提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。</p>
-                <label><input type="checkbox" id="no-risk-remind"> 今后不再提醒</label>
+            <!-- 节点页 -->
+            <div id="page-nodes" class="page">
+                <h2>空间节点</h2>
+                <button onclick="loadSpaceNodes()">刷新节点</button>
+                <div id="space-nodes-list"></div>
+                <h3>Harness 工具</h3>
+                <button onclick="loadHarnessTools()">加载工具</button>
+                <div id="harness-tools-list"></div>
             </div>
-            <textarea id="seed-desc" placeholder="任务描述，如：写一个Python函数，判断一个字符串是否是回文"></textarea>
-            <input type="text" id="seed-testcases" placeholder='测试用例JSON，如：[{"input":"racecar","expected_output":true}]' />
-            <button onclick="submitSeed()">提交种子</button>
 
-            <h2>排行榜</h2>
-            <button onclick="loadLeaderboard()">刷新排行榜</button>
-            <ul id="leaderboard"></ul>
+            <!-- 发现页 -->
+            <div id="page-discover" class="page">
+                <h2>排行榜</h2>
+                <button onclick="loadLeaderboard()">积分榜</button>
+                <button onclick="loadContribLeaderboard()">贡献榜</button>
+                <ul id="leaderboard-list"></ul>
+                <h2>统计</h2>
+                <button onclick="loadStats()">刷新统计</button>
+                <pre id="stats-display"></pre>
+            </div>
 
-            <h2>统计</h2>
-            <button onclick="loadStats()">刷新统计</button>
-            <pre id="stats"></pre>
+            <!-- 我的页 -->
+            <div id="page-profile" class="page">
+                <h2>个人信息</h2>
+                <p>用户名：<span id="username-display"></span></p>
+                <p>积分：<span id="credits-display-2"></span></p>
+                <button onclick="showLedger()">积分流水</button>
+                <div id="ledger" style="display:none;"></div>
+                <button onclick="showAssistant()">SASES助手</button>
+                <div id="assistant-messages" style="display:none;"></div>
+                <h3>授粉设置</h3>
+                <label>
+                    <input type="checkbox" id="auto-pollinate-toggle" onchange="toggleAutoPollinate()">
+                    自动授粉（默认开启）
+                </label>
+                <h3>提交种子</h3>
+                <textarea id="seed-desc" placeholder="任务描述"></textarea>
+                <input type="text" id="seed-testcases" placeholder='测试用例 JSON，如：[{"input":1,"expected_output":2}]' />
+                <button onclick="submitSeed()">提交种子</button>
+                <h3>AGI 执行</h3>
+                <input type="text" id="agi-query" placeholder="输入任务，如：将摄氏30度转换为华氏度" />
+                <button onclick="executeAGI()">执行</button>
+                <div id="agi-result"></div>
+                <button onclick="logout()">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-page="page-chat" onclick="switchPage('page-chat')">聊天</div>
+            <div class="nav-item" data-page="page-nodes" onclick="switchPage('page-nodes')">节点</div>
+            <div class="nav-item" data-page="page-discover" onclick="switchPage('page-discover')">发现</div>
+            <div class="nav-item" data-page="page-profile" onclick="switchPage('page-profile')">我的</div>
         </div>
     </div>
 

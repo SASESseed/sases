@@ -1,9 +1,15 @@
 let token = localStorage.getItem('sases_token');
+let currentPage = 'page-chat';
 
+// ========== 认证相关 ==========
 function showRegister() {
-    document.getElementById('register-section').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
 }
-
+function showLogin() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+}
 async function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -21,7 +27,6 @@ async function login() {
         alert('登录失败');
     }
 }
-
 async function register() {
     const username = document.getElementById('reg-username').value;
     const email = document.getElementById('reg-email').value;
@@ -33,41 +38,92 @@ async function register() {
     });
     if (res.ok) {
         alert('注册成功，请登录');
-        document.getElementById('register-section').style.display = 'none';
+        showLogin();
     } else {
         alert('注册失败');
     }
 }
+function logout() {
+    localStorage.removeItem('sases_token');
+    token = null;
+    const auth = document.getElementById('auth-section');
+    const main = document.getElementById('main-app');
+    if (auth) auth.style.display = 'flex';
+    if (main) main.style.display = 'none';
+}
 
+// ========== 页面切换 ==========
+function switchPage(pageId) {
+    currentPage = pageId;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const page = document.getElementById(pageId);
+    if (page) page.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const nav = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+    if (nav) nav.classList.add('active');
+    const titles = {
+        'page-chat': '聊天',
+        'page-nodes': '节点',
+        'page-discover': '发现',
+        'page-profile': '我的'
+    };
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = titles[pageId] || 'SASES';
+    if (pageId === 'page-nodes') {
+        loadSpaceNodes();
+        loadHarnessTools();
+    } else if (pageId === 'page-discover') {
+        loadLeaderboard();
+        loadContribLeaderboard();
+        loadStats();
+    } else if (pageId === 'page-profile') {
+        loadProfile();
+    }
+}
+
+// ========== 主界面显示 ==========
 async function showMain() {
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('main-section').style.display = 'block';
+    const auth = document.getElementById('auth-section');
+    const main = document.getElementById('main-app');
+    // 防御性检查，避免元素缺失导致整个脚本崩溃
+    if (!auth || !main) {
+        console.error('缺失必要的页面元素：auth-section 或 main-app');
+        alert('页面结构错误，请检查 index.html');
+        return;
+    }
+    auth.style.display = 'none';
+    main.style.display = 'flex';
+    await loadProfile();
+    switchPage('page-chat');
+}
 
+// ========== 个人信息 ==========
+async function loadProfile() {
     const res = await fetch('/me', {
         headers: {'Authorization': `Bearer ${token}`}
     });
     if (res.ok) {
         const data = await res.json();
-        document.getElementById('username-display').textContent = data.username;
-        document.getElementById('credits-display').textContent = data.credits;
+        const uname = document.getElementById('username-display');
+        const credits = document.getElementById('credits-display');
+        const credits2 = document.getElementById('credits-display-2');
+        if (uname) uname.textContent = data.username;
+        if (credits) credits.textContent = data.credits;
+        if (credits2) credits2.textContent = data.credits;
     }
-
-    loadLeaderboard();
-    loadStats();
-    loadSettings();
-    checkPendingPollinate();
-    loadAssistantUnread();
 }
 
-function logout() {
-    localStorage.removeItem('sases_token');
-    token = null;
-    document.getElementById('auth-section').style.display = 'block';
-    document.getElementById('main-section').style.display = 'none';
-}
-
-async function chat() {
-    const query = document.getElementById('chat-input').value;
+// ========== 聊天 ==========
+async function sendChat() {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const query = input.value.trim();
+    if (!query) return;
+    const messagesDiv = document.getElementById('chat-messages');
+    if (messagesDiv) {
+        messagesDiv.innerHTML += `<div style="text-align:right; margin:5px 0;"><span style="background:#95ec69; padding:8px; border-radius:8px; display:inline-block;">${query}</span></div>`;
+    }
+    input.value = '';
     const res = await fetch('/chat', {
         method: 'POST',
         headers: {
@@ -76,45 +132,36 @@ async function chat() {
         },
         body: JSON.stringify({query})
     });
-    const data = await res.json();
-    document.getElementById('chat-result').textContent = data.answer;
-    if (data.deducted) {
-        alert(`本次查询已扣除 ${data.deducted} 积分`);
-        updateCreditsDisplay();
-        loadAssistantUnread();
-    }
-}
-
-async function showLedger() {
-    const res = await fetch('/my_ledger', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
     if (res.ok) {
         const data = await res.json();
-        const div = document.getElementById('ledger');
-        div.style.display = 'block';
-        div.innerHTML = '<h3>积分流水</h3><ul>' + data.ledger.map(item => 
-            `<li>${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})</li>`
-        ).join('') + '</ul>';
+        if (messagesDiv) {
+            messagesDiv.innerHTML += `<div style="text-align:left; margin:5px 0;"><span style="background:white; padding:8px; border-radius:8px; display:inline-block;">${data.answer}</span></div>`;
+        }
+        if (data.deducted) {
+            alert(`本次查询扣除 ${data.deducted} 积分`);
+            loadProfile();
+        }
+    } else if (res.status === 402) {
+        alert('积分不足，无法查询');
     } else {
-        alert('获取积分流水失败');
+        alert('请求失败');
     }
+    if (messagesDiv) messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// ========== 种子提交 ==========
 async function submitSeed() {
-    if (!localStorage.getItem('seed_risk_dismissed')) {
-        const dismiss = confirm('提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。\n\n点击“确定”继续，并永久不再提示；点击“取消”返回。');
-        if (!dismiss) return;
-        localStorage.setItem('seed_risk_dismissed', 'true');
-    }
-
-    const description = document.getElementById('seed-desc').value;
-    const testcases_str = document.getElementById('seed-testcases').value;
+    const desc = document.getElementById('seed-desc');
+    const tc = document.getElementById('seed-testcases');
+    if (!desc || !tc) return;
+    const description = desc.value;
+    const testcases_str = tc.value;
     let test_cases = [];
     try {
         test_cases = JSON.parse(testcases_str) || [];
     } catch(e) {
-        test_cases = [];
+        alert('测试用例 JSON 格式错误');
+        return;
     }
     const res = await fetch('/submit_seed', {
         method: 'POST',
@@ -124,101 +171,110 @@ async function submitSeed() {
         },
         body: JSON.stringify({description, test_cases})
     });
-    if (res.ok) {
-        alert('种子已提交');
-        loadAssistantUnread();
-    } else {
-        alert('提交失败');
-    }
+    if (res.ok) alert('种子已提交');
+    else alert('提交失败');
 }
 
-async function checkPendingPollinate() {
-    const settingsRes = await fetch('/me/settings', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    let autoPollinate = true;
-    if (settingsRes.ok) {
-        const settings = await settingsRes.json();
-        autoPollinate = settings.auto_pollinate_enabled;
-    }
-
-    if (autoPollinate) return;
-
-    if (localStorage.getItem('pollinate_auto_confirm') === 'true') return;
-
-    const res = await fetch('/pollinate/pending', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
-        if (data.has_pending) {
-            document.getElementById('pollinate-pending').style.display = 'block';
-            window._pendingPollinate = data;
-        }
-    }
-}
-
-async function confirmPollinate() {
-    const res = await fetch('/pollinate/confirm', {
+// ========== AGI 执行 ==========
+async function executeAGI() {
+    const query = document.getElementById('agi-query').value.trim();
+    if (!query) return;
+    const res = await fetch('/agi/execute', {
         method: 'POST',
-        headers: {'Authorization': `Bearer ${token}`}
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({query})
     });
-    const resultDiv = document.getElementById('pollinate-result');
-    if (res.ok) {
-        const data = await res.json();
-        resultDiv.textContent = data.message || '授粉成功';
-        document.getElementById('pollinate-pending').style.display = 'none';
-        localStorage.setItem('pollinate_auto_confirm', 'true');
-        updateCreditsDisplay();
-        loadAssistantUnread();
-    } else {
-        const err = await res.json();
-        resultDiv.textContent = `失败：${err.detail || res.status}`;
-    }
+    const data = await res.json();
+    const resultDiv = document.getElementById('agi-result');
+    if (resultDiv) resultDiv.textContent = JSON.stringify(data, null, 2);
 }
 
-async function dismissPollinate() {
-    document.getElementById('pollinate-pending').style.display = 'none';
-}
-
-async function updateCreditsDisplay() {
-    const res = await fetch('/me', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
-        document.getElementById('credits-display').textContent = data.credits;
-    }
-}
-
+// ========== 排行榜 ==========
 async function loadLeaderboard() {
     const res = await fetch('/leaderboard');
     const data = await res.json();
-    const list = document.getElementById('leaderboard');
-    list.innerHTML = '';
+    const list = document.getElementById('leaderboard-list');
+    if (!list) return;
+    list.innerHTML = '<h3>积分榜</h3>';
     data.forEach(item => {
         const li = document.createElement('li');
         li.textContent = `${item.username}: ${item.credits} 积分`;
         list.appendChild(li);
     });
 }
+async function loadContribLeaderboard() {
+    const res = await fetch('/contrib_leaderboard');
+    const data = await res.json();
+    const list = document.getElementById('leaderboard-list');
+    if (!list) return;
+    list.innerHTML += '<h3>贡献榜</h3>';
+    data.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.username}: ${item.score} 分`;
+        list.appendChild(li);
+    });
+}
 
+// ========== 统计 ==========
 async function loadStats() {
     const res = await fetch('/stats');
     const data = await res.json();
-    document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
+    const el = document.getElementById('stats-display');
+    if (el) el.textContent = JSON.stringify(data, null, 2);
 }
 
+// ========== 积分流水 ==========
+async function showLedger() {
+    const res = await fetch('/my_ledger', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        const div = document.getElementById('ledger');
+        if (div) {
+            div.style.display = 'block';
+            div.innerHTML = '<h3>积分流水</h3><ul>' + data.ledger.map(item =>
+                `<li>${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})</li>`
+            ).join('') + '</ul>';
+        }
+    }
+}
+
+// ========== SASES 助手消息 ==========
+async function showAssistant() {
+    const res = await fetch('/assistant/messages', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        const div = document.getElementById('assistant-messages');
+        if (div) {
+            div.style.display = 'block';
+            div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg =>
+                `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
+            ).join('') + '</ul>';
+        }
+        await fetch('/assistant/read', {
+            method: 'POST',
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+    }
+}
+
+// ========== 授粉设置 ==========
 async function loadSettings() {
     const res = await fetch('/me/settings', {
         headers: {'Authorization': `Bearer ${token}`}
     });
     if (res.ok) {
         const data = await res.json();
-        document.getElementById('auto-pollinate-toggle').checked = data.auto_pollinate_enabled;
+        const toggle = document.getElementById('auto-pollinate-toggle');
+        if (toggle) toggle.checked = data.auto_pollinate_enabled;
     }
 }
-
 async function toggleAutoPollinate() {
     const enabled = document.getElementById('auto-pollinate-toggle').checked;
     const res = await fetch('/me/settings', {
@@ -229,54 +285,48 @@ async function toggleAutoPollinate() {
         },
         body: JSON.stringify({auto_pollinate_enabled: enabled})
     });
-    if (res.ok) {
-        alert('设置已更新');
-        checkPendingPollinate();
-    } else {
-        alert('设置更新失败');
-    }
+    if (res.ok) alert('设置已更新');
+    else alert('更新失败');
 }
 
-// ========== SASES 助手 ==========
-async function loadAssistantUnread() {
-    const res = await fetch('/assistant/messages', {
-        headers: {'Authorization': `Bearer ${token}`}
+// ========== 空间节点 ==========
+async function loadSpaceNodes() {
+    const res = await fetch('/space/nodes');
+    const data = await res.json();
+    const div = document.getElementById('space-nodes-list');
+    if (!div) return;
+    div.innerHTML = '';
+    data.forEach(node => {
+        const item = document.createElement('div');
+        item.style.border = '1px solid #ddd';
+        item.style.padding = '8px';
+        item.style.margin = '5px 0';
+        item.innerHTML = `<strong>${node.name}</strong> (${node.node_type})<br>${node.description}`;
+        div.appendChild(item);
     });
-    if (res.ok) {
-        const data = await res.json();
-        const badge = document.getElementById('assistant-unread');
-        if (data.unread > 0) {
-            badge.textContent = `（${data.unread}条未读）`;
-        } else {
-            badge.textContent = '';
-        }
-    }
 }
 
-async function showAssistant() {
-    const res = await fetch('/assistant/messages', {
-        headers: {'Authorization': `Bearer ${token}`}
+// ========== Harness 工具 ==========
+async function loadHarnessTools() {
+    const res = await fetch('/harness/tools');
+    const data = await res.json();
+    const div = document.getElementById('harness-tools-list');
+    if (!div) return;
+    div.innerHTML = '';
+    data.forEach(tool => {
+        const item = document.createElement('div');
+        item.style.border = '1px solid #ddd';
+        item.style.padding = '8px';
+        item.style.margin = '5px 0';
+        item.innerHTML = `<strong>${tool.name}</strong> (${tool.module_id})<br>${tool.description}`;
+        div.appendChild(item);
     });
-    if (res.ok) {
-        const data = await res.json();
-        const div = document.getElementById('assistant-messages');
-        div.style.display = 'block';
-        div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg => 
-            `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
-        ).join('') + '</ul>';
-
-        // 标记已读
-        await fetch('/assistant/read', {
-            method: 'POST',
-            headers: {'Authorization': `Bearer ${token}`}
-        });
-        loadAssistantUnread();
-    } else {
-        alert('获取助手消息失败');
-    }
 }
 
-// 如果已有 token，自动进入主界面
+// ========== 初始化 ==========
 if (token) {
     showMain();
+} else {
+    const auth = document.getElementById('auth-section');
+    if (auth) auth.style.display = 'flex';
 }
