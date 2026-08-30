@@ -8,6 +8,7 @@ from core import safety_scan
 from core import knowledge_base
 from core import config
 from core import contribution_log
+from core import agi_coordinator
 from core.api_routes.auth_routes import get_current_user
 
 router = APIRouter()
@@ -27,8 +28,21 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     settings = auth.get_user_settings(current_user["id"])
     auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
 
-    kb = knowledge_base.load_kb()
     query = req.query
+
+    # ========== 新增：优先尝试 AGI 工具执行 ==========
+    agi_result = agi_coordinator.quick_execute(query)
+    if agi_result and agi_result["success"]:
+        # AGI 工具执行成功，直接返回
+        return {
+            "answer": f"🧠 工具执行成功：{agi_result['result']}",
+            "source": "agi",
+            "module_id": agi_result.get("module_id"),
+            "result": agi_result["result"]
+        }
+
+    # ========== 原有知识库检索逻辑 ==========
+    kb = knowledge_base.load_kb()
     source = "none"
     answer = ""
 
@@ -55,10 +69,8 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
 
     # 自动授粉关闭且命中知识库时，必须扣分成功才返回答案
     if source == "local_kb" and not auto_pollinate:
-        # 直接检查当前积分是否足够
         if current_user["credits"] < config.QUERY_DEDUCTION:
             raise HTTPException(status_code=402, detail="积分不足，无法查询")
-        # 尝试扣分
         success, msg = auth.deduct_credits(current_user["id"], config.QUERY_DEDUCTION, "仅查询不回流")
         if not success:
             raise HTTPException(status_code=402, detail=msg or "积分不足，无法查询")

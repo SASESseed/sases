@@ -83,20 +83,49 @@ def _extract_params_for_tool(query: str, module_id: str) -> Optional[Dict[str, A
         # 通用工具：传递整个查询作为 query 参数，由模块自行处理
         return {"query": query}
 
+def quick_execute(query: str) -> Optional[Dict[str, Any]]:
+    """
+    快速执行：只使用关键词匹配和参数提取，不调用 LLM。
+    如果匹配到工具并执行成功，返回结果；否则返回 None。
+    """
+    module_id = _keyword_match_tool(query)
+    if module_id is None:
+        return None
+
+    params = _extract_params_for_tool(query, module_id)
+    if params is None:
+        return None
+
+    response = harness_runtime.invoke_tool(module_id, params)
+    if response.success:
+        return {
+            "success": True,
+            "message": "任务执行成功",
+            "module_id": module_id,
+            "result": response.result
+        }
+    else:
+        return {
+            "success": False,
+            "message": response.error or "工具执行失败",
+            "module_id": module_id,
+            "result": None
+        }
+
 def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    AGI 协调器入口：根据用户输入执行任务。
-    返回统一格式的结果。
+    AGI 协调器入口：先尝试快速执行，再尝试 LLM 选择工具。
     """
     if params is None:
         params = {}
 
-    # 第一步：关键词匹配
-    module_id = _keyword_match_tool(query)
-    if module_id is None:
-        # 第二步：LLM 选择工具
-        module_id = _llm_select_tool(query)
+    # 第一步：快速执行（关键词匹配 + 参数提取）
+    quick_result = quick_execute(query)
+    if quick_result and quick_result["success"]:
+        return quick_result
 
+    # 第二步：LLM 选择工具
+    module_id = _llm_select_tool(query)
     if module_id is None:
         return {
             "success": False,
@@ -105,7 +134,7 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             "result": None
         }
 
-    # 如果没有提供参数，尝试从查询中提取
+    # 第三步：参数提取
     if not params:
         extracted = _extract_params_for_tool(query, module_id)
         if extracted is None:
@@ -117,7 +146,7 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             }
         params = extracted
 
-    # 调用工具
+    # 第四步：调用工具
     response = harness_runtime.invoke_tool(module_id, params)
     if response.success:
         return {
