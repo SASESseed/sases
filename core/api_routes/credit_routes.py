@@ -1,7 +1,7 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import auth
 from core import contribution_log
@@ -21,6 +21,15 @@ class SettingsUpdateRequest(BaseModel):
 
 class AllSettingsUpdateRequest(BaseModel):
     settings: Dict[str, Any]
+
+class ApiKeyCreateRequest(BaseModel):
+    provider: str
+    key: str
+    priority: int = 0
+
+class ApiKeyUpdatePriorityRequest(BaseModel):
+    key_id: int
+    priority: int
 
 # ---------- 授粉设置（兼容旧接口） ----------
 @router.get("/me/settings")
@@ -44,6 +53,26 @@ async def get_all_my_settings(current_user=Depends(get_current_user)):
 async def update_all_my_settings(req: AllSettingsUpdateRequest, current_user=Depends(get_current_user)):
     updated = auth.update_all_user_settings(current_user["id"], req.settings)
     return {"message": "设置已更新", "settings": updated}
+
+# ---------- API Key 管理 ----------
+@router.post("/api_keys")
+async def add_api_key(req: ApiKeyCreateRequest, current_user=Depends(get_current_user)):
+    auth.add_api_key(current_user["id"], req.provider, req.key, req.priority)
+    return {"message": "API Key 已添加"}
+
+@router.get("/api_keys")
+async def list_api_keys(current_user=Depends(get_current_user)):
+    return auth.list_api_keys(current_user["id"])
+
+@router.delete("/api_keys/{key_id}")
+async def delete_api_key(key_id: int, current_user=Depends(get_current_user)):
+    auth.delete_api_key(current_user["id"], key_id)
+    return {"message": "API Key 已删除"}
+
+@router.patch("/api_keys/priority")
+async def update_api_key_priority(req: ApiKeyUpdatePriorityRequest, current_user=Depends(get_current_user)):
+    auth.set_api_key_priority(current_user["id"], req.key_id, req.priority)
+    return {"message": "优先级已更新"}
 
 # ---------- 排行榜 ----------
 @router.get("/leaderboard")

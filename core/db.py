@@ -10,7 +10,7 @@ def get_db():
     return conn
 
 def init_db():
-    """初始化数据库表结构，包括用户、流水、消息、日志、通用设置等"""
+    """初始化数据库表结构，包括用户、流水、消息、日志、通用设置、API Keys等"""
     with get_db() as conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -43,13 +43,26 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
-        # 通用用户设置表（键值对，可存储 JSON）
+        # 通用用户设置表
         conn.execute("""
         CREATE TABLE IF NOT EXISTS user_settings (
             user_id INTEGER NOT NULL,
             key TEXT NOT NULL,
             value TEXT,
             PRIMARY KEY (user_id, key),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """)
+        # API Key 管理表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            encrypted_key TEXT NOT NULL,
+            priority INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)

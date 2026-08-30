@@ -15,6 +15,9 @@ SASES_SECRET_KEY = os.environ.get("SASES_SECRET_KEY", "sases-dev-secret-key")
 # 状态签名密钥文件
 SIGN_KEY_FILE = os.environ.get("SIGN_KEY_FILE", "secret_key.bin")
 
+# API Key 加密密钥文件
+API_KEY_ENCRYPTION_KEY_FILE = os.environ.get("API_KEY_ENCRYPTION_KEY_FILE", "api_key_encryption.key")
+
 # 数据库与知识库文件
 DB_FILE = os.environ.get("DB_FILE", "users.db")
 KB_FILE = os.environ.get("KB_FILE", "success_kb.json")
