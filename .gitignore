@@ -3,17 +3,14 @@ api_key.txt
 *.key
 secret_key.bin
 
-# 知识库本地数据（可后期改为共享方式）
-kb/
+# 本地数据库与知识库
+users.db
 success_kb.json
 seed_tasks_new.jsonl
 seed_tasks_external.jsonl
 *.jsonl.bak
 
-# 数据库（本地用户/积分数据，不应提交）
-users.db
-
-# 日志（本地运行产生的数据）
+# 日志
 safety_log.jsonl
 tamper_log.jsonl
 contribution_log.jsonl
