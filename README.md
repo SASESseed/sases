@@ -1,7 +1,7 @@
 # SASES
 
 **SASES** (Seed-Apollo Self-Evolving System) is a privacy-first, local-first AI self-evolving ecosystem.  
-It combines autonomous seed iteration, credit systems, pollination mechanisms, contribution ranking, and an extensible harness runtime to create a distributed AI service network.
+It combines autonomous seed iteration, credit systems, pollination mechanisms, contribution ranking, an extensible harness runtime, AGI coordination, and distributed node services to create a personal AI service network.
 
 > **One brain, many windows.**  
 > SASES is designed to be lightweight, modular, and community-driven.
@@ -36,6 +36,9 @@ It combines autonomous seed iteration, credit systems, pollination mechanisms, c
 - **Space Service (Node as a Service)**  
   Register Harness modules and AGI services as discoverable space nodes. Supports local and remote invocation, reputation tracking, and node synchronization between peers.
 
+- **API Key Management**  
+  Users can securely add, update, delete, and prioritize multiple API keys from different providers (DeepSeek, OpenAI, Moonshot, Zhipu, Qwen). Keys are encrypted at rest using Fernet encryption. The model router automatically selects the highest-priority active key and falls back to the system default if all user keys fail.
+
 ---
 
 ## 🧱 Project Structure
@@ -48,13 +51,14 @@ sases/
 ├── core/
 │ ├── config.py # Centralized configuration
 │ ├── db.py # Database initialization
-│ ├── auth_service.py # Authentication, credits, signatures
+│ ├── auth_service.py # Authentication, credits, signatures, API keys
 │ ├── knowledge_base.py # Knowledge base management
 │ ├── contribution_log.py # Contribution logging and leaderboard
-│ ├── seed_utils.py # Code utilities and API wrapper
+│ ├── seed_utils.py # Code utilities and API wrapper (multi-key routing)
 │ ├── similarity.py # Semantic deduplication
 │ ├── sandbox.py # Safe code execution
 │ ├── safety_scan.py # Content safety scanning
+│ ├── encryption.py # Fernet encryption for API keys
 │ ├── harness_runtime.py # Harness module runtime
 │ ├── harness_models.py # Harness data models
 │ ├── agi_coordinator.py # AGI task coordinator
@@ -63,7 +67,7 @@ sases/
 │ └── unit_converter/ # Example Harness module
 │ ├── manifest.json
 │ └── main.py
-├── tests/ # Unit tests (43 passed)
+├── tests/ # Unit tests (60+ passed)
 └── static/ # Web console and chat UI
 
 text
@@ -75,7 +79,7 @@ text
 ### 1. Install dependencies
 
 ```bash
-pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn httpx
+pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn httpx python-dotenv cryptography
 2. Configure environment variables
 Create a .env file or set the following variables:
 
@@ -98,7 +102,7 @@ Visit http://127.0.0.1:8001/static/index.html to open the console.
 🧪 Run Tests
 bash
 python -m pytest tests/ -v
-All 43 unit tests should pass.
+All 60+ unit tests should pass.
 
 🎯 Current Status
 Seed iteration loop with semantic deduplication
@@ -117,7 +121,11 @@ AGI coordinator with keyword matching and parameter extraction
 
 Space service with node registration, remote invocation, and peer synchronization
 
+API key management with encryption and multi-provider routing
+
 Modular route structure (core/api_routes/)
+
+Basic web console with WeChat-style bottom navigation
 
 📜 License
 This project is licensed under the Apache License 2.0.
