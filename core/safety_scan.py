@@ -16,13 +16,42 @@ client = openai.OpenAI(
 MODEL = config.MODEL_NAME
 SAFETY_LOG = "safety_log.jsonl"
 
+# 本地危险模式检测（快速预筛）
+DANGEROUS_PATTERNS = [
+    r'\bos\.system\s*\(',
+    r'\bsubprocess\.(call|run|Popen)\s*\(',
+    r'\beval\s*\(',
+    r'\bexec\s*\(',
+    r'\bshutil\.rmtree\s*\(',
+    r'\brm\s+-rf\b',
+    r'\b__import__\s*\(',
+    r'\bopen\s*\([^\)]*["\']w["\']\s*\)',
+    r'\bsocket\.socket\s*\(',
+]
+
+def _local_quick_scan(text: str) -> bool:
+    """
+    本地快速扫描，返回 True 表示未发现明显危险，False 表示需要进一步检查。
+    """
+    for pattern in DANGEROUS_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            return False
+    return True
+
 def scan_content(text):
     """
-    使用 DeepSeek 对内容进行安全分类。
+    使用本地规则 + DeepSeek 对内容进行安全分类。
     返回 (is_safe, category)：
     - is_safe=True 表示正常
     - is_safe=False 表示恶意或高风险
     """
+    # 第一步：本地快速预筛
+    if _local_quick_scan(text):
+        # 本地判断安全，直接放行，记录日志
+        log_safety_scan(text, "safe")
+        return True, "normal"
+
+    # 第二步：本地发现可疑，调用 DeepSeek 深度扫描
     prompt = f"""你是一个内容安全审核员。请判断以下内容是否安全。
 
 内容：
@@ -44,7 +73,6 @@ def scan_content(text):
             max_tokens=50
         )
         raw = resp.choices[0].message.content.strip()
-        # 解析JSON
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
             result = json.loads(match.group())
@@ -54,9 +82,9 @@ def scan_content(text):
         category = result.get("category", "normal")
         return safe, category
     except Exception as e:
-        # 扫描失败时默认安全，但记录错误
+        # 扫描失败时，如果本地预筛已经发现可疑，保守拦截
         log_safety_scan(text, "error", str(e))
-        return True, "unknown_error"
+        return False, "high_risk"
 
 def log_safety_scan(content, category, detail=""):
     """记录安全扫描日志"""
