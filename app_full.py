@@ -4,19 +4,28 @@ from contextlib import asynccontextmanager
 
 from core.api_routes import auth_routes, seed_routes, credit_routes, harness_routes, agi_routes, space_routes
 from core.space_service import space_service
+from core import config
+from core.discovery import NodeDiscovery
+
+# 全局发现服务实例
+discovery = NodeDiscovery(on_peer_discovered=lambda peer_url: space_service.sync_from_peer(peer_url))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动自动同步
+    # 启动空间服务后台线程
     space_service.start_auto_sync(interval=300)
-    # 启动健康检查
     space_service.start_health_check(interval=60)
+    # 启动 mDNS 发现（如果启用）
+    if config.ENABLE_MDNS:
+        discovery.start()
     yield
-    # 停止线程
+    # 停止后台任务
+    if config.ENABLE_MDNS:
+        discovery.stop()
     space_service.stop_auto_sync()
     space_service.stop_health_check()
 
-app = FastAPI(title="SASES Full Web Service", version="0.8.2", lifespan=lifespan)
+app = FastAPI(title="SASES Full Web Service", version="0.12.0", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
