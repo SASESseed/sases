@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# 自动加载项目根目录下的 .env 文件（如果存在）
+load_dotenv()
 
 # DeepSeek API 配置
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
