@@ -2,16 +2,15 @@ import json
 import re
 import uuid
 import datetime
-
 from core.db import get_db
-
-KB_FILE = "success_kb.json"  # 保留常量，可能在其他地方引用，但已不使用文件
 
 def _row_to_dict(row):
     if not row:
         return None
     d = dict(row)
-    # 解析 test_cases 字段
+    # 将 verified 字段转为布尔
+    if "verified" in d:
+        d["verified"] = bool(d["verified"])
     if d.get("test_cases"):
         try:
             d["test_cases"] = json.loads(d["test_cases"])
@@ -22,19 +21,15 @@ def _row_to_dict(row):
     return d
 
 def load_kb():
-    """加载知识库列表，按时间戳升序"""
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM kb_entries ORDER BY timestamp ASC").fetchall()
         return [_row_to_dict(row) for row in rows]
 
 def save_kb(entries):
-    """全量保存（用于兼容，但实际不使用；保留空实现避免其他代码报错）"""
-    # 迁移后不再支持全量覆盖，可以忽略或记录警告
+    """全量保存（已弃用，保留空实现避免调用错误）"""
     print("警告：save_kb 已弃用，请使用 add_to_kb 逐个添加")
-    pass
 
 def add_to_kb(task, branch_a, branch_b, synthesis, model_id="unknown", user_id="system", backtrack_count=0, test_cases=None):
-    """向知识库添加一条记录"""
     entry_id = str(uuid.uuid4())
     timestamp = datetime.datetime.now(datetime.UTC).isoformat()
     with get_db() as conn:
@@ -50,24 +45,14 @@ def tokenize(text):
     return re.findall(r"\w+", text.lower())
 
 def load_shared_ids():
-    # 分享日志仍为 jsonl 文件，暂时保留原实现；后续可迁移到 SQLite
-    import os
-    if not os.path.exists("shared_pollinate_log.jsonl"):
-        return set()
-    with open("shared_pollinate_log.jsonl", "r", encoding="utf-8") as f:
-        ids = set()
-        for line in f:
-            try:
-                data = json.loads(line)
-                ids.add(data.get("kb_id"))
-            except:
-                pass
-        return ids
+    with get_db() as conn:
+        rows = conn.execute("SELECT kb_id FROM shared_pollinate_log").fetchall()
+        return {row["kb_id"] for row in rows}
 
 def add_shared_id(kb_id):
-    import os, time
-    with open("shared_pollinate_log.jsonl", "a", encoding="utf-8") as f:
-        f.write(json.dumps({"kb_id": kb_id, "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}) + "\n")
+    with get_db() as conn:
+        conn.execute("INSERT OR REPLACE INTO shared_pollinate_log (kb_id, timestamp) VALUES (?, ?)",
+                     (kb_id, datetime.datetime.now(datetime.UTC).isoformat()))
 
 def find_pending_pollinate(user_id):
     kb = load_kb()

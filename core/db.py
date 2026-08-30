@@ -83,6 +83,13 @@ def init_db():
             test_cases TEXT
         )
         """)
+        # 共享授粉日志表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS shared_pollinate_log (
+            kb_id TEXT PRIMARY KEY,
+            timestamp TEXT
+        )
+        """)
         # 空间节点表
         conn.execute("""
         CREATE TABLE IF NOT EXISTS space_nodes (
