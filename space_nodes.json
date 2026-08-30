@@ -10,9 +10,27 @@
     "endpoint": null,
     "icon": null,
     "owner_id": "self",
-    "registered_at": "2026-08-30 20:53:30",
+    "registered_at": "2026-08-30 21:23:31",
     "reputation": 1.0,
     "success_count": 0,
-    "total_count": 0
+    "total_count": 0,
+    "status": "unknown"
+  },
+  "node-B": {
+    "node_id": "node-B",
+    "name": "Node B",
+    "description": "SASES Node",
+    "node_type": "sases_service",
+    "capabilities": [
+      "node_service"
+    ],
+    "endpoint": null,
+    "icon": null,
+    "owner_id": "self",
+    "registered_at": "2026-08-30 21:26:14",
+    "reputation": 1.0,
+    "success_count": 0,
+    "total_count": 0,
+    "status": "unknown"
   }
 }

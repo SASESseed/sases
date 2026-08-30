@@ -1,5 +1,10 @@
-import json
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"  # 强制使用镜像
+
+import json
 from huggingface_hub import HfApi, create_repo, upload_folder
 
 KB_FILE = "success_kb.json"
@@ -7,7 +12,6 @@ EXPORT_FILE = "finetune_data.jsonl"
 REPO_NAME = "sases-finetune-data"
 
 def export_data():
-    """导出知识库为指令微调格式"""
     with open(KB_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -22,20 +26,16 @@ def export_data():
                 ]
             }
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
-
     print(f"已导出 {len(data)} 条数据")
     return len(data)
 
 def upload():
     count = export_data()
-
-    # 创建临时目录存放数据集
     os.makedirs("hf_upload", exist_ok=True)
     if os.path.exists(f"hf_upload/{EXPORT_FILE}"):
         os.remove(f"hf_upload/{EXPORT_FILE}")
     os.replace(EXPORT_FILE, f"hf_upload/{EXPORT_FILE}")
 
-    # 写入 README
     with open("hf_upload/README.md", "w", encoding="utf-8") as f:
         f.write(f"""---
 license: mit
@@ -60,12 +60,10 @@ SASES 种子架构自动迭代产生的成功轨迹数据集。
 用于微调代码生成模型，使模型学习 SASES 的生成-验证-回溯工作范式。
 """)
 
-    # 获取用户名
     api = HfApi()
     user = api.whoami()["name"]
     repo_id = f"{user}/{REPO_NAME}"
 
-    # 创建仓库（如果不存在）
     try:
         create_repo(repo_id, repo_type="dataset", exist_ok=True)
         print(f"仓库已就绪: {repo_id}")
@@ -73,7 +71,6 @@ SASES 种子架构自动迭代产生的成功轨迹数据集。
         print(f"创建仓库失败: {e}")
         return
 
-    # 上传
     upload_folder(
         folder_path="hf_upload",
         repo_id=repo_id,
