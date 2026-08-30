@@ -1,8 +1,6 @@
 import os
 import json
 import time
-import uuid
-import datetime
 
 import auth
 from core import config
@@ -19,14 +17,12 @@ def process_seed(task):
     print(f"\n处理种子: {desc} (提交者ID: {seed_user_id})")
 
     try:
-        # 发芽：生成两个分支
         branches_text = seed_utils.call_chat(
             f"任务：{desc}\n请提出两种截然不同的思路，用`思路A：`和`思路B：`标明。",
             temperature=0.7
         )
         branch_a, branch_b = seed_utils.parse_two_branches(branches_text)
 
-        # 生长 + 申诉
         synthesis = ""
         syntax_error = ""
         for attempt in range(2):
@@ -43,7 +39,6 @@ def process_seed(task):
             print("  申诉失败，跳过。")
             return False
 
-        # 沙箱验证
         passed, msg, _ = seed_utils.safe_run_tests(synthesis, test_cases)
         if passed:
             print("  ✓ 通过，入库。")
@@ -57,7 +52,6 @@ def process_seed(task):
                 test_cases=test_cases
             )
 
-            # 发放积分：仅对真实用户
             if seed_user_id != "system":
                 try:
                     uid = int(seed_user_id)
@@ -91,19 +85,22 @@ def main():
         print("种子池为空，无任务可处理。")
         return
 
+    remaining_tasks = tasks.copy()
     success = 0
     for i, task in enumerate(tasks):
         print(f"\n[{i+1}/{len(tasks)}]")
         if process_seed(task):
             success += 1
+            # 处理成功后立即从剩余列表中移除该任务
+            remaining_tasks.remove(task)
+        # 每次处理后重写种子池，只保留未处理的任务
+        with open(SEED_FILE, "w", encoding="utf-8") as f:
+            for t in remaining_tasks:
+                f.write(json.dumps(t, ensure_ascii=False) + "\n")
         time.sleep(0.3)
 
     print(f"\n处理完成：成功 {success}/{len(tasks)}")
-
-    # 处理完成后清空种子池
-    with open(SEED_FILE, "w", encoding="utf-8") as f:
-        pass
-    print(f"种子池 {SEED_FILE} 已清空，避免重复处理。")
+    print(f"剩余未处理种子数：{len(remaining_tasks)}")
 
 if __name__ == "__main__":
     main()
