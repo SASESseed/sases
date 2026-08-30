@@ -59,9 +59,10 @@ class NodeDiscovery:
         self.zeroconf = None
         self.info = None
         self.browser = None
+        self.local_ip = None
 
-    def _get_local_ip(self) -> str:
-        """获取本机局域网 IP，优先使用主机名解析并过滤有效地址"""
+    def _get_local_ip(self) -> Optional[str]:
+        """获取本机局域网 IP，优先使用主机名解析并过滤有效地址；失败返回 None"""
         # 方法1：主机名解析
         try:
             hostname = socket.gethostname()
@@ -83,15 +84,14 @@ class NodeDiscovery:
         except Exception:
             pass
 
-        # 回退
-        print("警告：无法获取有效的局域网 IP，使用 127.0.0.1")
-        return "127.0.0.1"
+        return None
 
     def _run(self):
         """在后台线程中运行 mDNS 注册与监听"""
         try:
             self.zeroconf = Zeroconf()
-            local_ip = self._get_local_ip()
+            # 使用 start() 中已获取的 local_ip
+            local_ip = self.local_ip
             port = int(os.environ.get("SASES_PORT", "8001"))
 
             self.info = ServiceInfo(
@@ -130,8 +130,17 @@ class NodeDiscovery:
             print(f"mDNS 服务异常: {e}")
 
     def start(self):
+        """启动 mDNS 服务。如果无法获取有效局域网 IP，则自动禁用。"""
         if not self.enabled or not ZEROCONF_AVAILABLE:
             return
+
+        # 先获取有效 IP
+        self.local_ip = self._get_local_ip()
+        if not self.local_ip:
+            print("未找到有效局域网 IP，mDNS 发现服务已自动禁用。")
+            self.enabled = False
+            return
+
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 

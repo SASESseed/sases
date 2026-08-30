@@ -152,10 +152,6 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None, user_id=No
         }
 
 def execute_task_with_image(query: str, image_base64: str, user_id=None) -> Dict[str, Any]:
-    """
-    多模态任务执行：用户提供图片和文本，系统使用视觉模型分析图片并回答。
-    """
-    # 先检查用户是否有可用的视觉模型 Key
     if user_id is not None:
         api_keys = auth_service.get_active_api_keys(user_id)
         has_vision = False
@@ -180,16 +176,12 @@ def execute_task_with_image(query: str, image_base64: str, user_id=None) -> Dict
             user_id=user_id,
             temperature=0.3
         )
-        return {
-            "success": True,
-            "message": "多模态任务执行成功",
-            "module_id": None,
-            "result": {"answer": answer}
-        }
+        return {"success": True, "message": "多模态任务执行成功", "module_id": None, "result": {"answer": answer}}
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"多模态任务执行失败: {e}",
-            "module_id": None,
-            "result": None
-        }
+        return {"success": False, "message": f"多模态任务执行失败: {e}", "module_id": None, "result": None}
+
+def execute_task_with_audio(query: str, audio_base64: str, user_id=None) -> Dict[str, Any]:
+    return {"success": False, "message": "音频识别功能尚未接入，请使用文本或图片输入。", "module_id": None, "result": None}
+
+def execute_task_with_video(query: str, video_base64: str, user_id=None) -> Dict[str, Any]:
+    return {"success": False, "message": "视频理解功能尚未接入，请使用文本或图片输入。", "module_id": None, "result": None}

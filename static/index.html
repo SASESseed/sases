@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SASES 控制台</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/static/style.css">
@@ -12,7 +12,7 @@
         <!-- 认证区域 -->
         <div id="auth-section">
             <h2>登录</h2>
-            <input type="text" id="login-username" placeholder="用户名" />
+            <input type="text" id="login-username" placeholder="用户名" autofocus />
             <input type="password" id="login-password" placeholder="密码" />
             <button onclick="login()">登录</button>
             <button onclick="showRegister()">注册新用户</button>
@@ -34,11 +34,18 @@
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
                     <input type="file" id="chat-image" accept="image/*" style="display:none;" onchange="handleImageSelect(event)" />
-                    <button id="image-btn" onclick="document.getElementById('chat-image').click()">📷</button>
+                    <input type="file" id="chat-audio" accept="audio/*" style="display:none;" onchange="handleAudioSelect(event)" />
+                    <input type="file" id="chat-video" accept="video/*" style="display:none;" onchange="handleVideoSelect(event)" />
+                    <button id="image-btn" onclick="document.getElementById('chat-image').click()" title="发送图片">📷</button>
+                    <button id="audio-btn" onclick="document.getElementById('chat-audio').click()" title="发送音频">🎤</button>
+                    <button id="video-btn" onclick="document.getElementById('chat-video').click()" title="发送视频">🎬</button>
                     <button id="send-btn" onclick="chat()">发送</button>
                 </div>
                 <div id="image-preview" style="margin-top:5px;"></div>
-                <div id="chat-loading" style="display:none; color:#888;">正在处理...</div>
+                <div id="chat-loading" style="display:none; text-align:center; margin-top:10px;">
+                    <div class="spinner"></div>
+                    <span>正在处理...</span>
+                </div>
                 <div id="chat-error" style="display:none; color:red;"></div>
                 <div id="chat-result"></div>
             </div>
@@ -81,6 +88,7 @@
                 <div id="harness-panel" style="display:none;">
                     <h3>Harness 工具调用</h3>
                     <select id="tool-select"></select>
+                    <div id="tool-params-example" style="color:#888; font-size:12px; margin-bottom:5px;"></div>
                     <textarea id="tool-params" placeholder='参数 JSON，如 {"celsius":30}'></textarea>
                     <button onclick="invokeTool()">执行工具</button>
                     <div id="tool-result"></div>

@@ -1,7 +1,33 @@
+// 确保页面加载时只显示聊天视图
+document.addEventListener('DOMContentLoaded', function() {
+    const views = document.querySelectorAll('.view');
+    views.forEach(v => v.classList.remove('active'));
+    const chatView = document.getElementById('view-chat');
+    if (chatView) chatView.classList.add('active');
+});
+
 let token = localStorage.getItem('sases_token');
 let selectedImageBase64 = null;
+let selectedAudioBase64 = null;
+let selectedVideoBase64 = null;
 
-// ---------- HTML 转义函数（防止 XSS） ----------
+const TOOL_EXAMPLES = {
+    'unit-converter': '{"celsius": 30}',
+    'calculator': '{"expression": "2+3*4"}',
+    'text-stats': '{"text": "Hello world. Hello again."}',
+    'json-formatter': '{"json_string": "{\\"name\\":\\"test\\"}", "indent": 2}',
+    'base64-codec': '{"action": "encode", "text": "hello"}',
+    'string-utils': '{"operation": "reverse", "text": "hello"}'
+};
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     return String(text)
@@ -12,7 +38,29 @@ function escapeHtml(text) {
         .replace(/'/g, '&#039;');
 }
 
-// ---------- 视图切换 ----------
+async function apiFetch(url, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(url, { ...options, headers });
+    if (response.status === 401) {
+        showToast('登录已过期，请重新登录', 'error');
+        logout();
+        throw new Error('Unauthorized');
+    }
+    if (!response.ok) {
+        let detail = '请求失败';
+        try {
+            const data = await response.json();
+            detail = data.detail || detail;
+        } catch (e) {}
+        throw new Error(detail);
+    }
+    return response.json();
+}
+
 function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
@@ -20,62 +68,68 @@ function switchView(viewId) {
     document.querySelector(`.nav-item[data-view="${viewId}"]`).classList.add('active');
 }
 
-// ---------- 认证 ----------
 function showRegister() {
     document.getElementById('register-section').style.display = 'block';
 }
 
 async function login() {
-    const username = document.getElementById('login-username').value;
+    const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
-    const res = await fetch('/token', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-    });
-    if (res.ok) {
-        const data = await res.json();
-        token = data.access_token;
-        localStorage.setItem('sases_token', token);
-        showMain();
-    } else {
-        alert('登录失败');
+    if (!username || !password) {
+        showToast('请输入用户名和密码', 'error');
+        return;
+    }
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    try {
+        const response = await fetch('/token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+        });
+        if (response.ok) {
+            const data = await response.json();
+            token = data.access_token;
+            localStorage.setItem('sases_token', token);
+            showToast('登录成功', 'success');
+            showMain();
+        } else {
+            const error = await response.json();
+            showToast(error.detail || '登录失败', 'error');
+        }
+    } catch (e) {
+        showToast('网络错误：' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '登录';
     }
 }
 
 async function register() {
-    const username = document.getElementById('reg-username').value;
-    const email = document.getElementById('reg-email').value;
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
-    const res = await fetch('/register', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({username, email, password})
-    });
-    if (res.ok) {
-        alert('注册成功，请登录');
-        document.getElementById('register-section').style.display = 'none';
-    } else {
-        alert('注册失败');
+    if (!username || !email || !password) {
+        showToast('请填写完整注册信息', 'error');
+        return;
     }
-}
-
-async function showMain() {
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('main-section').style.display = 'block';
-    switchView('view-chat');
-    const res = await fetch('/me', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
-        document.getElementById('username-display').textContent = data.username;
-        document.getElementById('credits-display').textContent = data.credits;
+    try {
+        const response = await fetch('/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, email, password})
+        });
+        if (response.ok) {
+            showToast('注册成功，请登录', 'success');
+            document.getElementById('register-section').style.display = 'none';
+        } else {
+            const error = await response.json();
+            showToast(error.detail || '注册失败', 'error');
+        }
+    } catch (e) {
+        showToast('网络错误：' + e.message, 'error');
     }
-    loadSettings();
-    loadLeaderboard();
-    loadAssistantUnread();
-    loadStats();
 }
 
 function logout() {
@@ -83,88 +137,151 @@ function logout() {
     token = null;
     document.getElementById('auth-section').style.display = 'block';
     document.getElementById('main-section').style.display = 'none';
+    const loginBtn = document.querySelector('#auth-section button[onclick="login()"]');
+    if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+    }
 }
 
-// ---------- 图片处理 ----------
+async function showMain() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-section').style.display = 'block';
+    switchView('view-chat');
+    try {
+        const data = await apiFetch('/me');
+        document.getElementById('username-display').textContent = data.username;
+        document.getElementById('credits-display').textContent = data.credits;
+    } catch (e) {}
+    loadSettings();
+    loadLeaderboard();
+    loadAssistantUnread();
+    loadStats();
+}
+
 function handleImageSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('图片大小不能超过 5MB', 'error');
+        return;
+    }
     const reader = new FileReader();
     reader.onload = function(e) {
-        const base64 = e.target.result.split(',')[1];
-        selectedImageBase64 = base64;
-        const preview = document.getElementById('image-preview');
-        preview.innerHTML = `
+        selectedImageBase64 = e.target.result.split(',')[1];
+        document.getElementById('image-preview').innerHTML = `
             <div style="display:flex; align-items:center;">
-                <img src="data:image/jpeg;base64,${base64}" style="max-width:80px; max-height:80px; margin-right:5px;" />
-                <button onclick="clearSelectedImage()" style="margin-left:5px;">移除</button>
+                <img src="data:image/jpeg;base64,${selectedImageBase64}" style="max-width:80px; max-height:80px; margin-right:5px;" />
+                <button onclick="clearSelectedFile('image')" style="margin-left:5px;">移除</button>
             </div>`;
         document.getElementById('chat-image').value = '';
     };
     reader.readAsDataURL(file);
 }
 
-function clearSelectedImage() {
-    selectedImageBase64 = null;
-    document.getElementById('image-preview').innerHTML = '';
+function handleAudioSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('音频大小不能超过 10MB', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedAudioBase64 = e.target.result.split(',')[1];
+        showToast('已选择音频：' + file.name, 'info');
+        document.getElementById('chat-audio').value = '';
+    };
+    reader.readAsDataURL(file);
 }
 
-// ---------- 聊天 ----------
-async function chat() {
-    const query = document.getElementById('chat-input').value;
-    const image = selectedImageBase64;
+function handleVideoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+        showToast('视频大小不能超过 25MB', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedVideoBase64 = e.target.result.split(',')[1];
+        showToast('已选择视频：' + file.name, 'info');
+        document.getElementById('chat-video').value = '';
+    };
+    reader.readAsDataURL(file);
+}
 
-    if (!query && !image) {
-        showChatError('请输入问题或选择图片');
+function clearSelectedFile(type) {
+    if (type === 'image') {
+        selectedImageBase64 = null;
+        document.getElementById('image-preview').innerHTML = '';
+    } else if (type === 'audio') {
+        selectedAudioBase64 = null;
+    } else if (type === 'video') {
+        selectedVideoBase64 = null;
+    }
+}
+
+async function chat() {
+    const query = document.getElementById('chat-input').value.trim();
+    const image = selectedImageBase64;
+    const audio = selectedAudioBase64;
+    const video = selectedVideoBase64;
+
+    if (!query && !image && !audio && !video) {
+        showToast('请输入问题或选择文件', 'error');
         return;
     }
 
     const sendBtn = document.getElementById('send-btn');
     sendBtn.disabled = true;
-    document.getElementById('chat-loading').style.display = 'block';
+    sendBtn.textContent = '发送中...';
+    document.getElementById('chat-loading').style.display = 'flex';
     document.getElementById('chat-error').style.display = 'none';
 
+    const payload = { query };
+    if (image) payload.image = image;
+    if (audio) payload.audio = audio;
+    if (video) payload.video = video;
+
     try {
-        const res = await fetch('/chat', {
+        const data = await apiFetch('/chat', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query, image })
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
         document.getElementById('chat-result').textContent = data.answer;
-        clearSelectedImage();
+        clearSelectedFile('image');
+        clearSelectedFile('audio');
+        clearSelectedFile('video');
         if (data.deducted) {
-            showChatError(`本次查询已扣除 ${data.deducted} 积分`);
+            showToast(`本次查询已扣除 ${data.deducted} 积分`, 'info');
             updateCreditsDisplay();
-            loadAssistantUnread();
         }
     } catch (e) {
-        showChatError('请求失败：' + e.message);
+        document.getElementById('chat-error').textContent = e.message;
+        document.getElementById('chat-error').style.display = 'block';
     } finally {
         sendBtn.disabled = false;
+        sendBtn.textContent = '发送';
         document.getElementById('chat-loading').style.display = 'none';
     }
 }
 
-function showChatError(message) {
-    const errorDiv = document.getElementById('chat-error');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('chat-input');
+    if (input) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chat();
+            }
+        });
+    }
+});
 
-// ---------- 积分流水 ----------
 async function showLedger() {
-    const res = await fetch('/my_ledger', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/my_ledger');
         const div = document.getElementById('ledger');
         div.style.display = 'block';
         div.innerHTML = '<h3>积分流水</h3>';
@@ -175,80 +292,82 @@ async function showLedger() {
             ul.appendChild(li);
         });
         div.appendChild(ul);
-    } else {
-        alert('获取积分流水失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- 提交种子 ----------
 async function submitSeed() {
     if (!localStorage.getItem('seed_risk_dismissed')) {
         const dismiss = confirm('提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。\n\n点击“确定”继续，并永久不再提示；点击“取消”返回。');
         if (!dismiss) return;
         localStorage.setItem('seed_risk_dismissed', 'true');
     }
-    const description = document.getElementById('seed-desc').value;
-    const testcases_str = document.getElementById('seed-testcases').value;
+    const description = document.getElementById('seed-desc').value.trim();
+    const testcases_str = document.getElementById('seed-testcases').value.trim();
     let test_cases = [];
-    try { test_cases = JSON.parse(testcases_str) || []; } catch(e) { test_cases = []; }
-    const res = await fetch('/submit_seed', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({description, test_cases})
-    });
-    if (res.ok) {
-        alert('种子已提交');
+    try { test_cases = testcases_str ? JSON.parse(testcases_str) : []; } catch(e) {
+        showToast('测试用例 JSON 格式错误', 'error');
+        return;
+    }
+    try {
+        await apiFetch('/submit_seed', {
+            method: 'POST',
+            body: JSON.stringify({description, test_cases})
+        });
+        showToast('种子已提交', 'success');
+        document.getElementById('seed-desc').value = '';
+        document.getElementById('seed-testcases').value = '';
         loadAssistantUnread();
-    } else {
-        alert('提交失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- 更新积分显示 ----------
 async function updateCreditsDisplay() {
-    const res = await fetch('/me', { headers: {'Authorization': `Bearer ${token}`} });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/me');
         document.getElementById('credits-display').textContent = data.credits;
+    } catch (e) {}
+}
+
+async function loadLeaderboard() {
+    try {
+        const data = await apiFetch('/leaderboard');
+        const list = document.getElementById('leaderboard');
+        list.innerHTML = '';
+        data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = `${item.username}: ${item.credits} 积分`;
+            list.appendChild(li);
+        });
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- 排行榜 ----------
-async function loadLeaderboard() {
-    const res = await fetch('/leaderboard');
-    const data = await res.json();
-    const list = document.getElementById('leaderboard');
-    list.innerHTML = '';
-    data.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.username}: ${item.credits} 积分`;
-        list.appendChild(li);
-    });
-}
-
-// ---------- 贡献榜 ----------
 async function loadContribLeaderboard() {
-    const res = await fetch('/contrib_leaderboard');
-    const data = await res.json();
-    const div = document.getElementById('discover-content');
-    div.innerHTML = '<h3>贡献榜</h3>';
-    const ul = document.createElement('ul');
-    data.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.username}: ${item.score}`;
-        ul.appendChild(li);
-    });
-    div.appendChild(ul);
+    try {
+        const data = await apiFetch('/contrib_leaderboard');
+        const div = document.getElementById('discover-content');
+        div.innerHTML = '<h3>贡献榜</h3>';
+        const ul = document.createElement('ul');
+        data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = `${item.username}: ${item.score}`;
+            ul.appendChild(li);
+        });
+        div.appendChild(ul);
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
 }
 
-// ---------- 统计 ----------
 async function loadStats() {
-    const res = await fetch('/stats');
-    const data = await res.json();
-    document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
+    try {
+        const data = await apiFetch('/stats');
+        document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
+    } catch (e) {}
 }
 
 function toggleStats() {
@@ -256,33 +375,29 @@ function toggleStats() {
     stats.style.display = stats.style.display === 'none' ? 'block' : 'none';
 }
 
-// ---------- 自动授粉设置 ----------
 async function loadSettings() {
-    const res = await fetch('/me/settings', { headers: {'Authorization': `Bearer ${token}`} });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/me/settings');
         document.getElementById('auto-pollinate-toggle').checked = data.auto_pollinate_enabled;
-    }
+    } catch (e) {}
 }
 
 async function toggleAutoPollinate() {
     const enabled = document.getElementById('auto-pollinate-toggle').checked;
-    const res = await fetch('/me/settings', {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({auto_pollinate_enabled: enabled})
-    });
-    if (res.ok) alert('设置已更新'); else alert('设置更新失败');
+    try {
+        await apiFetch('/me/settings', {
+            method: 'PATCH',
+            body: JSON.stringify({auto_pollinate_enabled: enabled})
+        });
+        showToast('设置已更新', 'success');
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
 }
 
-// ---------- SASES 助手 ----------
 async function loadAssistantUnread() {
-    const res = await fetch('/assistant/messages', { headers: {'Authorization': `Bearer ${token}`} });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/assistant/messages');
         const badge = document.getElementById('assistant-unread');
         if (data.unread > 0) {
             badge.textContent = data.unread;
@@ -290,13 +405,12 @@ async function loadAssistantUnread() {
         } else {
             badge.style.display = 'none';
         }
-    }
+    } catch (e) {}
 }
 
 async function showAssistant() {
-    const res = await fetch('/assistant/messages', { headers: {'Authorization': `Bearer ${token}`} });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/assistant/messages');
         const div = document.getElementById('assistant-messages');
         div.style.display = 'block';
         div.innerHTML = '<h3>SASES助手</h3>';
@@ -307,24 +421,19 @@ async function showAssistant() {
             ul.appendChild(li);
         });
         div.appendChild(ul);
-
-        await fetch('/assistant/read', {
-            method: 'POST',
-            headers: {'Authorization': `Bearer ${token}`}
-        });
+        await apiFetch('/assistant/read', { method: 'POST' });
         loadAssistantUnread();
-    } else {
-        alert('获取助手消息失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- Harness 工具 ----------
 let toolList = [];
 
 async function loadToolList() {
-    const res = await fetch('/harness/tools');
-    if (res.ok) {
-        toolList = await res.json();
+    try {
+        const data = await apiFetch('/harness/tools');
+        toolList = data;
         const select = document.getElementById('tool-select');
         select.innerHTML = '';
         toolList.forEach(tool => {
@@ -333,9 +442,17 @@ async function loadToolList() {
             opt.textContent = `${tool.name} (${tool.module_id})`;
             select.appendChild(opt);
         });
-    } else {
-        alert('获取工具列表失败');
+        select.onchange = updateToolExample;
+        updateToolExample();
+    } catch (e) {
+        showToast(e.message, 'error');
     }
+}
+
+function updateToolExample() {
+    const moduleId = document.getElementById('tool-select').value;
+    const example = TOOL_EXAMPLES[moduleId] || '';
+    document.getElementById('tool-params-example').textContent = example ? `示例: ${example}` : '';
 }
 
 function toggleHarnessPanel() {
@@ -353,24 +470,28 @@ async function invokeTool() {
     const paramsText = document.getElementById('tool-params').value.trim();
     let params = {};
     if (paramsText) {
-        try { params = JSON.parse(paramsText); } catch(e) { alert('参数 JSON 格式错误'); return; }
+        try { params = JSON.parse(paramsText); } catch(e) {
+            showToast('参数 JSON 格式错误', 'error');
+            return;
+        }
     }
-    const res = await fetch('/harness/invoke', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ module_id: moduleId, params })
-    });
-    const data = await res.json();
-    document.getElementById('tool-result').textContent = JSON.stringify(data, null, 2);
+    try {
+        const data = await apiFetch('/harness/invoke', {
+            method: 'POST',
+            body: JSON.stringify({ module_id: moduleId, params })
+        });
+        document.getElementById('tool-result').textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
 }
 
-// ---------- 空间节点 ----------
 let nodeList = [];
 
 async function loadNodeList() {
-    const res = await fetch('/space/nodes');
-    if (res.ok) {
-        nodeList = await res.json();
+    try {
+        const data = await apiFetch('/space/nodes');
+        nodeList = data;
         const ul = document.getElementById('node-list');
         ul.innerHTML = '';
         nodeList.forEach(node => {
@@ -396,8 +517,8 @@ async function loadNodeList() {
             li.appendChild(btn);
             ul.appendChild(li);
         });
-    } else {
-        alert('获取节点列表失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
@@ -412,61 +533,34 @@ function toggleNodePanel() {
 }
 
 async function invokeNode(nodeId) {
-    if (!token) {
-        alert('请先登录');
-        return;
-    }
-
     const paramsText = prompt(`输入调用节点 ${nodeId} 的参数 JSON（留空表示 {}）：`);
     let params = {};
     if (paramsText && paramsText.trim() !== '') {
         try {
             params = JSON.parse(paramsText);
             if (typeof params !== 'object' || Array.isArray(params)) {
-                alert('参数必须是 JSON 对象，例如 {"key":"value"}');
+                showToast('参数必须是 JSON 对象', 'error');
                 return;
             }
         } catch (e) {
-            alert('参数 JSON 格式错误');
+            showToast('参数 JSON 格式错误', 'error');
             return;
         }
     }
-
-    if (!nodeId || typeof nodeId !== 'string') {
-        alert('节点 ID 无效');
-        return;
-    }
-
     try {
-        const res = await fetch('/space/invoke', {
+        const data = await apiFetch('/space/invoke', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ node_id: nodeId, params: params })
+            body: JSON.stringify({ node_id: nodeId, params })
         });
-
-        if (res.status === 401) {
-            alert('登录已过期，请重新登录');
-            logout();
-            return;
-        }
-
-        const data = await res.json();
         document.getElementById('node-invoke-result').textContent = JSON.stringify(data, null, 2);
     } catch (e) {
-        alert('请求失败: ' + e.message);
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- 知识库导出 ----------
 async function exportKnowledgeBase() {
-    const res = await fetch('/kb/export', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/kb/export');
         const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -474,19 +568,17 @@ async function exportKnowledgeBase() {
         a.download = 'success_kb.json';
         a.click();
         URL.revokeObjectURL(url);
-    } else {
-        alert('导出知识库失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- 通用设置 ----------
 async function loadGeneralSettings() {
-    const res = await fetch('/me/settings/all', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const data = await res.json();
+    try {
+        const data = await apiFetch('/me/settings/all');
         document.getElementById('general-settings-json').value = JSON.stringify(data, null, 2);
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
@@ -503,23 +595,21 @@ function toggleGeneralSettings() {
 async function saveGeneralSettings() {
     const text = document.getElementById('general-settings-json').value.trim();
     let settings;
-    try { settings = JSON.parse(text); } catch(e) { alert('设置 JSON 格式错误'); return; }
-    const res = await fetch('/me/settings/all', {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({settings})
-    });
-    if (res.ok) {
-        alert('设置已保存');
-    } else {
-        alert('保存设置失败');
+    try { settings = JSON.parse(text); } catch(e) {
+        showToast('设置 JSON 格式错误', 'error');
+        return;
+    }
+    try {
+        await apiFetch('/me/settings/all', {
+            method: 'PATCH',
+            body: JSON.stringify({settings})
+        });
+        showToast('设置已保存', 'success');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// ---------- API Key 管理 ----------
 async function toggleApiKeyPanel() {
     const panel = document.getElementById('api-key-panel');
     if (panel.style.display === 'none') {
@@ -531,14 +621,11 @@ async function toggleApiKeyPanel() {
 }
 
 async function loadApiKeys() {
-    const res = await fetch('/api_keys', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        const keys = await res.json();
+    try {
+        const data = await apiFetch('/api_keys');
         const ul = document.getElementById('api-key-list');
         ul.innerHTML = '';
-        keys.forEach(k => {
+        data.forEach(k => {
             const li = document.createElement('li');
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
@@ -557,66 +644,58 @@ async function loadApiKeys() {
             li.appendChild(btnDel);
             ul.appendChild(li);
         });
-    } else {
-        alert('获取 API Key 列表失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
 async function addApiKey() {
     const provider = document.getElementById('api-key-provider').value;
     const key = document.getElementById('api-key-value').value.trim();
-    const priority = parseInt(document.getElementById('api-key-priority').value) || 1; // 默认1，1为最高
-    if (!provider || !key) { alert('请填写提供商和 API Key'); return; }
-    const res = await fetch('/api_keys', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({provider, key, priority})
-    });
-    if (res.ok) {
-        alert('API Key 已添加');
+    const priority = parseInt(document.getElementById('api-key-priority').value) || 1;
+    if (!provider || !key) {
+        showToast('请填写提供商和 API Key', 'error');
+        return;
+    }
+    try {
+        await apiFetch('/api_keys', {
+            method: 'POST',
+            body: JSON.stringify({provider, key, priority})
+        });
+        showToast('API Key 已添加', 'success');
+        document.getElementById('api-key-value').value = '';
         loadApiKeys();
-    } else {
-        alert('添加失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
 async function deleteApiKey(id) {
     if (!confirm('确认删除该 API Key？')) return;
-    const res = await fetch(`/api_keys/${id}`, {
-        method: 'DELETE',
-        headers: {'Authorization': `Bearer ${token}`}
-    });
-    if (res.ok) {
-        alert('已删除');
+    try {
+        await apiFetch(`/api_keys/${id}`, { method: 'DELETE' });
+        showToast('已删除', 'success');
         loadApiKeys();
-    } else {
-        alert('删除失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
 async function setApiKeyPriority(id) {
     const priority = prompt('输入新的优先级（数字越小越优先，1为最高）：');
     if (!priority) return;
-    const res = await fetch('/api_keys/priority', {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({key_id: id, priority: parseInt(priority)})
-    });
-    if (res.ok) {
-        alert('优先级已更新');
+    try {
+        await apiFetch('/api_keys/priority', {
+            method: 'PATCH',
+            body: JSON.stringify({key_id: id, priority: parseInt(priority)})
+        });
+        showToast('优先级已更新', 'success');
         loadApiKeys();
-    } else {
-        alert('更新失败');
+    } catch (e) {
+        showToast(e.message, 'error');
     }
 }
 
-// 自动进入主界面
 if (token) {
     showMain();
 }
