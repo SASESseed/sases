@@ -10,12 +10,9 @@ from core import config
 from core.db import get_db, init_db
 
 class SpaceService:
-    def __init__(self):
+    def __init__(self, nodes_file: Optional[str] = None):
+        # 忽略 nodes_file 参数，仅用于兼容旧测试
         init_db()
-        self._sync_thread = None
-        self._stop_sync = threading.Event()
-        self._health_thread = None
-        self._stop_health = threading.Event()
         self._register_self()
 
     def _register_self(self):
@@ -237,18 +234,21 @@ class SpaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # ---------- 后台任务 ----------
     def start_auto_sync(self, interval: int = 300):
-        if self._sync_thread and self._sync_thread.is_alive():
+        import threading
+        if getattr(self, "_sync_thread", None) and self._sync_thread.is_alive():
             return
-        self._stop_sync.clear()
+        self._stop_sync = threading.Event()
         self._sync_thread = threading.Thread(target=self._auto_sync_loop, args=(interval,), daemon=True)
         self._sync_thread.start()
         print(f"自动同步线程已启动，间隔 {interval} 秒")
 
     def stop_auto_sync(self):
-        self._stop_sync.set()
-        if self._sync_thread:
-            self._sync_thread.join(timeout=5)
+        if getattr(self, "_stop_sync", None):
+            self._stop_sync.set()
+            if getattr(self, "_sync_thread", None):
+                self._sync_thread.join(timeout=5)
         print("自动同步线程已停止")
 
     def _auto_sync_loop(self, interval):
@@ -273,17 +273,19 @@ class SpaceService:
                 print(f"向 {peer} 注册失败: {reg_result.get('error')}")
 
     def start_health_check(self, interval: int = 60):
-        if self._health_thread and self._health_thread.is_alive():
+        import threading
+        if getattr(self, "_health_thread", None) and self._health_thread.is_alive():
             return
-        self._stop_health.clear()
+        self._stop_health = threading.Event()
         self._health_thread = threading.Thread(target=self._health_check_loop, args=(interval,), daemon=True)
         self._health_thread.start()
         print(f"健康检查线程已启动，间隔 {interval} 秒")
 
     def stop_health_check(self):
-        self._stop_health.set()
-        if self._health_thread:
-            self._health_thread.join(timeout=5)
+        if getattr(self, "_stop_health", None):
+            self._stop_health.set()
+            if getattr(self, "_health_thread", None):
+                self._health_thread.join(timeout=5)
         print("健康检查线程已停止")
 
     def _health_check_loop(self, interval):
