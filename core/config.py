@@ -27,3 +27,8 @@ EXTERNAL_SEED_REWARD = int(os.environ.get("EXTERNAL_SEED_REWARD", "5"))
 MANUAL_POLLINATE_BASIC_REWARD = int(os.environ.get("MANUAL_POLLINATE_BASIC_REWARD", "3"))
 MANUAL_POLLINATE_EXPERT_REWARD = int(os.environ.get("MANUAL_POLLINATE_EXPERT_REWARD", "10"))
 QUERY_DEDUCTION = int(os.environ.get("QUERY_DEDUCTION", "2"))
+
+# 节点相关
+NODE_ID = os.environ.get("SASES_NODE_ID", "node-001")
+NODE_NAME = os.environ.get("SASES_NODE_NAME", "SASES Node")
+PEER_NODES = [x.strip() for x in os.environ.get("SASES_PEERS", "").split(",") if x.strip()]
