@@ -1,34 +1,22 @@
 import json
 import time
+import threading
 from typing import Dict, Any, List, Optional
 
 import httpx
 
 from core.harness_runtime import harness_runtime
 from core import config
-from core.db import get_db
+from core.db import get_db, init_db
 
 class SpaceService:
     def __init__(self):
-        # 确保表存在
-        from core.db import init_db
         init_db()
+        self._sync_thread = None
+        self._stop_sync = threading.Event()
+        self._health_thread = None
+        self._stop_health = threading.Event()
         self._register_self()
-
-    # ---------- 私有工具 ----------
-    def _row_to_dict(self, row) -> dict:
-        if not row:
-            return None
-        d = dict(row)
-        # 解析 capabilities JSON
-        if d.get("capabilities"):
-            try:
-                d["capabilities"] = json.loads(d["capabilities"])
-            except:
-                d["capabilities"] = []
-        else:
-            d["capabilities"] = []
-        return d
 
     def _register_self(self):
         if config.NODE_ID and config.NODE_NAME:
@@ -42,7 +30,19 @@ class SpaceService:
                 owner_id="self"
             )
 
-    # ---------- 节点注册与查询 ----------
+    def _row_to_dict(self, row):
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("capabilities"):
+            try:
+                d["capabilities"] = json.loads(d["capabilities"])
+            except:
+                d["capabilities"] = []
+        else:
+            d["capabilities"] = []
+        return d
+
     def register_node(self, node_id: str, name: str, description: str,
                       node_type: str = "harness", capabilities: List[str] = None,
                       endpoint: str = None, icon: str = None, owner_id: str = "system") -> Dict[str, Any]:
@@ -51,7 +51,6 @@ class SpaceService:
         with get_db() as conn:
             existing = conn.execute("SELECT * FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
             if existing:
-                # 更新基本信息，保留信誉和统计
                 conn.execute("""
                 UPDATE space_nodes
                 SET name = ?, description = ?, node_type = ?, capabilities = ?, endpoint = ?, icon = ?, owner_id = ?, registered_at = ?
@@ -78,7 +77,6 @@ class SpaceService:
             row = conn.execute("SELECT * FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
         return self._row_to_dict(row)
 
-    # ---------- 信誉与状态 ----------
     def update_reputation(self, node_id: str, success: bool):
         with get_db() as conn:
             node = conn.execute("SELECT total_count, success_count FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
@@ -97,7 +95,6 @@ class SpaceService:
         with get_db() as conn:
             conn.execute("UPDATE space_nodes SET status = ? WHERE node_id = ?", (status, node_id))
 
-    # ---------- 健康检查与远程调用 ----------
     def check_node_health(self, node_id: str) -> bool:
         node = self.get_node(node_id)
         if not node or not node.get("endpoint"):
@@ -161,7 +158,6 @@ class SpaceService:
             self.update_reputation(node_id, False)
             return {"success": False, "error": f"Remote call failed: {e}"}
 
-    # ---------- 节点同步 ----------
     def sync_from_peer(self, peer_url: str) -> dict:
         url = f"{peer_url.rstrip('/')}/space/nodes"
         headers = {}
@@ -241,21 +237,18 @@ class SpaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    # ---------- 后台任务 ----------
     def start_auto_sync(self, interval: int = 300):
-        import threading
-        if getattr(self, "_sync_thread", None) and self._sync_thread.is_alive():
+        if self._sync_thread and self._sync_thread.is_alive():
             return
-        self._stop_sync = threading.Event()
+        self._stop_sync.clear()
         self._sync_thread = threading.Thread(target=self._auto_sync_loop, args=(interval,), daemon=True)
         self._sync_thread.start()
         print(f"自动同步线程已启动，间隔 {interval} 秒")
 
     def stop_auto_sync(self):
-        if getattr(self, "_stop_sync", None):
-            self._stop_sync.set()
-            if getattr(self, "_sync_thread", None):
-                self._sync_thread.join(timeout=5)
+        self._stop_sync.set()
+        if self._sync_thread:
+            self._sync_thread.join(timeout=5)
         print("自动同步线程已停止")
 
     def _auto_sync_loop(self, interval):
@@ -280,19 +273,17 @@ class SpaceService:
                 print(f"向 {peer} 注册失败: {reg_result.get('error')}")
 
     def start_health_check(self, interval: int = 60):
-        import threading
-        if getattr(self, "_health_thread", None) and self._health_thread.is_alive():
+        if self._health_thread and self._health_thread.is_alive():
             return
-        self._stop_health = threading.Event()
+        self._stop_health.clear()
         self._health_thread = threading.Thread(target=self._health_check_loop, args=(interval,), daemon=True)
         self._health_thread.start()
         print(f"健康检查线程已启动，间隔 {interval} 秒")
 
     def stop_health_check(self):
-        if getattr(self, "_stop_health", None):
-            self._stop_health.set()
-            if getattr(self, "_health_thread", None):
-                self._health_thread.join(timeout=5)
+        self._stop_health.set()
+        if self._health_thread:
+            self._health_thread.join(timeout=5)
         print("健康检查线程已停止")
 
     def _health_check_loop(self, interval):
