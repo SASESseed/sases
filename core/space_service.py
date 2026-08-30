@@ -20,6 +20,9 @@ class SpaceService:
         # 自动同步相关
         self._sync_thread = None
         self._stop_sync = threading.Event()
+        # 健康检查相关
+        self._health_thread = None
+        self._stop_health = threading.Event()
 
     def _load_nodes(self) -> Dict[str, dict]:
         if not os.path.exists(self.nodes_file):
@@ -151,6 +154,12 @@ class SpaceService:
             self.update_node_status(node_id, "offline")
             return False
 
+    def _update_all_nodes_health(self):
+        """更新所有有 endpoint 的节点的在线状态"""
+        for node_id in list(self.nodes.keys()):
+            if self.nodes[node_id].get("endpoint"):
+                self.check_node_health(node_id)
+
     def invoke_remote_node(self, node_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
         with self._lock:
             node = self.get_node(node_id)
@@ -239,11 +248,11 @@ class SpaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    # ========== 自动同步与后台任务 ==========
+    # ========== 自动同步 ==========
     def start_auto_sync(self, interval: int = 300):
         """启动后台自动同步线程，默认每 300 秒同步一次"""
         if self._sync_thread and self._sync_thread.is_alive():
-            return  # 已在运行
+            return
         self._stop_sync.clear()
         self._sync_thread = threading.Thread(
             target=self._auto_sync_loop,
@@ -265,7 +274,7 @@ class SpaceService:
     def _auto_sync_loop(self, interval: int):
         while not self._stop_sync.is_set():
             self.sync_all_peers()
-            self._stop_sync.wait(interval)  # 可中断的 sleep
+            self._stop_sync.wait(interval)
 
     def sync_all_peers(self):
         """对所有配置的 peer 执行同步和注册"""
@@ -273,26 +282,44 @@ class SpaceService:
         if not peers:
             return
         for peer in peers:
-            # 同步节点列表
             result = self.sync_from_peer(peer)
             if result.get("success"):
                 print(f"同步 {peer} 成功，新增节点 {result.get('added', 0)}")
             else:
                 print(f"同步 {peer} 失败: {result.get('error')}")
-            # 向 peer 注册自己
             reg_result = self.register_to_peer(peer)
             if reg_result.get("success") or "Node registered" in str(reg_result):
                 print(f"向 {peer} 注册成功")
             else:
                 print(f"向 {peer} 注册失败: {reg_result.get('error')}")
-            # 健康检查当前所有有 endpoint 的节点
-            self._update_all_nodes_health()
 
-    def _update_all_nodes_health(self):
-        """更新所有有 endpoint 的节点的在线状态"""
-        for node_id in list(self.nodes.keys()):
-            if self.nodes[node_id].get("endpoint"):
-                self.check_node_health(node_id)
+    # ========== 健康检查 ==========
+    def start_health_check(self, interval: int = 60):
+        """启动健康检查后台线程，默认每 60 秒检查一次"""
+        if self._health_thread and self._health_thread.is_alive():
+            return
+        self._stop_health.clear()
+        self._health_thread = threading.Thread(
+            target=self._health_check_loop,
+            args=(interval,),
+            daemon=True,
+            name="space-health-check"
+        )
+        self._health_thread.start()
+        print(f"健康检查线程已启动，间隔 {interval} 秒")
+
+    def stop_health_check(self):
+        """停止健康检查线程"""
+        self._stop_health.set()
+        if self._health_thread:
+            self._health_thread.join(timeout=5)
+            self._health_thread = None
+            print("健康检查线程已停止")
+
+    def _health_check_loop(self, interval: int):
+        while not self._stop_health.is_set():
+            self._update_all_nodes_health()
+            self._stop_health.wait(interval)
 
 # 全局单例
 space_service = SpaceService()

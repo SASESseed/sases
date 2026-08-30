@@ -7,13 +7,16 @@ from core.space_service import space_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动自动同步后台线程
+    # 启动自动同步
     space_service.start_auto_sync(interval=300)
+    # 启动健康检查
+    space_service.start_health_check(interval=60)
     yield
-    # 停止自动同步
+    # 停止线程
     space_service.stop_auto_sync()
+    space_service.stop_health_check()
 
-app = FastAPI(title="SASES Full Web Service", version="0.8.1", lifespan=lifespan)
+app = FastAPI(title="SASES Full Web Service", version="0.8.2", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
