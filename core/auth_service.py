@@ -3,7 +3,7 @@ import json
 import time
 import hmac
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -61,7 +61,7 @@ def authenticate_user(username: str, password: str):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -196,16 +196,9 @@ def update_all_user_settings(user_id: int, settings: dict) -> dict:
     return get_all_user_settings(user_id)
 
 def export_kb():
-    kb_file = config.KB_FILE
-    if not os.path.exists(kb_file):
-        return []
-    with open(kb_file, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
-            return []
+    from core import knowledge_base
+    return knowledge_base.load_kb()
 
-# 兼容旧函数
 def get_user_settings(user_id: int):
     return get_all_user_settings(user_id)
 
@@ -218,8 +211,7 @@ def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
         return True
 
 # ========== API Key 管理 ==========
-def add_api_key(user_id: int, provider: str, key: str, priority: int = 0) -> bool:
-    # 标准化 provider：转小写并应用别名映射
+def add_api_key(user_id: int, provider: str, key: str, priority: int = 1) -> bool:
     provider = provider.strip().lower()
     provider = config.PROVIDER_ALIASES.get(provider, provider)
 
@@ -246,7 +238,7 @@ def list_api_keys(user_id: int) -> list:
     keys = []
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT id, provider, encrypted_key, priority, is_active FROM api_keys WHERE user_id = ? ORDER BY priority DESC",
+            "SELECT id, provider, encrypted_key, priority, is_active FROM api_keys WHERE user_id = ? ORDER BY priority ASC",
             (user_id,)
         ).fetchall()
         for r in rows:
@@ -274,7 +266,7 @@ def get_active_api_keys(user_id: int) -> list:
     result = []
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT provider, encrypted_key, priority FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY priority DESC",
+            "SELECT provider, encrypted_key, priority FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY priority ASC",
             (user_id,)
         ).fetchall()
         for r in rows:
@@ -313,13 +305,11 @@ def verify_state_signature(user_id: int, signature: str):
     return verify_state(user_id, user["credits"], signature)
 
 def log_tamper_event(user_id: int, detail: str):
-    entry = {
-        "user_id": user_id,
-        "detail": detail,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    with open("tamper_log.jsonl", "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    with get_db() as conn:
+        conn.execute("""
+        INSERT INTO tamper_log (user_id, detail, timestamp)
+        VALUES (?, ?, ?)
+        """, (user_id, detail, time.strftime("%Y-%m-%d %H:%M:%S")))
 
 # 初始化数据库
 init_db()

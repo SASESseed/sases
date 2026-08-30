@@ -31,7 +31,7 @@ def save_kb(entries):
 
 def add_to_kb(task, branch_a, branch_b, synthesis, model_id="unknown", user_id="system", backtrack_count=0, test_cases=None):
     entry_id = str(uuid.uuid4())
-    timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     with get_db() as conn:
         conn.execute("""
         INSERT INTO kb_entries (id, task, branch_a, branch_b, solution, verified, model_id, user_id, timestamp, backtrack_count, test_cases)
@@ -52,7 +52,7 @@ def load_shared_ids():
 def add_shared_id(kb_id):
     with get_db() as conn:
         conn.execute("INSERT OR REPLACE INTO shared_pollinate_log (kb_id, timestamp) VALUES (?, ?)",
-                     (kb_id, datetime.datetime.now(datetime.UTC).isoformat()))
+                     (kb_id, datetime.datetime.now(datetime.timezone.utc).isoformat()))
 
 def find_pending_pollinate(user_id):
     kb = load_kb()

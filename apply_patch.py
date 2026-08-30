@@ -32,7 +32,7 @@ new_func = '''def add_to_kb(task, branch_a, branch_b, synthesis, model_id=MODEL,
         "id": str(uuid.uuid4()),
         "model_id": model_id,
         "user_id": user_id,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
         "backtrack_count": backtrack_count
     })
     save_kb(knowledge_base)'''
