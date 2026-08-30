@@ -2,58 +2,59 @@ import json
 import os
 import re
 import time
+import threading
 import uuid
 import datetime
 
 KB_FILE = "success_kb.json"
 SHARED_LOG_FILE = "shared_pollinate_log.jsonl"
 
+_lock = threading.RLock()
 
 def load_kb():
-    """加载知识库，返回条目列表。"""
-    if not os.path.exists(KB_FILE):
-        return []
-    with open(KB_FILE, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
+    """加载知识库，返回条目列表（加锁）"""
+    with _lock:
+        if not os.path.exists(KB_FILE):
             return []
-
+        with open(KB_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return []
 
 def save_kb(entries):
-    """保存知识库。"""
-    with open(KB_FILE, "w", encoding="utf-8") as f:
-        json.dump(entries, f, ensure_ascii=False, indent=2)
-
+    """保存知识库（加锁）"""
+    with _lock:
+        with open(KB_FILE, "w", encoding="utf-8") as f:
+            json.dump(entries, f, ensure_ascii=False, indent=2)
 
 def add_to_kb(task, branch_a, branch_b, synthesis, model_id="unknown", user_id="system", backtrack_count=0, test_cases=None):
-    """向知识库添加一条成功记录，并保存。"""
-    kb = load_kb()
-    entry = {
-        "task": task,
-        "branch_a": branch_a,
-        "branch_b": branch_b,
-        "solution": synthesis,
-        "verified": True,
-        "id": str(uuid.uuid4()),
-        "model_id": model_id,
-        "user_id": user_id,
-        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
-        "backtrack_count": backtrack_count
-    }
-    if test_cases is not None:
-        entry["test_cases"] = test_cases
-    kb.append(entry)
-    save_kb(kb)
-
+    """向知识库添加一条成功记录（原子操作）"""
+    with _lock:
+        kb = load_kb_unlocked()
+        entry = {
+            "task": task,
+            "branch_a": branch_a,
+            "branch_b": branch_b,
+            "solution": synthesis,
+            "verified": True,
+            "id": str(uuid.uuid4()),
+            "model_id": model_id,
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            "backtrack_count": backtrack_count
+        }
+        if test_cases is not None:
+            entry["test_cases"] = test_cases
+        kb.append(entry)
+        save_kb_unlocked(kb)
 
 def tokenize(text):
-    """文本分词（用于 BM25）。"""
+    """文本分词（用于 BM25）"""
     return re.findall(r"\w+", text.lower())
 
-
 def load_shared_ids():
-    """加载已分享的知识库条目ID集合。"""
+    """加载已分享的知识库条目ID集合"""
     if not os.path.exists(SHARED_LOG_FILE):
         return set()
     with open(SHARED_LOG_FILE, "r", encoding="utf-8") as f:
@@ -66,15 +67,13 @@ def load_shared_ids():
                 pass
         return ids
 
-
 def add_shared_id(kb_id):
-    """记录一个已分享的知识库条目ID。"""
+    """记录一个已分享的知识库条目ID"""
     with open(SHARED_LOG_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps({"kb_id": kb_id, "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}) + "\n")
 
-
 def find_pending_pollinate(user_id):
-    """查找指定用户最近一条可分享但尚未分享的手动授粉记录。"""
+    """查找指定用户最近一条可分享但尚未分享的手动授粉记录"""
     kb = load_kb()
     shared_ids = load_shared_ids()
     for entry in reversed(kb):
@@ -84,3 +83,17 @@ def find_pending_pollinate(user_id):
         if entry.get("id") not in shared_ids and entry.get("user_id") == user_id:
             return entry
     return None
+
+# 内部无锁版本，供加锁的 add_to_kb 使用
+def load_kb_unlocked():
+    if not os.path.exists(KB_FILE):
+        return []
+    with open(KB_FILE, "r", encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except:
+            return []
+
+def save_kb_unlocked(entries):
+    with open(KB_FILE, "w", encoding="utf-8") as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
