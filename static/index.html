@@ -9,37 +9,34 @@
 </head>
 <body>
     <div class="app">
-        <!-- 认证区域 -->
         <div id="auth-section">
             <h2>登录</h2>
             <input type="text" id="login-username" placeholder="用户名" autofocus />
             <input type="password" id="login-password" placeholder="密码" />
-            <button onclick="login()">登录</button>
-            <button onclick="showRegister()">注册新用户</button>
+            <button id="login-btn">登录</button>
+            <button id="show-register-btn">注册新用户</button>
 
             <div id="register-section" style="display:none;">
                 <h3>注册</h3>
                 <input type="text" id="reg-username" placeholder="用户名" />
                 <input type="email" id="reg-email" placeholder="邮箱" />
                 <input type="password" id="reg-password" placeholder="密码" />
-                <button onclick="register()">注册</button>
+                <button id="register-btn">注册</button>
             </div>
         </div>
 
-        <!-- 主内容区域 -->
         <div id="main-section" style="display:none;">
-            <!-- 聊天视图 -->
             <div id="view-chat" class="view active">
                 <h2>聊天</h2>
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
-                    <input type="file" id="chat-image" accept="image/*" style="display:none;" onchange="handleImageSelect(event)" />
-                    <input type="file" id="chat-audio" accept="audio/*" style="display:none;" onchange="handleAudioSelect(event)" />
-                    <input type="file" id="chat-video" accept="video/*" style="display:none;" onchange="handleVideoSelect(event)" />
-                    <button id="image-btn" onclick="document.getElementById('chat-image').click()" title="发送图片">📷</button>
-                    <button id="audio-btn" onclick="document.getElementById('chat-audio').click()" title="发送音频">🎤</button>
-                    <button id="video-btn" onclick="document.getElementById('chat-video').click()" title="发送视频">🎬</button>
-                    <button id="send-btn" onclick="chat()">发送</button>
+                    <input type="file" id="chat-image" accept="image/*" style="display:none;" />
+                    <input type="file" id="chat-audio" accept="audio/*" style="display:none;" />
+                    <input type="file" id="chat-video" accept="video/*" style="display:none;" />
+                    <button id="image-btn" title="发送图片">📷</button>
+                    <button id="audio-btn" title="发送音频">🎤</button>
+                    <button id="video-btn" title="发送视频">🎬</button>
+                    <button id="send-btn">发送</button>
                 </div>
                 <div id="image-preview" style="margin-top:5px;"></div>
                 <div id="chat-loading" style="display:none; text-align:center; margin-top:10px;">
@@ -50,11 +47,10 @@
                 <div id="chat-result"></div>
             </div>
 
-            <!-- 联系人视图 -->
             <div id="view-contacts" class="view">
                 <h2>联系人</h2>
                 <div class="settings-group">
-                    <div class="setting-item" onclick="showAssistant()">
+                    <div class="setting-item" data-action="assistant">
                         <span>SASES助手</span>
                         <span id="assistant-unread" class="unread-badge" style="display:none;"></span>
                         <span class="arrow">&gt;</span>
@@ -63,91 +59,74 @@
                 <div id="assistant-messages" style="display:none; background:#f9f9f9; padding:10px;"></div>
             </div>
 
-            <!-- 发现视图 -->
             <div id="view-discover" class="view">
                 <h2>发现</h2>
                 <div class="settings-group">
-                    <div class="setting-item" onclick="loadLeaderboard()">
-                        <span>排行榜</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="leaderboard">
+                        <span>排行榜</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="loadContribLeaderboard()">
-                        <span>贡献榜</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="contrib">
+                        <span>贡献榜</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="toggleHarnessPanel()">
-                        <span>Harness 工具调用</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="harness-panel">
+                        <span>Harness 工具调用</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="toggleNodePanel()">
-                        <span>空间节点浏览</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="node-panel">
+                        <span>空间节点浏览</span><span class="arrow">&gt;</span>
                     </div>
                 </div>
-
                 <div id="harness-panel" style="display:none;">
                     <h3>Harness 工具调用</h3>
                     <select id="tool-select"></select>
                     <div id="tool-params-example" style="color:#888; font-size:12px; margin-bottom:5px;"></div>
                     <textarea id="tool-params" placeholder='参数 JSON，如 {"celsius":30}'></textarea>
-                    <button onclick="invokeTool()">执行工具</button>
+                    <button id="invoke-tool-btn">执行工具</button>
                     <div id="tool-result"></div>
                 </div>
-
                 <div id="node-panel" style="display:none;">
                     <h3>空间节点</h3>
                     <ul id="node-list"></ul>
                     <div id="node-invoke-result"></div>
                 </div>
-
                 <div id="discover-content"></div>
                 <ul id="leaderboard"></ul>
             </div>
 
-            <!-- 我的视图 -->
             <div id="view-me" class="view">
                 <h2>我的</h2>
                 <div class="user-header">
                     <span>欢迎，<span id="username-display"></span></span>
                     <span>积分：<span id="credits-display"></span></span>
-                    <button onclick="logout()" style="float:right;">退出登录</button>
+                    <button id="logout-btn">退出登录</button>
                 </div>
                 <div class="settings-group">
                     <div class="setting-item">
                         <span>自动授粉</span>
-                        <input type="checkbox" id="auto-pollinate-toggle" onchange="toggleAutoPollinate()">
+                        <input type="checkbox" id="auto-pollinate-toggle" />
                     </div>
-                    <div class="setting-item" onclick="showLedger()">
-                        <span>积分流水</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="ledger">
+                        <span>积分流水</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="toggleStats()">
-                        <span>统计信息</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="stats">
+                        <span>统计信息</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="exportKnowledgeBase()">
-                        <span>导出知识库</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="export-kb">
+                        <span>导出知识库</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="toggleGeneralSettings()">
-                        <span>通用设置</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="general-settings">
+                        <span>通用设置</span><span class="arrow">&gt;</span>
                     </div>
-                    <div class="setting-item" onclick="toggleApiKeyPanel()">
-                        <span>API Key 管理</span>
-                        <span class="arrow">&gt;</span>
+                    <div class="setting-item" data-action="api-keys">
+                        <span>API Key 管理</span><span class="arrow">&gt;</span>
                     </div>
                 </div>
-
                 <div id="ledger" style="display:none; background:#f9f9f9; padding:10px;"></div>
                 <pre id="stats" style="display:none; background:#f9f9f9; padding:10px;"></pre>
-
                 <div id="general-settings-panel" style="display:none; background:#fafafa; padding:10px;">
                     <h3>通用设置</h3>
                     <textarea id="general-settings-json" placeholder='{"theme":"dark","language":"zh"}'></textarea>
-                    <button onclick="saveGeneralSettings()">保存设置</button>
+                    <button id="save-general-settings">保存设置</button>
                 </div>
-
                 <div id="api-key-panel" style="display:none; background:#fafafa; padding:10px;">
                     <h3>API Key 管理</h3>
                     <select id="api-key-provider">
@@ -159,10 +138,9 @@
                     </select>
                     <input type="password" id="api-key-value" placeholder="API Key" />
                     <input type="number" id="api-key-priority" placeholder="优先级（数字越小越优先，1为最高）" value="1" />
-                    <button onclick="addApiKey()">添加/更新</button>
+                    <button id="add-api-key-btn">添加/更新</button>
                     <ul id="api-key-list"></ul>
                 </div>
-
                 <h3>提交种子</h3>
                 <div id="seed-risk-warning">
                     <p style="color:#b8860b;">提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。</p>
@@ -170,31 +148,26 @@
                 </div>
                 <textarea id="seed-desc" placeholder="任务描述，如：写一个Python函数，判断一个字符串是否是回文"></textarea>
                 <input type="text" id="seed-testcases" placeholder='测试用例JSON，如：[{"input":"racecar","expected_output":true}]' />
-                <button onclick="submitSeed()">提交种子</button>
+                <button id="submit-seed-btn">提交种子</button>
             </div>
         </div>
 
-        <!-- 底部导航栏 -->
         <div id="bottom-nav">
-            <div class="nav-item active" data-view="view-chat" onclick="switchView('view-chat')">
-                <span class="nav-icon">💬</span>
-                <span class="nav-label">聊天</span>
+            <div class="nav-item active" data-view="view-chat">
+                <span class="nav-icon">💬</span><span class="nav-label">聊天</span>
             </div>
-            <div class="nav-item" data-view="view-contacts" onclick="switchView('view-contacts')">
-                <span class="nav-icon">👥</span>
-                <span class="nav-label">联系人</span>
+            <div class="nav-item" data-view="view-contacts">
+                <span class="nav-icon">👥</span><span class="nav-label">联系人</span>
             </div>
-            <div class="nav-item" data-view="view-discover" onclick="switchView('view-discover')">
-                <span class="nav-icon">🧭</span>
-                <span class="nav-label">发现</span>
+            <div class="nav-item" data-view="view-discover">
+                <span class="nav-icon">🧭</span><span class="nav-label">发现</span>
             </div>
-            <div class="nav-item" data-view="view-me" onclick="switchView('view-me')">
-                <span class="nav-icon">👤</span>
-                <span class="nav-label">我的</span>
+            <div class="nav-item" data-view="view-me">
+                <span class="nav-icon">👤</span><span class="nav-label">我的</span>
             </div>
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script type="module" src="/static/modules/main.js"></script>
 </body>
 </html>
