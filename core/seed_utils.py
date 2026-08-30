@@ -4,6 +4,7 @@ import re
 import time
 import json
 import os
+import base64
 import subprocess
 import tempfile
 import inspect
@@ -41,7 +42,6 @@ def check_syntax(code):
         return False, str(e)
 
 def safe_run_tests(code, test_cases, timeout=5):
-    """在隔离沙箱中运行代码并执行测试用例。返回 (passed, message, is_code)。"""
     if not test_cases:
         return False, "无测试用例", False
     if not is_python_code(code):
@@ -122,32 +122,42 @@ def parse_two_branches(text):
                 b = b.strip()
     return (a or "默认算法A"), (b or "默认算法B")
 
-def _call_openai_with_key(provider: str, api_key: str, model: str, prompt: str, temperature: float, max_retries: int):
-    """使用指定 provider 的 API key 调用 OpenAI 兼容接口"""
+def _call_openai_with_key(provider: str, api_key: str, model: str, messages: list, temperature: float, max_retries: int):
     base_url = config.PROVIDER_BASE_URLS.get(provider, config.DEEPSEEK_BASE_URL)
     client = openai.OpenAI(api_key=api_key, base_url=base_url, timeout=120, max_retries=max_retries)
     resp = client.chat.completions.create(
         model=model,
-        messages=[{"role": "user", "content": prompt}],
+        messages=messages,
         temperature=temperature
     )
     return resp.choices[0].message.content
 
-def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None):
+def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None, image_base64=None):
     """
     调用模型生成回复。
-    如果提供 user_id，则优先使用该用户配置的 API Keys（按优先级），
-    全部失败时回退到系统默认 DeepSeek Key。
+    如果提供了 user_id，则优先使用该用户配置的 API Keys（按优先级）。
+    如果提供了 image_base64，则构造多模态消息，并根据 provider 选择对应的视觉模型。
     """
     if model is None:
-        model = config.MODEL_NAME
+        model = config.MODEL_NAME  # 默认文本模型
+
+    # 构造消息
+    messages = []
+    if image_base64:
+        content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+        ]
+        messages.append({"role": "user", "content": content})
+    else:
+        messages.append({"role": "user", "content": prompt})
 
     # 如果提供了用户ID，尝试使用用户API Key
     if user_id is not None:
         try:
             from core import auth_service
             api_keys = auth_service.get_active_api_keys(user_id)
-        except Exception as e:
+        except Exception:
             api_keys = []
 
         if api_keys:
@@ -155,8 +165,18 @@ def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None):
             for entry in api_keys:
                 provider = entry["provider"]
                 api_key = entry["key"]
+                # 根据是否图片输入选择模型
+                if image_base64:
+                    # 从映射中获取该提供商的视觉模型，若没有则跳过
+                    vision_model = config.VISION_MODEL_BY_PROVIDER.get(provider)
+                    if not vision_model:
+                        print(f"Provider {provider} 不支持视觉模型，跳过")
+                        continue
+                    model_to_use = vision_model
+                else:
+                    model_to_use = model  # 文本任务使用传入的 model（可能为默认模型）
                 try:
-                    return _call_openai_with_key(provider, api_key, model, prompt, temperature, max_retries)
+                    return _call_openai_with_key(provider, api_key, model_to_use, messages, temperature, max_retries)
                 except Exception as e:
                     last_error = e
                     print(f"Provider {provider} 调用失败: {e}")
@@ -166,11 +186,14 @@ def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None):
 
     # 回退到默认客户端
     last_error = None
+    # 如果有图片，使用默认视觉模型
+    if image_base64:
+        model = config.VISION_MODEL_NAME
     for attempt in range(max_retries + 1):
         try:
             resp = _client.chat.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 temperature=temperature
             )
             return resp.choices[0].message.content

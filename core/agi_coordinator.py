@@ -5,7 +5,6 @@ from core.harness_runtime import harness_runtime
 from core import seed_utils
 
 def _keyword_match_tool(query: str):
-    """简单关键词匹配，返回匹配到的模块ID或None"""
     tools = harness_runtime.list_tools()
     query_lower = query.lower()
 
@@ -27,7 +26,7 @@ def _keyword_match_tool(query: str):
 
     return None
 
-def _llm_select_tool(query: str) -> Optional[str]:
+def _llm_select_tool(query: str, user_id=None) -> Optional[str]:
     tools = harness_runtime.list_tools()
     if not tools:
         return None
@@ -48,7 +47,7 @@ def _llm_select_tool(query: str) -> Optional[str]:
 
 请只回复工具 ID，不要附加其他文字。"""
     try:
-        response = seed_utils.call_chat(prompt, temperature=0.0)
+        response = seed_utils.call_chat(prompt, temperature=0.0, user_id=user_id)
         selected = response.strip().lower()
         if selected == "none":
             return None
@@ -61,7 +60,6 @@ def _llm_select_tool(query: str) -> Optional[str]:
         return None
 
 def _extract_params_for_tool(query: str, module_id: str) -> Optional[Dict[str, Any]]:
-    """根据工具类型从自然语言查询中提取参数"""
     if module_id == "unit-converter":
         match = re.search(r'[-+]?\d+(?:\.\d+)?', query)
         if not match:
@@ -80,14 +78,9 @@ def _extract_params_for_tool(query: str, module_id: str) -> Optional[Dict[str, A
         else:
             return None
     else:
-        # 通用工具：传递整个查询作为 query 参数，由模块自行处理
         return {"query": query}
 
 def quick_execute(query: str) -> Optional[Dict[str, Any]]:
-    """
-    快速执行：只使用关键词匹配和参数提取，不调用 LLM。
-    如果匹配到工具并执行成功，返回结果；否则返回 None。
-    """
     module_id = _keyword_match_tool(query)
     if module_id is None:
         return None
@@ -112,20 +105,15 @@ def quick_execute(query: str) -> Optional[Dict[str, Any]]:
             "result": None
         }
 
-def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """
-    AGI 协调器入口：先尝试快速执行，再尝试 LLM 选择工具。
-    """
+def execute_task(query: str, params: Optional[Dict[str, Any]] = None, user_id=None) -> Dict[str, Any]:
     if params is None:
         params = {}
 
-    # 第一步：快速执行（关键词匹配 + 参数提取）
     quick_result = quick_execute(query)
     if quick_result and quick_result["success"]:
         return quick_result
 
-    # 第二步：LLM 选择工具
-    module_id = _llm_select_tool(query)
+    module_id = _llm_select_tool(query, user_id=user_id)
     if module_id is None:
         return {
             "success": False,
@@ -134,7 +122,6 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             "result": None
         }
 
-    # 第三步：参数提取
     if not params:
         extracted = _extract_params_for_tool(query, module_id)
         if extracted is None:
@@ -146,7 +133,6 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             }
         params = extracted
 
-    # 第四步：调用工具
     response = harness_runtime.invoke_tool(module_id, params)
     if response.success:
         return {
@@ -160,5 +146,31 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
             "success": False,
             "message": response.error or "工具执行失败",
             "module_id": module_id,
+            "result": None
+        }
+
+def execute_task_with_image(query: str, image_base64: str, user_id=None) -> Dict[str, Any]:
+    """
+    多模态任务执行：用户提供图片和文本，系统使用视觉模型分析图片并回答。
+    该方法暂不调用 Harness 工具，只进行多模态对话。
+    """
+    try:
+        answer = seed_utils.call_chat(
+            query,
+            image_base64=image_base64,
+            user_id=user_id,
+            temperature=0.3
+        )
+        return {
+            "success": True,
+            "message": "多模态任务执行成功",
+            "module_id": None,
+            "result": {"answer": answer}
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"多模态任务执行失败: {e}",
+            "module_id": None,
             "result": None
         }

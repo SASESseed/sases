@@ -1,4 +1,5 @@
 let token = localStorage.getItem('sases_token');
+let selectedImageBase64 = null;
 
 // ---------- HTML 转义函数（防止 XSS） ----------
 function escapeHtml(text) {
@@ -84,20 +85,38 @@ function logout() {
     document.getElementById('main-section').style.display = 'none';
 }
 
+// ---------- 图片处理 ----------
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result.split(',')[1];
+        selectedImageBase64 = base64;
+        const preview = document.getElementById('image-preview');
+        preview.innerHTML = `<img src="data:image/jpeg;base64,${base64}" style="max-width:100px; max-height:100px; margin:5px;" />`;
+        document.getElementById('chat-image').value = '';
+    };
+    reader.readAsDataURL(file);
+}
+
 // ---------- 聊天 ----------
 async function chat() {
     const query = document.getElementById('chat-input').value;
+    const image = selectedImageBase64;
+
     const res = await fetch('/chat', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({query})
+        body: JSON.stringify({ query, image })
     });
     const data = await res.json();
-    // 使用 textContent 防止 XSS
     document.getElementById('chat-result').textContent = data.answer;
+    selectedImageBase64 = null;
+    document.getElementById('image-preview').innerHTML = '';
     if (data.deducted) {
         alert(`本次查询已扣除 ${data.deducted} 积分`);
         updateCreditsDisplay();
@@ -114,7 +133,6 @@ async function showLedger() {
         const data = await res.json();
         const div = document.getElementById('ledger');
         div.style.display = 'block';
-        // 使用 DOM API 构建列表，所有文本经 textContent 设置，避免 XSS
         div.innerHTML = '<h3>积分流水</h3>';
         const ul = document.createElement('ul');
         data.ledger.forEach(item => {
@@ -196,7 +214,6 @@ async function loadContribLeaderboard() {
 async function loadStats() {
     const res = await fetch('/stats');
     const data = await res.json();
-    // 使用 textContent 防止 XSS
     document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
 }
 
@@ -252,7 +269,6 @@ async function showAssistant() {
         const ul = document.createElement('ul');
         data.messages.forEach(msg => {
             const li = document.createElement('li');
-            // 使用 textContent 避免 XSS
             li.textContent = `${msg.title}：${msg.content} (${msg.timestamp})`;
             ul.appendChild(li);
         });
@@ -311,7 +327,6 @@ async function invokeTool() {
         body: JSON.stringify({ module_id: moduleId, params })
     });
     const data = await res.json();
-    // 使用 textContent
     document.getElementById('tool-result').textContent = JSON.stringify(data, null, 2);
 }
 
@@ -337,7 +352,6 @@ async function loadNodeList() {
             statusSpan.style.marginRight = '5px';
             statusSpan.textContent = '●';
             li.appendChild(statusSpan);
-            // 节点名称和 ID 使用 textContent
             const textSpan = document.createElement('span');
             textSpan.textContent = `${statusText} ${node.name} (${node.node_id})`;
             li.appendChild(textSpan);
@@ -495,7 +509,6 @@ async function loadApiKeys() {
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
             li.style.alignItems = 'center';
-            // 使用 textContent 而非 innerHTML
             const span = document.createElement('span');
             span.textContent = `${k.provider} - ${k.masked_key} (优先级:${k.priority})`;
             li.appendChild(span);
@@ -518,7 +531,7 @@ async function loadApiKeys() {
 async function addApiKey() {
     const provider = document.getElementById('api-key-provider').value;
     const key = document.getElementById('api-key-value').value.trim();
-    const priority = parseInt(document.getElementById('api-key-priority').value) || 0;
+    const priority = parseInt(document.getElementById('api-key-priority').value) || 1; // 默认1，1为最高
     if (!provider || !key) { alert('请填写提供商和 API Key'); return; }
     const res = await fetch('/api_keys', {
         method: 'POST',
@@ -551,7 +564,7 @@ async function deleteApiKey(id) {
 }
 
 async function setApiKeyPriority(id) {
-    const priority = prompt('输入新的优先级（数字越大越优先）：');
+    const priority = prompt('输入新的优先级（数字越小越优先，1为最高）：');
     if (!priority) return;
     const res = await fetch('/api_keys/priority', {
         method: 'PATCH',

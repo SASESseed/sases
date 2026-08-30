@@ -30,8 +30,13 @@
             <!-- 聊天视图 -->
             <div id="view-chat" class="view active">
                 <h2>聊天</h2>
-                <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
-                <button onclick="chat()">发送</button>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
+                    <input type="file" id="chat-image" accept="image/*" style="display:none;" onchange="handleImageSelect(event)" />
+                    <button onclick="document.getElementById('chat-image').click()">📷</button>
+                    <button onclick="chat()">发送</button>
+                </div>
+                <div id="image-preview"></div>
                 <div id="chat-result"></div>
             </div>
 
@@ -142,7 +147,7 @@
                         <option value="qwen">通义千问 (Qwen)</option>
                     </select>
                     <input type="password" id="api-key-value" placeholder="API Key" />
-                    <input type="number" id="api-key-priority" placeholder="优先级（数字越大越优先）" value="0" />
+                    <input type="number" id="api-key-priority" placeholder="优先级（数字越小越优先，1为最高）" value="1" />
                     <button onclick="addApiKey()">添加/更新</button>
                     <ul id="api-key-list"></ul>
                 </div>

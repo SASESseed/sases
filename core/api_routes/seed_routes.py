@@ -16,6 +16,7 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     query: str
+    image: str = None  # 可选的 base64 图片数据
 
 class SeedSubmitRequest(BaseModel):
     description: str
@@ -30,8 +31,27 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     auto_pollinate = settings.get("auto_pollinate_enabled", True) if settings else True
 
     query = req.query
+    image_base64 = req.image
 
-    # 优先尝试 AGI 快速执行
+    # 如果有图片，优先执行多模态任务
+    if image_base64:
+        result = agi_coordinator.execute_task_with_image(query, image_base64, user_id=current_user["id"])
+        if result["success"]:
+            return {
+                "answer": result["result"]["answer"],
+                "source": "multimodal",
+                "module_id": None,
+                "result": result["result"]
+            }
+        else:
+            return {
+                "answer": f"多模态处理失败：{result['message']}",
+                "source": "multimodal_error",
+                "module_id": None,
+                "result": None
+            }
+
+    # 文本：优先尝试 AGI 快速执行
     agi_result = agi_coordinator.quick_execute(query)
     if agi_result and agi_result["success"]:
         return {
@@ -85,7 +105,6 @@ async def submit_seed(req: SeedSubmitRequest, current_user=Depends(get_current_u
     if not req.description or len(req.description) < 10:
         raise HTTPException(status_code=400, detail="任务描述过短")
 
-    # 写入外部种子池表
     seed = seed_store.add_external_seed(
         description=req.description,
         test_cases=req.test_cases if req.test_cases else [],
