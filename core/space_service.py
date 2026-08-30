@@ -1,39 +1,34 @@
 import json
-import os
 import time
-import threading
 from typing import Dict, Any, List, Optional
 
 import httpx
 
 from core.harness_runtime import harness_runtime
 from core import config
-
-SPACE_NODES_FILE = "space_nodes.json"
+from core.db import get_db
 
 class SpaceService:
-    def __init__(self, nodes_file: str = SPACE_NODES_FILE):
-        self.nodes_file = nodes_file
-        self._lock = threading.RLock()
-        self.nodes = self._load_nodes()
+    def __init__(self):
+        # 确保表存在
+        from core.db import init_db
+        init_db()
         self._register_self()
-        self._sync_thread = None
-        self._stop_sync = threading.Event()
-        self._health_thread = None
-        self._stop_health = threading.Event()
 
-    def _load_nodes(self) -> Dict[str, dict]:
-        if not os.path.exists(self.nodes_file):
-            return {}
-        with open(self.nodes_file, "r", encoding="utf-8") as f:
+    # ---------- 私有工具 ----------
+    def _row_to_dict(self, row) -> dict:
+        if not row:
+            return None
+        d = dict(row)
+        # 解析 capabilities JSON
+        if d.get("capabilities"):
             try:
-                return json.load(f)
+                d["capabilities"] = json.loads(d["capabilities"])
             except:
-                return {}
-
-    def _save_nodes(self):
-        with open(self.nodes_file, "w", encoding="utf-8") as f:
-            json.dump(self.nodes, f, ensure_ascii=False, indent=2)
+                d["capabilities"] = []
+        else:
+            d["capabilities"] = []
+        return d
 
     def _register_self(self):
         if config.NODE_ID and config.NODE_NAME:
@@ -47,89 +42,62 @@ class SpaceService:
                 owner_id="self"
             )
 
-    def _is_valid_node(self, node: dict) -> bool:
-        required_fields = ["node_id", "name", "node_type"]
-        for field in required_fields:
-            if field not in node or not node[field]:
-                return False
-        if "capabilities" in node and not isinstance(node["capabilities"], list):
-            return False
-        if "endpoint" in node and node["endpoint"] is not None and not isinstance(node["endpoint"], str):
-            return False
-        return True
-
+    # ---------- 节点注册与查询 ----------
     def register_node(self, node_id: str, name: str, description: str,
                       node_type: str = "harness", capabilities: List[str] = None,
                       endpoint: str = None, icon: str = None, owner_id: str = "system") -> Dict[str, Any]:
         capabilities = capabilities or []
-        with self._lock:
-            existing = self.nodes.get(node_id)
+        caps_json = json.dumps(capabilities)
+        with get_db() as conn:
+            existing = conn.execute("SELECT * FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
             if existing:
-                existing.update({
-                    "name": name,
-                    "description": description,
-                    "node_type": node_type,
-                    "capabilities": capabilities,
-                    "endpoint": endpoint,
-                    "icon": icon,
-                    "owner_id": owner_id,
-                    "registered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "status": existing.get("status", "unknown")
-                })
-                node = existing
+                # 更新基本信息，保留信誉和统计
+                conn.execute("""
+                UPDATE space_nodes
+                SET name = ?, description = ?, node_type = ?, capabilities = ?, endpoint = ?, icon = ?, owner_id = ?, registered_at = ?
+                WHERE node_id = ?
+                """, (name, description, node_type, caps_json, endpoint, icon, owner_id, time.strftime("%Y-%m-%d %H:%M:%S"), node_id))
             else:
-                node = {
-                    "node_id": node_id,
-                    "name": name,
-                    "description": description,
-                    "node_type": node_type,
-                    "capabilities": capabilities,
-                    "endpoint": endpoint,
-                    "icon": icon,
-                    "owner_id": owner_id,
-                    "registered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "reputation": 1.0,
-                    "success_count": 0,
-                    "total_count": 0,
-                    "status": "unknown"
-                }
-            self.nodes[node_id] = node
-            self._save_nodes()
-            return node
+                conn.execute("""
+                INSERT INTO space_nodes (node_id, name, description, node_type, capabilities, endpoint, icon, owner_id, registered_at, reputation, success_count, total_count, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1.0, 0, 0, 'unknown')
+                """, (node_id, name, description, node_type, caps_json, endpoint, icon, owner_id, time.strftime("%Y-%m-%d %H:%M:%S")))
+            row = conn.execute("SELECT * FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
+        return self._row_to_dict(row)
 
     def list_nodes(self, node_type: str = None) -> List[Dict[str, Any]]:
-        with self._lock:
-            result = []
-            for node in self.nodes.values():
-                if node_type and node.get("node_type") != node_type:
-                    continue
-                result.append(node)
-            return result
+        with get_db() as conn:
+            if node_type:
+                rows = conn.execute("SELECT * FROM space_nodes WHERE node_type = ?", (node_type,)).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM space_nodes").fetchall()
+        return [self._row_to_dict(row) for row in rows]
 
     def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self.nodes.get(node_id)
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
+        return self._row_to_dict(row)
 
+    # ---------- 信誉与状态 ----------
     def update_reputation(self, node_id: str, success: bool):
-        with self._lock:
-            node = self.nodes.get(node_id)
+        with get_db() as conn:
+            node = conn.execute("SELECT total_count, success_count FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
             if not node:
                 return
-            node["total_count"] = node.get("total_count", 0) + 1
-            if success:
-                node["success_count"] = node.get("success_count", 0) + 1
-            if node["total_count"] > 0:
-                success_rate = node["success_count"] / node["total_count"]
-                node["reputation"] = 0.5 + success_rate * 0.5
-            self._save_nodes()
+            total = node["total_count"] + 1
+            success_count = node["success_count"] + (1 if success else 0)
+            reputation = 0.5 + (success_count / total) * 0.5 if total > 0 else 1.0
+            conn.execute("""
+            UPDATE space_nodes
+            SET total_count = ?, success_count = ?, reputation = ?
+            WHERE node_id = ?
+            """, (total, success_count, reputation, node_id))
 
     def update_node_status(self, node_id: str, status: str):
-        with self._lock:
-            node = self.nodes.get(node_id)
-            if node:
-                node["status"] = status
-                self._save_nodes()
+        with get_db() as conn:
+            conn.execute("UPDATE space_nodes SET status = ? WHERE node_id = ?", (status, node_id))
 
+    # ---------- 健康检查与远程调用 ----------
     def check_node_health(self, node_id: str) -> bool:
         node = self.get_node(node_id)
         if not node or not node.get("endpoint"):
@@ -153,13 +121,13 @@ class SpaceService:
             return False
 
     def _update_all_nodes_health(self):
-        for node_id in list(self.nodes.keys()):
-            if self.nodes[node_id].get("endpoint"):
-                self.check_node_health(node_id)
+        nodes = self.list_nodes()
+        for node in nodes:
+            if node.get("endpoint"):
+                self.check_node_health(node["node_id"])
 
     def invoke_remote_node(self, node_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        with self._lock:
-            node = self.get_node(node_id)
+        node = self.get_node(node_id)
         if not node:
             return {"success": False, "error": f"Node {node_id} not found"}
 
@@ -193,6 +161,7 @@ class SpaceService:
             self.update_reputation(node_id, False)
             return {"success": False, "error": f"Remote call failed: {e}"}
 
+    # ---------- 节点同步 ----------
     def sync_from_peer(self, peer_url: str) -> dict:
         url = f"{peer_url.rstrip('/')}/space/nodes"
         headers = {}
@@ -207,30 +176,48 @@ class SpaceService:
                 invalid = 0
                 if not isinstance(remote_nodes, list):
                     return {"success": False, "error": "Invalid response format from peer"}
-                with self._lock:
+                with get_db() as conn:
                     for node in remote_nodes:
-                        if not isinstance(node, dict) or not self._is_valid_node(node):
+                        if not isinstance(node, dict):
                             invalid += 1
                             continue
                         node_id = node.get("node_id")
-                        if node_id and node_id not in self.nodes:
-                            self.nodes[node_id] = node
-                            self.nodes[node_id]["status"] = "unknown"
+                        name = node.get("name")
+                        node_type = node.get("node_type")
+                        if not node_id or not name or not node_type:
+                            invalid += 1
+                            continue
+                        existing = conn.execute("SELECT 1 FROM space_nodes WHERE node_id = ?", (node_id,)).fetchone()
+                        if not existing:
+                            capabilities = json.dumps(node.get("capabilities", []))
+                            conn.execute("""
+                            INSERT INTO space_nodes (node_id, name, description, node_type, capabilities, endpoint, icon, owner_id, registered_at, reputation, success_count, total_count, status)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'unknown')
+                            """, (
+                                node_id,
+                                name,
+                                node.get("description", ""),
+                                node_type,
+                                capabilities,
+                                node.get("endpoint"),
+                                node.get("icon"),
+                                node.get("owner_id", "remote"),
+                                time.strftime("%Y-%m-%d %H:%M:%S"),
+                                node.get("reputation", 1.0),
+                            ))
                             added += 1
-                    self._save_nodes()
                 return {
                     "success": True,
                     "added": added,
                     "invalid": invalid,
-                    "total_local": len(self.nodes)
+                    "total_local": len(self.list_nodes())
                 }
         except Exception as e:
             return {"success": False, "error": str(e)}
 
     def register_to_peer(self, peer_url: str) -> dict:
         url = f"{peer_url.rstrip('/')}/space/register_node_external"
-        with self._lock:
-            self_node = self.get_node(config.NODE_ID)
+        self_node = self.get_node(config.NODE_ID)
         if not self_node:
             return {"success": False, "error": "Local node not registered"}
         payload = {
@@ -254,27 +241,24 @@ class SpaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # ---------- 后台任务 ----------
     def start_auto_sync(self, interval: int = 300):
-        if self._sync_thread and self._sync_thread.is_alive():
+        import threading
+        if getattr(self, "_sync_thread", None) and self._sync_thread.is_alive():
             return
-        self._stop_sync.clear()
-        self._sync_thread = threading.Thread(
-            target=self._auto_sync_loop,
-            args=(interval,),
-            daemon=True,
-            name="space-auto-sync"
-        )
+        self._stop_sync = threading.Event()
+        self._sync_thread = threading.Thread(target=self._auto_sync_loop, args=(interval,), daemon=True)
         self._sync_thread.start()
         print(f"自动同步线程已启动，间隔 {interval} 秒")
 
     def stop_auto_sync(self):
-        self._stop_sync.set()
-        if self._sync_thread:
-            self._sync_thread.join(timeout=5)
-            self._sync_thread = None
-            print("自动同步线程已停止")
+        if getattr(self, "_stop_sync", None):
+            self._stop_sync.set()
+            if getattr(self, "_sync_thread", None):
+                self._sync_thread.join(timeout=5)
+        print("自动同步线程已停止")
 
-    def _auto_sync_loop(self, interval: int):
+    def _auto_sync_loop(self, interval):
         while not self._stop_sync.is_set():
             self.sync_all_peers()
             self._stop_sync.wait(interval)
@@ -296,28 +280,25 @@ class SpaceService:
                 print(f"向 {peer} 注册失败: {reg_result.get('error')}")
 
     def start_health_check(self, interval: int = 60):
-        if self._health_thread and self._health_thread.is_alive():
+        import threading
+        if getattr(self, "_health_thread", None) and self._health_thread.is_alive():
             return
-        self._stop_health.clear()
-        self._health_thread = threading.Thread(
-            target=self._health_check_loop,
-            args=(interval,),
-            daemon=True,
-            name="space-health-check"
-        )
+        self._stop_health = threading.Event()
+        self._health_thread = threading.Thread(target=self._health_check_loop, args=(interval,), daemon=True)
         self._health_thread.start()
         print(f"健康检查线程已启动，间隔 {interval} 秒")
 
     def stop_health_check(self):
-        self._stop_health.set()
-        if self._health_thread:
-            self._health_thread.join(timeout=5)
-            self._health_thread = None
-            print("健康检查线程已停止")
+        if getattr(self, "_stop_health", None):
+            self._stop_health.set()
+            if getattr(self, "_health_thread", None):
+                self._health_thread.join(timeout=5)
+        print("健康检查线程已停止")
 
-    def _health_check_loop(self, interval: int):
+    def _health_check_loop(self, interval):
         while not self._stop_health.is_set():
             self._update_all_nodes_health()
             self._stop_health.wait(interval)
 
+# 全局单例
 space_service = SpaceService()

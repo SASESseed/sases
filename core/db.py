@@ -67,7 +67,7 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
-        # 知识库表（新增）
+        # 知识库表
         conn.execute("""
         CREATE TABLE IF NOT EXISTS kb_entries (
             id TEXT PRIMARY KEY,
@@ -81,6 +81,24 @@ def init_db():
             timestamp TEXT,
             backtrack_count INTEGER DEFAULT 0,
             test_cases TEXT
+        )
+        """)
+        # 空间节点表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS space_nodes (
+            node_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            node_type TEXT NOT NULL,
+            capabilities TEXT,
+            endpoint TEXT,
+            icon TEXT,
+            owner_id TEXT,
+            registered_at TEXT,
+            reputation REAL DEFAULT 1.0,
+            success_count INTEGER DEFAULT 0,
+            total_count INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'unknown'
         )
         """)
         # 为已有表添加可能缺失的字段（兼容旧库）
@@ -106,6 +124,8 @@ def init_db():
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
-        # 添加贡献日志索引
+        # 贡献日志索引
         conn.execute("CREATE INDEX IF NOT EXISTS idx_contrib_user ON contribution_log(user_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_contrib_event ON contribution_log(event_type)")
+        # 空间节点索引
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_space_nodes_type ON space_nodes(node_type)")
