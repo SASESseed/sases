@@ -85,7 +85,6 @@ function switchPage(pageId) {
 async function showMain() {
     const auth = document.getElementById('auth-section');
     const main = document.getElementById('main-app');
-    // 防御性检查，避免元素缺失导致整个脚本崩溃
     if (!auth || !main) {
         console.error('缺失必要的页面元素：auth-section 或 main-app');
         alert('页面结构错误，请检查 index.html');
@@ -94,6 +93,7 @@ async function showMain() {
     auth.style.display = 'none';
     main.style.display = 'flex';
     await loadProfile();
+    loadSettings();
     switchPage('page-chat');
 }
 
@@ -121,7 +121,10 @@ async function sendChat() {
     if (!query) return;
     const messagesDiv = document.getElementById('chat-messages');
     if (messagesDiv) {
-        messagesDiv.innerHTML += `<div style="text-align:right; margin:5px 0;"><span style="background:#95ec69; padding:8px; border-radius:8px; display:inline-block;">${query}</span></div>`;
+        const userRow = document.createElement('div');
+        userRow.className = 'msg-row user';
+        userRow.innerHTML = `<span class="bubble user">${query}</span>`;
+        messagesDiv.appendChild(userRow);
     }
     input.value = '';
     const res = await fetch('/chat', {
@@ -135,7 +138,10 @@ async function sendChat() {
     if (res.ok) {
         const data = await res.json();
         if (messagesDiv) {
-            messagesDiv.innerHTML += `<div style="text-align:left; margin:5px 0;"><span style="background:white; padding:8px; border-radius:8px; display:inline-block;">${data.answer}</span></div>`;
+            const assistantRow = document.createElement('div');
+            assistantRow.className = 'msg-row assistant';
+            assistantRow.innerHTML = `<span class="bubble assistant">${data.answer}</span>`;
+            messagesDiv.appendChild(assistantRow);
         }
         if (data.deducted) {
             alert(`本次查询扣除 ${data.deducted} 积分`);
@@ -143,6 +149,12 @@ async function sendChat() {
         }
     } else if (res.status === 402) {
         alert('积分不足，无法查询');
+        if (messagesDiv) {
+            const assistantRow = document.createElement('div');
+            assistantRow.className = 'msg-row assistant';
+            assistantRow.innerHTML = `<span class="bubble assistant">积分不足，无法查询</span>`;
+            messagesDiv.appendChild(assistantRow);
+        }
     } else {
         alert('请求失败');
     }
