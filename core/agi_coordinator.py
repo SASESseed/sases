@@ -68,7 +68,6 @@ def _extract_params_for_tool(query: str, module_id: str) -> Optional[Dict[str, A
             return None
         value = float(match.group())
 
-        # 如果同时出现“摄氏”和“华氏”，根据出现顺序判断源单位
         if "摄氏" in query and "华氏" in query:
             if query.index("摄氏") < query.index("华氏"):
                 return {"celsius": value}
@@ -81,8 +80,8 @@ def _extract_params_for_tool(query: str, module_id: str) -> Optional[Dict[str, A
         else:
             return None
     else:
-        # 通用工具暂时无法自动提取参数，返回空字典
-        return {}
+        # 通用工具：传递整个查询作为 query 参数，由模块自行处理
+        return {"query": query}
 
 def execute_task(query: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
