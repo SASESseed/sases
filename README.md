@@ -11,7 +11,8 @@ It combines autonomous seed iteration, credit systems, pollination mechanisms, c
 ## ✨ Core Features
 
 - **Seed Architecture**  
-  Automatic generation, branching, synthesis, verification, backtracking, and knowledge accumulation.
+  Automatic generation, branching, synthesis, verification, backtracking, and knowledge accumulation.  
+  Includes semantic deduplication for diverse seed generation.
 
 - **Apollo Security Architecture**  
   Content safety scanning, tamper-proof state signatures, and risk control.
@@ -25,8 +26,15 @@ It combines autonomous seed iteration, credit systems, pollination mechanisms, c
 - **Contribution Leaderboard**  
   A reputation-based ranking that rewards real contributions instead of simple credit accumulation.
 
-- **Modular Harness Runtime (planned)**  
-  A unified runtime for mini-apps, space nodes, and AGI tool orchestration.
+- **Harness Runtime**  
+  A modular runtime for mini-apps and tools. Developers can create Harness modules with a simple manifest and `run(params)` function.  
+  Current example: unit converter.
+
+- **AGI Coordinator**  
+  Accepts natural language tasks, selects the appropriate Harness tool via keyword matching or LLM reasoning, extracts parameters, and executes the task.
+
+- **Space Service (Node as a Service)**  
+  Register Harness modules and AGI services as discoverable space nodes. Supports local and remote invocation, reputation tracking, and node synchronization between peers.
 
 ---
 
@@ -46,8 +54,16 @@ sases/
 │ ├── seed_utils.py # Code utilities and API wrapper
 │ ├── similarity.py # Semantic deduplication
 │ ├── sandbox.py # Safe code execution
-│ └── safety_scan.py # Content safety scanning
-├── tests/ # Unit tests (27 passed)
+│ ├── safety_scan.py # Content safety scanning
+│ ├── harness_runtime.py # Harness module runtime
+│ ├── harness_models.py # Harness data models
+│ ├── agi_coordinator.py # AGI task coordinator
+│ └── space_service.py # Space node service and sync
+├── harness_modules/
+│ └── unit_converter/ # Example Harness module
+│ ├── manifest.json
+│ └── main.py
+├── tests/ # Unit tests (43 passed)
 └── static/ # Web console and chat UI
 
 text
@@ -59,7 +75,7 @@ text
 ### 1. Install dependencies
 
 ```bash
-pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn
+pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn httpx
 2. Configure environment variables
 Create a .env file or set the following variables:
 
@@ -71,6 +87,9 @@ Optional:
 text
 MODEL_NAME=deepseek-v4-flash
 SASES_PORT=8001
+SASES_NODE_ID=node-001
+SASES_NODE_NAME=My SASES Node
+SASES_PEERS=http://other-node:8001
 3. Start the web service
 bash
 python -m uvicorn app_full:app --reload --port 8001
@@ -79,7 +98,7 @@ Visit http://127.0.0.1:8001/static/index.html to open the console.
 🧪 Run Tests
 bash
 python -m pytest tests/ -v
-All 27 unit tests should pass.
+All 43 unit tests should pass.
 
 🎯 Current Status
 Seed iteration loop with semantic deduplication
@@ -92,9 +111,13 @@ Pollination mechanism (manual and auto)
 
 Contribution leaderboard
 
-Modular route structure (core/api_routes/)
+Harness runtime with unit converter example
 
-Basic web console and chat UI
+AGI coordinator with keyword matching and parameter extraction
+
+Space service with node registration, remote invocation, and peer synchronization
+
+Modular route structure (core/api_routes/)
 
 📜 License
 This project is licensed under the Apache License 2.0.
