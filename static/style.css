@@ -1,12 +1,14 @@
 * {
     box-sizing: border-box;
 }
+
 body {
     font-family: Arial, sans-serif;
     background: #f5f5f5;
     margin: 0;
     padding: 0;
 }
+
 .app {
     max-width: 600px;
     margin: 0 auto;
@@ -16,30 +18,37 @@ body {
     padding-bottom: 60px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
+
 #auth-section {
     padding: 20px;
 }
+
 #main-section {
     display: flex;
     flex-direction: column;
 }
+
 .view {
     display: none;
     padding: 20px;
 }
+
 .view.active {
     display: block;
 }
+
 .user-header {
     margin-bottom: 15px;
     font-size: 16px;
 }
+
 .settings-group {
     border: 1px solid #ddd;
     border-radius: 6px;
     margin-bottom: 15px;
     background: #fff;
 }
+
 .setting-item {
     display: flex;
     align-items: center;
@@ -47,16 +56,20 @@ body {
     border-bottom: 1px solid #eee;
     cursor: pointer;
 }
+
 .setting-item:last-child {
     border-bottom: none;
 }
+
 .setting-item span:first-child {
     flex: 1;
 }
+
 .arrow {
     color: #aaa;
     font-size: 18px;
 }
+
 .unread-badge {
     background: red;
     color: white;
@@ -65,13 +78,20 @@ body {
     font-size: 12px;
     margin-left: 5px;
 }
-input[type="text"], input[type="password"], input[type="email"], textarea, select {
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+textarea,
+select {
     width: 100%;
     padding: 8px;
     margin: 5px 0;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+
 button {
     padding: 8px 15px;
     margin: 5px 5px 5px 0;
@@ -80,7 +100,15 @@ button {
     border: 1px solid #ddd;
     border-radius: 4px;
 }
-#chat-result, #tool-result, #node-invoke-result {
+
+button:disabled {
+    background: #e0e0e0;
+    cursor: not-allowed;
+}
+
+#chat-result,
+#tool-result,
+#node-invoke-result {
     min-height: 50px;
     background: #f9f9f9;
     border: 1px solid #ddd;
@@ -88,14 +116,56 @@ button {
     white-space: pre-wrap;
     margin-top: 10px;
 }
+
 ul {
     list-style: none;
     padding: 0;
 }
+
 li {
     padding: 8px;
     border-bottom: 1px solid #eee;
 }
+
+/* 聊天输入区域 */
+.chat-input-area {
+    display: flex;
+    align-items: center;
+}
+
+.chat-input-area input[type="text"] {
+    flex: 1;
+    margin-right: 5px;
+}
+
+.chat-input-area button {
+    margin-left: 5px;
+}
+
+/* 图片预览 */
+#image-preview {
+    margin-top: 5px;
+}
+
+#image-preview img {
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* 加载状态 */
+#chat-loading {
+    color: #888;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* 错误提示 */
+#chat-error {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
 /* 底部导航 */
 #bottom-nav {
     position: fixed;
@@ -112,6 +182,7 @@ li {
     height: 60px;
     z-index: 100;
 }
+
 .nav-item {
     display: flex;
     flex-direction: column;
@@ -121,31 +192,40 @@ li {
     cursor: pointer;
     color: #888;
 }
+
 .nav-item.active {
     color: #07c160;
 }
+
 .nav-icon {
     font-size: 22px;
     line-height: 1;
 }
+
 .nav-label {
     font-size: 12px;
     margin-top: 2px;
 }
-/* 额外面板样式 */
-#harness-panel, #node-panel {
+
+/* 面板样式 */
+#harness-panel,
+#node-panel,
+#general-settings-panel,
+#api-key-panel {
     background: #fafafa;
     border: 1px solid #eee;
     padding: 10px;
     margin-bottom: 15px;
 }
-/* API Key 管理列表样式 */
+
+/* API Key 列表样式 */
 #api-key-list li {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
 }
+
 #api-key-list button {
     margin-left: 5px;
 }

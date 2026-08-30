@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SASES 控制台</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -33,10 +34,12 @@
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="输入问题，如：排序算法" />
                     <input type="file" id="chat-image" accept="image/*" style="display:none;" onchange="handleImageSelect(event)" />
-                    <button onclick="document.getElementById('chat-image').click()">📷</button>
-                    <button onclick="chat()">发送</button>
+                    <button id="image-btn" onclick="document.getElementById('chat-image').click()">📷</button>
+                    <button id="send-btn" onclick="chat()">发送</button>
                 </div>
-                <div id="image-preview"></div>
+                <div id="image-preview" style="margin-top:5px;"></div>
+                <div id="chat-loading" style="display:none; color:#888;">正在处理...</div>
+                <div id="chat-error" style="display:none; color:red;"></div>
                 <div id="chat-result"></div>
             </div>
 

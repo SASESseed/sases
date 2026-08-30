@@ -94,10 +94,19 @@ function handleImageSelect(event) {
         const base64 = e.target.result.split(',')[1];
         selectedImageBase64 = base64;
         const preview = document.getElementById('image-preview');
-        preview.innerHTML = `<img src="data:image/jpeg;base64,${base64}" style="max-width:100px; max-height:100px; margin:5px;" />`;
+        preview.innerHTML = `
+            <div style="display:flex; align-items:center;">
+                <img src="data:image/jpeg;base64,${base64}" style="max-width:80px; max-height:80px; margin-right:5px;" />
+                <button onclick="clearSelectedImage()" style="margin-left:5px;">移除</button>
+            </div>`;
         document.getElementById('chat-image').value = '';
     };
     reader.readAsDataURL(file);
+}
+
+function clearSelectedImage() {
+    selectedImageBase64 = null;
+    document.getElementById('image-preview').innerHTML = '';
 }
 
 // ---------- 聊天 ----------
@@ -105,23 +114,48 @@ async function chat() {
     const query = document.getElementById('chat-input').value;
     const image = selectedImageBase64;
 
-    const res = await fetch('/chat', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ query, image })
-    });
-    const data = await res.json();
-    document.getElementById('chat-result').textContent = data.answer;
-    selectedImageBase64 = null;
-    document.getElementById('image-preview').innerHTML = '';
-    if (data.deducted) {
-        alert(`本次查询已扣除 ${data.deducted} 积分`);
-        updateCreditsDisplay();
-        loadAssistantUnread();
+    if (!query && !image) {
+        showChatError('请输入问题或选择图片');
+        return;
     }
+
+    const sendBtn = document.getElementById('send-btn');
+    sendBtn.disabled = true;
+    document.getElementById('chat-loading').style.display = 'block';
+    document.getElementById('chat-error').style.display = 'none';
+
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query, image })
+        });
+        const data = await res.json();
+        document.getElementById('chat-result').textContent = data.answer;
+        clearSelectedImage();
+        if (data.deducted) {
+            showChatError(`本次查询已扣除 ${data.deducted} 积分`);
+            updateCreditsDisplay();
+            loadAssistantUnread();
+        }
+    } catch (e) {
+        showChatError('请求失败：' + e.message);
+    } finally {
+        sendBtn.disabled = false;
+        document.getElementById('chat-loading').style.display = 'none';
+    }
+}
+
+function showChatError(message) {
+    const errorDiv = document.getElementById('chat-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
 }
 
 // ---------- 积分流水 ----------
