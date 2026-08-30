@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 
-# 自动加载项目根目录下的 .env 文件（如果存在）
 load_dotenv()
 
 # DeepSeek API 配置（系统默认，用于无用户Key时的回退）
@@ -16,6 +15,20 @@ PROVIDER_BASE_URLS = {
     "moonshot": "https://api.moonshot.cn/v1",
     "zhipu": "https://open.bigmodel.cn/api/paas/v4",
     "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+}
+
+# 提供商别名映射（用于标准化用户输入）
+PROVIDER_ALIASES = {
+    "ds": "deepseek",
+    "deepseek-chat": "deepseek",
+    "gpt": "openai",
+    "openai-chat": "openai",
+    "moonshot-v1": "moonshot",
+    "kimi": "moonshot",
+    "glm": "zhipu",
+    "chatglm": "zhipu",
+    "qwen-turbo": "qwen",
+    "tongyi": "qwen",
 }
 
 # SASES JWT 密钥

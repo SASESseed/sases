@@ -1,15 +1,9 @@
 let token = localStorage.getItem('sases_token');
-let currentPage = 'page-chat';
 
-// ========== 认证相关 ==========
 function showRegister() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('register-section').style.display = 'block';
 }
-function showLogin() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
-}
+
 async function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -27,6 +21,7 @@ async function login() {
         alert('登录失败');
     }
 }
+
 async function register() {
     const username = document.getElementById('reg-username').value;
     const email = document.getElementById('reg-email').value;
@@ -38,207 +33,60 @@ async function register() {
     });
     if (res.ok) {
         alert('注册成功，请登录');
-        showLogin();
+        document.getElementById('register-section').style.display = 'none';
     } else {
         alert('注册失败');
     }
 }
-function logout() {
-    localStorage.removeItem('sases_token');
-    token = null;
-    const auth = document.getElementById('auth-section');
-    const main = document.getElementById('main-app');
-    if (auth) auth.style.display = 'flex';
-    if (main) main.style.display = 'none';
-}
 
-// ========== 页面切换 ==========
-function switchPage(pageId) {
-    currentPage = pageId;
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const page = document.getElementById(pageId);
-    if (page) page.classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const nav = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-    if (nav) nav.classList.add('active');
-    const titles = {
-        'page-chat': '聊天',
-        'page-nodes': '节点',
-        'page-discover': '发现',
-        'page-profile': '我的'
-    };
-    const titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.textContent = titles[pageId] || 'SASES';
-    if (pageId === 'page-nodes') {
-        loadSpaceNodes();
-        loadHarnessTools();
-    } else if (pageId === 'page-discover') {
-        loadLeaderboard();
-        loadContribLeaderboard();
-        loadStats();
-    } else if (pageId === 'page-profile') {
-        loadProfile();
-    }
-}
-
-// ========== 主界面显示 ==========
 async function showMain() {
-    const auth = document.getElementById('auth-section');
-    const main = document.getElementById('main-app');
-    if (!auth || !main) {
-        console.error('缺失必要的页面元素：auth-section 或 main-app');
-        alert('页面结构错误，请检查 index.html');
-        return;
-    }
-    auth.style.display = 'none';
-    main.style.display = 'flex';
-    await loadProfile();
-    loadSettings();
-    switchPage('page-chat');
-}
-
-// ========== 个人信息 ==========
-async function loadProfile() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-section').style.display = 'block';
+    switchView('view-chat');
     const res = await fetch('/me', {
         headers: {'Authorization': `Bearer ${token}`}
     });
     if (res.ok) {
         const data = await res.json();
-        const uname = document.getElementById('username-display');
-        const credits = document.getElementById('credits-display');
-        const credits2 = document.getElementById('credits-display-2');
-        if (uname) uname.textContent = data.username;
-        if (credits) credits.textContent = data.credits;
-        if (credits2) credits2.textContent = data.credits;
+        document.getElementById('username-display').textContent = data.username;
+        document.getElementById('credits-display').textContent = data.credits;
     }
+    loadSettings();
+    loadLeaderboard();
+    loadAssistantUnread();
+    loadStats();
 }
 
-// ========== 聊天 ==========
-async function sendChat() {
-    const input = document.getElementById('chat-input');
-    if (!input) return;
-    const query = input.value.trim();
-    if (!query) return;
-    const messagesDiv = document.getElementById('chat-messages');
-    if (messagesDiv) {
-        const userRow = document.createElement('div');
-        userRow.className = 'msg-row user';
-        userRow.innerHTML = `<span class="bubble user">${query}</span>`;
-        messagesDiv.appendChild(userRow);
-    }
-    input.value = '';
+function logout() {
+    localStorage.removeItem('sases_token');
+    token = null;
+    document.getElementById('auth-section').style.display = 'block';
+    document.getElementById('main-section').style.display = 'none';
+}
+
+function switchView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector(`.nav-item[data-view="${viewId}"]`).classList.add('active');
+}
+
+async function chat() {
+    const query = document.getElementById('chat-input').value;
     const res = await fetch('/chat', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({query})
-    });
-    if (res.ok) {
-        const data = await res.json();
-        if (messagesDiv) {
-            const assistantRow = document.createElement('div');
-            assistantRow.className = 'msg-row assistant';
-            assistantRow.innerHTML = `<span class="bubble assistant">${data.answer}</span>`;
-            messagesDiv.appendChild(assistantRow);
-        }
-        if (data.deducted) {
-            alert(`本次查询扣除 ${data.deducted} 积分`);
-            loadProfile();
-        }
-    } else if (res.status === 402) {
-        alert('积分不足，无法查询');
-        if (messagesDiv) {
-            const assistantRow = document.createElement('div');
-            assistantRow.className = 'msg-row assistant';
-            assistantRow.innerHTML = `<span class="bubble assistant">积分不足，无法查询</span>`;
-            messagesDiv.appendChild(assistantRow);
-        }
-    } else {
-        alert('请求失败');
-    }
-    if (messagesDiv) messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-// ========== 种子提交 ==========
-async function submitSeed() {
-    const desc = document.getElementById('seed-desc');
-    const tc = document.getElementById('seed-testcases');
-    if (!desc || !tc) return;
-    const description = desc.value;
-    const testcases_str = tc.value;
-    let test_cases = [];
-    try {
-        test_cases = JSON.parse(testcases_str) || [];
-    } catch(e) {
-        alert('测试用例 JSON 格式错误');
-        return;
-    }
-    const res = await fetch('/submit_seed', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({description, test_cases})
-    });
-    if (res.ok) alert('种子已提交');
-    else alert('提交失败');
-}
-
-// ========== AGI 执行 ==========
-async function executeAGI() {
-    const query = document.getElementById('agi-query').value.trim();
-    if (!query) return;
-    const res = await fetch('/agi/execute', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
         body: JSON.stringify({query})
     });
     const data = await res.json();
-    const resultDiv = document.getElementById('agi-result');
-    if (resultDiv) resultDiv.textContent = JSON.stringify(data, null, 2);
+    document.getElementById('chat-result').textContent = data.answer;
+    if (data.deducted) {
+        alert(`本次查询已扣除 ${data.deducted} 积分`);
+        updateCreditsDisplay();
+        loadAssistantUnread();
+    }
 }
 
-// ========== 排行榜 ==========
-async function loadLeaderboard() {
-    const res = await fetch('/leaderboard');
-    const data = await res.json();
-    const list = document.getElementById('leaderboard-list');
-    if (!list) return;
-    list.innerHTML = '<h3>积分榜</h3>';
-    data.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.username}: ${item.credits} 积分`;
-        list.appendChild(li);
-    });
-}
-async function loadContribLeaderboard() {
-    const res = await fetch('/contrib_leaderboard');
-    const data = await res.json();
-    const list = document.getElementById('leaderboard-list');
-    if (!list) return;
-    list.innerHTML += '<h3>贡献榜</h3>';
-    data.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.username}: ${item.score} 分`;
-        list.appendChild(li);
-    });
-}
-
-// ========== 统计 ==========
-async function loadStats() {
-    const res = await fetch('/stats');
-    const data = await res.json();
-    const el = document.getElementById('stats-display');
-    if (el) el.textContent = JSON.stringify(data, null, 2);
-}
-
-// ========== 积分流水 ==========
 async function showLedger() {
     const res = await fetch('/my_ledger', {
         headers: {'Authorization': `Bearer ${token}`}
@@ -246,99 +94,357 @@ async function showLedger() {
     if (res.ok) {
         const data = await res.json();
         const div = document.getElementById('ledger');
-        if (div) {
-            div.style.display = 'block';
-            div.innerHTML = '<h3>积分流水</h3><ul>' + data.ledger.map(item =>
-                `<li>${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})</li>`
-            ).join('') + '</ul>';
-        }
+        div.style.display = 'block';
+        div.innerHTML = '<h3>积分流水</h3><ul>' + data.ledger.map(item =>
+            `<li>${item.amount > 0 ? '+' : ''}${item.amount} 积分 - ${item.reason} (${item.timestamp})</li>`
+        ).join('') + '</ul>';
+    } else {
+        alert('获取积分流水失败');
     }
 }
 
-// ========== SASES 助手消息 ==========
-async function showAssistant() {
-    const res = await fetch('/assistant/messages', {
-        headers: {'Authorization': `Bearer ${token}`}
+async function submitSeed() {
+    if (!localStorage.getItem('seed_risk_dismissed')) {
+        const dismiss = confirm('提示：提交的种子将进入 SASES 公共种子池，并被其他用户或系统使用。请勿包含个人隐私信息。\n\n点击“确定”继续，并永久不再提示；点击“取消”返回。');
+        if (!dismiss) return;
+        localStorage.setItem('seed_risk_dismissed', 'true');
+    }
+    const description = document.getElementById('seed-desc').value;
+    const testcases_str = document.getElementById('seed-testcases').value;
+    let test_cases = [];
+    try { test_cases = JSON.parse(testcases_str) || []; } catch(e) { test_cases = []; }
+    const res = await fetch('/submit_seed', {
+        method: 'POST',
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({description, test_cases})
     });
     if (res.ok) {
-        const data = await res.json();
-        const div = document.getElementById('assistant-messages');
-        if (div) {
-            div.style.display = 'block';
-            div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg =>
-                `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
-            ).join('') + '</ul>';
-        }
-        await fetch('/assistant/read', {
-            method: 'POST',
-            headers: {'Authorization': `Bearer ${token}`}
-        });
+        alert('种子已提交');
+        loadAssistantUnread();
+    } else {
+        alert('提交失败');
     }
 }
 
-// ========== 授粉设置 ==========
+async function updateCreditsDisplay() {
+    const res = await fetch('/me', { headers: {'Authorization': `Bearer ${token}`} });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('credits-display').textContent = data.credits;
+    }
+}
+
+async function loadLeaderboard() {
+    const res = await fetch('/leaderboard');
+    const data = await res.json();
+    const list = document.getElementById('leaderboard');
+    list.innerHTML = '';
+    data.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.username}: ${item.credits} 积分`;
+        list.appendChild(li);
+    });
+}
+
+async function loadContribLeaderboard() {
+    const res = await fetch('/contrib_leaderboard');
+    const data = await res.json();
+    const div = document.getElementById('discover-content');
+    div.innerHTML = '<h3>贡献榜</h3><ul>' + data.map(item =>
+        `<li>${item.username}: ${item.score}</li>`
+    ).join('') + '</ul>';
+}
+
+async function loadStats() {
+    const res = await fetch('/stats');
+    const data = await res.json();
+    document.getElementById('stats').textContent = JSON.stringify(data, null, 2);
+}
+
+function toggleStats() {
+    const stats = document.getElementById('stats');
+    stats.style.display = stats.style.display === 'none' ? 'block' : 'none';
+}
+
 async function loadSettings() {
-    const res = await fetch('/me/settings', {
-        headers: {'Authorization': `Bearer ${token}`}
-    });
+    const res = await fetch('/me/settings', { headers: {'Authorization': `Bearer ${token}`} });
     if (res.ok) {
         const data = await res.json();
-        const toggle = document.getElementById('auto-pollinate-toggle');
-        if (toggle) toggle.checked = data.auto_pollinate_enabled;
+        document.getElementById('auto-pollinate-toggle').checked = data.auto_pollinate_enabled;
     }
 }
+
 async function toggleAutoPollinate() {
     const enabled = document.getElementById('auto-pollinate-toggle').checked;
     const res = await fetch('/me/settings', {
         method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
         body: JSON.stringify({auto_pollinate_enabled: enabled})
     });
-    if (res.ok) alert('设置已更新');
-    else alert('更新失败');
+    if (res.ok) alert('设置已更新'); else alert('设置更新失败');
 }
 
-// ========== 空间节点 ==========
-async function loadSpaceNodes() {
-    const res = await fetch('/space/nodes');
-    const data = await res.json();
-    const div = document.getElementById('space-nodes-list');
-    if (!div) return;
-    div.innerHTML = '';
-    data.forEach(node => {
-        const item = document.createElement('div');
-        item.style.border = '1px solid #ddd';
-        item.style.padding = '8px';
-        item.style.margin = '5px 0';
-        item.innerHTML = `<strong>${node.name}</strong> (${node.node_type})<br>${node.description}`;
-        div.appendChild(item);
-    });
+async function loadAssistantUnread() {
+    const res = await fetch('/assistant/messages', { headers: {'Authorization': `Bearer ${token}`} });
+    if (res.ok) {
+        const data = await res.json();
+        const badge = document.getElementById('assistant-unread');
+        if (data.unread > 0) { badge.textContent = data.unread; badge.style.display = 'inline-block'; }
+        else badge.style.display = 'none';
+    }
 }
 
-// ========== Harness 工具 ==========
-async function loadHarnessTools() {
+async function showAssistant() {
+    const res = await fetch('/assistant/messages', { headers: {'Authorization': `Bearer ${token}`} });
+    if (res.ok) {
+        const data = await res.json();
+        const div = document.getElementById('assistant-messages');
+        div.style.display = 'block';
+        div.innerHTML = '<h3>SASES助手</h3><ul>' + data.messages.map(msg =>
+            `<li><strong>${msg.title}</strong>：${msg.content} <small>(${msg.timestamp})</small></li>`
+        ).join('') + '</ul>';
+        await fetch('/assistant/read', { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
+        loadAssistantUnread();
+    } else alert('获取助手消息失败');
+}
+
+// ========== Harness 工具调用 ==========
+let toolList = [];
+
+async function loadToolList() {
     const res = await fetch('/harness/tools');
-    const data = await res.json();
-    const div = document.getElementById('harness-tools-list');
-    if (!div) return;
-    div.innerHTML = '';
-    data.forEach(tool => {
-        const item = document.createElement('div');
-        item.style.border = '1px solid #ddd';
-        item.style.padding = '8px';
-        item.style.margin = '5px 0';
-        item.innerHTML = `<strong>${tool.name}</strong> (${tool.module_id})<br>${tool.description}`;
-        div.appendChild(item);
-    });
+    if (res.ok) {
+        toolList = await res.json();
+        const select = document.getElementById('tool-select');
+        select.innerHTML = '';
+        toolList.forEach(tool => {
+            const opt = document.createElement('option');
+            opt.value = tool.module_id;
+            opt.textContent = `${tool.name} (${tool.module_id})`;
+            select.appendChild(opt);
+        });
+    } else alert('获取工具列表失败');
 }
 
-// ========== 初始化 ==========
+function toggleHarnessPanel() {
+    const panel = document.getElementById('harness-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        loadToolList();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+async function invokeTool() {
+    const moduleId = document.getElementById('tool-select').value;
+    const paramsText = document.getElementById('tool-params').value.trim();
+    let params = {};
+    if (paramsText) {
+        try { params = JSON.parse(paramsText); } catch(e) { alert('参数 JSON 格式错误'); return; }
+    }
+    const res = await fetch('/harness/invoke', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ module_id: moduleId, params })
+    });
+    const data = await res.json();
+    document.getElementById('tool-result').textContent = JSON.stringify(data, null, 2);
+}
+
+// ========== 空间节点浏览 ==========
+let nodeList = [];
+
+async function loadNodeList() {
+    const res = await fetch('/space/nodes');
+    if (res.ok) {
+        nodeList = await res.json();
+        const ul = document.getElementById('node-list');
+        ul.innerHTML = '';
+        nodeList.forEach(node => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.innerHTML = `<span>${node.name} (${node.node_id})</span>`;
+            const btn = document.createElement('button');
+            btn.textContent = '调用';
+            btn.onclick = () => invokeNode(node.node_id);
+            li.appendChild(btn);
+            ul.appendChild(li);
+        });
+    } else alert('获取节点列表失败');
+}
+
+function toggleNodePanel() {
+    const panel = document.getElementById('node-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        loadNodeList();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+async function invokeNode(nodeId) {
+    const paramsText = prompt(`输入调用节点 ${nodeId} 的参数 JSON：`);
+    if (!paramsText) return;
+    let params = {};
+    try { params = JSON.parse(paramsText); } catch(e) { alert('参数 JSON 格式错误'); return; }
+    const res = await fetch('/space/invoke', {
+        method: 'POST',
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({ node_id: nodeId, params })
+    });
+    const data = await res.json();
+    document.getElementById('node-invoke-result').textContent = JSON.stringify(data, null, 2);
+}
+
+// ========== 导出知识库 ==========
+async function exportKnowledgeBase() {
+    const res = await fetch('/kb/export', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'success_kb.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    } else {
+        alert('导出知识库失败');
+    }
+}
+
+// ========== 通用设置 ==========
+async function loadGeneralSettings() {
+    const res = await fetch('/me/settings/all', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('general-settings-json').value = JSON.stringify(data, null, 2);
+    }
+}
+
+function toggleGeneralSettings() {
+    const panel = document.getElementById('general-settings-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        loadGeneralSettings();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+async function saveGeneralSettings() {
+    const text = document.getElementById('general-settings-json').value.trim();
+    let settings;
+    try { settings = JSON.parse(text); } catch(e) { alert('设置 JSON 格式错误'); return; }
+    const res = await fetch('/me/settings/all', {
+        method: 'PATCH',
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({settings})
+    });
+    if (res.ok) {
+        alert('设置已保存');
+    } else {
+        alert('保存设置失败');
+    }
+}
+
+// ========== API Key 管理 ==========
+async function toggleApiKeyPanel() {
+    const panel = document.getElementById('api-key-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        loadApiKeys();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+async function loadApiKeys() {
+    const res = await fetch('/api_keys', {
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        const keys = await res.json();
+        const ul = document.getElementById('api-key-list');
+        ul.innerHTML = '';
+        keys.forEach(k => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.innerHTML = `<span>${k.provider} - ${k.masked_key} (优先级:${k.priority})</span>`;
+            const btnDel = document.createElement('button');
+            btnDel.textContent = '删除';
+            btnDel.onclick = () => deleteApiKey(k.id);
+            const btnPriority = document.createElement('button');
+            btnPriority.textContent = '设优先';
+            btnPriority.onclick = () => setApiKeyPriority(k.id);
+            li.appendChild(btnPriority);
+            li.appendChild(btnDel);
+            ul.appendChild(li);
+        });
+    } else {
+        alert('获取 API Key 列表失败');
+    }
+}
+
+async function addApiKey() {
+    const provider = document.getElementById('api-key-provider').value.trim();
+    const key = document.getElementById('api-key-value').value.trim();
+    const priority = parseInt(document.getElementById('api-key-priority').value) || 0;
+    if (!provider || !key) { alert('请填写提供商和API Key'); return; }
+    const res = await fetch('/api_keys', {
+        method: 'POST',
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({provider, key, priority})
+    });
+    if (res.ok) {
+        alert('API Key 已添加');
+        loadApiKeys();
+    } else {
+        alert('添加失败');
+    }
+}
+
+async function deleteApiKey(id) {
+    if (!confirm('确认删除该 API Key？')) return;
+    const res = await fetch(`/api_keys/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) {
+        alert('已删除');
+        loadApiKeys();
+    } else {
+        alert('删除失败');
+    }
+}
+
+async function setApiKeyPriority(id) {
+    const priority = prompt('输入新的优先级（数字越大越优先）：');
+    if (!priority) return;
+    const res = await fetch('/api_keys/priority', {
+        method: 'PATCH',
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({key_id: id, priority: parseInt(priority)})
+    });
+    if (res.ok) {
+        alert('优先级已更新');
+        loadApiKeys();
+    } else {
+        alert('更新失败');
+    }
+}
+
+// 如果已有 token，自动进入主界面
 if (token) {
     showMain();
-} else {
-    const auth = document.getElementById('auth-section');
-    if (auth) auth.style.display = 'flex';
 }

@@ -219,6 +219,10 @@ def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
 
 # ========== API Key 管理 ==========
 def add_api_key(user_id: int, provider: str, key: str, priority: int = 0) -> bool:
+    # 标准化 provider：转小写并应用别名映射
+    provider = provider.strip().lower()
+    provider = config.PROVIDER_ALIASES.get(provider, provider)
+
     from core.encryption import encrypt_text
     encrypted = encrypt_text(key)
     with get_db() as conn:
