@@ -10,7 +10,8 @@ import inspect
 
 from core import config
 
-client = openai.OpenAI(
+# 默认客户端（使用系统环境变量）
+_client = openai.OpenAI(
     api_key=config.DEEPSEEK_API_KEY,
     base_url=config.DEEPSEEK_BASE_URL,
     timeout=120,
@@ -121,22 +122,61 @@ def parse_two_branches(text):
                 b = b.strip()
     return (a or "默认算法A"), (b or "默认算法B")
 
-def call_chat(prompt, max_retries=2, temperature=0.7, model=None):
-    """调用 DeepSeek API，带重试。model 默认使用 config.MODEL_NAME。"""
+def _call_openai_with_key(provider: str, api_key: str, model: str, prompt: str, temperature: float, max_retries: int):
+    """使用指定 provider 的 API key 调用 OpenAI 兼容接口"""
+    base_url = config.PROVIDER_BASE_URLS.get(provider, config.DEEPSEEK_BASE_URL)
+    client = openai.OpenAI(api_key=api_key, base_url=base_url, timeout=120, max_retries=max_retries)
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=temperature
+    )
+    return resp.choices[0].message.content
+
+def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None):
+    """
+    调用模型生成回复。
+    如果提供 user_id，则优先使用该用户配置的 API Keys（按优先级），
+    全部失败时回退到系统默认 DeepSeek Key。
+    """
     if model is None:
         model = config.MODEL_NAME
+
+    # 如果提供了用户ID，尝试使用用户API Key
+    if user_id is not None:
+        try:
+            from core import auth_service
+            api_keys = auth_service.get_active_api_keys(user_id)
+        except Exception as e:
+            api_keys = []
+
+        if api_keys:
+            last_error = None
+            for entry in api_keys:
+                provider = entry["provider"]
+                api_key = entry["key"]
+                try:
+                    return _call_openai_with_key(provider, api_key, model, prompt, temperature, max_retries)
+                except Exception as e:
+                    last_error = e
+                    print(f"Provider {provider} 调用失败: {e}")
+                    continue
+            if last_error:
+                raise last_error
+
+    # 回退到默认客户端
     last_error = None
     for attempt in range(max_retries + 1):
         try:
-            resp = client.chat.completions.create(
+            resp = _client.chat.completions.create(
                 model=model,
-                messages=[{"role":"user", "content":prompt}],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=temperature
             )
             return resp.choices[0].message.content
         except Exception as e:
             last_error = e
-            print(f"  API调用失败（尝试 {attempt+1}/{max_retries+1}）：{e}")
+            print(f"默认 API 调用失败（尝试 {attempt+1}/{max_retries+1}）：{e}")
             if attempt < max_retries:
                 time.sleep(5)
     raise last_error

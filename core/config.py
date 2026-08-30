@@ -4,10 +4,19 @@ from dotenv import load_dotenv
 # 自动加载项目根目录下的 .env 文件（如果存在）
 load_dotenv()
 
-# DeepSeek API 配置
+# DeepSeek API 配置（系统默认，用于无用户Key时的回退）
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
+
+# 提供商基地址映射（用户配置 API Key 时可选择）
+PROVIDER_BASE_URLS = {
+    "deepseek": "https://api.deepseek.com/v1",
+    "openai": "https://api.openai.com/v1",
+    "moonshot": "https://api.moonshot.cn/v1",
+    "zhipu": "https://open.bigmodel.cn/api/paas/v4",
+    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+}
 
 # SASES JWT 密钥
 SASES_SECRET_KEY = os.environ.get("SASES_SECRET_KEY", "sases-dev-secret-key")
