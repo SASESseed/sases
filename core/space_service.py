@@ -17,6 +17,9 @@ class SpaceService:
         self._lock = threading.RLock()
         self.nodes = self._load_nodes()
         self._register_self()
+        # 自动同步相关
+        self._sync_thread = None
+        self._stop_sync = threading.Event()
 
     def _load_nodes(self) -> Dict[str, dict]:
         if not os.path.exists(self.nodes_file):
@@ -44,12 +47,10 @@ class SpaceService:
             )
 
     def _is_valid_node(self, node: dict) -> bool:
-        """检查节点是否包含必要字段"""
         required_fields = ["node_id", "name", "node_type"]
         for field in required_fields:
             if field not in node or not node[field]:
                 return False
-        # capabilities 和 endpoint 可选，但如果存在应确保类型正确
         if "capabilities" in node and not isinstance(node["capabilities"], list):
             return False
         if "endpoint" in node and node["endpoint"] is not None and not isinstance(node["endpoint"], str):
@@ -71,7 +72,9 @@ class SpaceService:
                     "endpoint": endpoint,
                     "icon": icon,
                     "owner_id": owner_id,
-                    "registered_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                    "registered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    # 保留状态和信誉
+                    "status": existing.get("status", "unknown")
                 })
                 node = existing
             else:
@@ -87,7 +90,8 @@ class SpaceService:
                     "registered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                     "reputation": 1.0,
                     "success_count": 0,
-                    "total_count": 0
+                    "total_count": 0,
+                    "status": "unknown"
                 }
             self.nodes[node_id] = node
             self._save_nodes()
@@ -118,6 +122,34 @@ class SpaceService:
                 success_rate = node["success_count"] / node["total_count"]
                 node["reputation"] = 0.5 + success_rate * 0.5
             self._save_nodes()
+
+    def update_node_status(self, node_id: str, status: str):
+        """更新节点在线状态：online/offline/unknown"""
+        with self._lock:
+            node = self.nodes.get(node_id)
+            if node:
+                node["status"] = status
+                self._save_nodes()
+
+    def check_node_health(self, node_id: str) -> bool:
+        """检查指定节点是否在线，返回 True/False"""
+        node = self.get_node(node_id)
+        if not node or not node.get("endpoint"):
+            return False
+        endpoint = node["endpoint"].rstrip("/")
+        health_url = f"{endpoint}/space/health"
+        try:
+            with httpx.Client(timeout=3) as client:
+                response = client.get(health_url)
+                if response.status_code == 200:
+                    self.update_node_status(node_id, "online")
+                    return True
+                else:
+                    self.update_node_status(node_id, "offline")
+                    return False
+        except Exception:
+            self.update_node_status(node_id, "offline")
+            return False
 
     def invoke_remote_node(self, node_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
         with self._lock:
@@ -171,6 +203,7 @@ class SpaceService:
                         node_id = node.get("node_id")
                         if node_id and node_id not in self.nodes:
                             self.nodes[node_id] = node
+                            self.nodes[node_id]["status"] = "unknown"  # 新节点初始状态
                             added += 1
                     self._save_nodes()
                 return {
@@ -205,6 +238,61 @@ class SpaceService:
                 return response.json()
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    # ========== 自动同步与后台任务 ==========
+    def start_auto_sync(self, interval: int = 300):
+        """启动后台自动同步线程，默认每 300 秒同步一次"""
+        if self._sync_thread and self._sync_thread.is_alive():
+            return  # 已在运行
+        self._stop_sync.clear()
+        self._sync_thread = threading.Thread(
+            target=self._auto_sync_loop,
+            args=(interval,),
+            daemon=True,
+            name="space-auto-sync"
+        )
+        self._sync_thread.start()
+        print(f"自动同步线程已启动，间隔 {interval} 秒")
+
+    def stop_auto_sync(self):
+        """停止自动同步线程"""
+        self._stop_sync.set()
+        if self._sync_thread:
+            self._sync_thread.join(timeout=5)
+            self._sync_thread = None
+            print("自动同步线程已停止")
+
+    def _auto_sync_loop(self, interval: int):
+        while not self._stop_sync.is_set():
+            self.sync_all_peers()
+            self._stop_sync.wait(interval)  # 可中断的 sleep
+
+    def sync_all_peers(self):
+        """对所有配置的 peer 执行同步和注册"""
+        peers = config.PEER_NODES
+        if not peers:
+            return
+        for peer in peers:
+            # 同步节点列表
+            result = self.sync_from_peer(peer)
+            if result.get("success"):
+                print(f"同步 {peer} 成功，新增节点 {result.get('added', 0)}")
+            else:
+                print(f"同步 {peer} 失败: {result.get('error')}")
+            # 向 peer 注册自己
+            reg_result = self.register_to_peer(peer)
+            if reg_result.get("success") or "Node registered" in str(reg_result):
+                print(f"向 {peer} 注册成功")
+            else:
+                print(f"向 {peer} 注册失败: {reg_result.get('error')}")
+            # 健康检查当前所有有 endpoint 的节点
+            self._update_all_nodes_health()
+
+    def _update_all_nodes_health(self):
+        """更新所有有 endpoint 的节点的在线状态"""
+        for node_id in list(self.nodes.keys()):
+            if self.nodes[node_id].get("endpoint"):
+                self.check_node_health(node_id)
 
 # 全局单例
 space_service = SpaceService()

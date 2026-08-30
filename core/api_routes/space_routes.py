@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 from core.space_service import space_service
+from core import config
 from core.api_routes.auth_routes import get_current_user
 
 router = APIRouter()
@@ -30,6 +31,11 @@ class NodeInvokeRequest(BaseModel):
     node_id: str
     params: Dict[str, Any] = {}
 
+@router.get("/space/health")
+async def health():
+    """健康检查端点，供其他节点 ping"""
+    return {"status": "ok", "node_id": config.NODE_ID, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
+
 @router.post("/space/register_node")
 async def register_node(req: NodeRegisterRequest, current_user=Depends(get_current_user)):
     node = space_service.register_node(
@@ -44,7 +50,6 @@ async def register_node(req: NodeRegisterRequest, current_user=Depends(get_curre
     )
     return {"message": "Node registered", "node": node}
 
-# 节点间注册（不需要用户认证，供其他节点调用）
 @router.post("/space/register_node_external")
 async def register_node_external(req: NodeRegisterExternalRequest):
     node = space_service.register_node(
@@ -68,13 +73,11 @@ async def invoke_node(req: NodeInvokeRequest, current_user=Depends(get_current_u
     result = space_service.invoke_remote_node(req.node_id, req.params)
     return result
 
-# 节点同步：拉取远程节点列表
 @router.post("/space/sync_from_peer")
 async def sync_from_peer(peer_url: str):
     result = space_service.sync_from_peer(peer_url)
     return result
 
-# 节点同步：向远程节点注册自己
 @router.post("/space/register_to_peer")
 async def register_to_peer(peer_url: str):
     result = space_service.register_to_peer(peer_url)
