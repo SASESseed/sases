@@ -42,6 +42,7 @@ def check_syntax(code):
         return False, str(e)
 
 def safe_run_tests(code, test_cases, timeout=5):
+    """在隔离沙箱中运行代码并执行测试用例。返回 (passed, message, is_code)。"""
     if not test_cases:
         return False, "无测试用例", False
     if not is_python_code(code):
@@ -123,6 +124,7 @@ def parse_two_branches(text):
     return (a or "默认算法A"), (b or "默认算法B")
 
 def _call_openai_with_key(provider: str, api_key: str, model: str, messages: list, temperature: float, max_retries: int):
+    """使用指定 provider 的 API key 调用 OpenAI 兼容接口"""
     base_url = config.PROVIDER_BASE_URLS.get(provider, config.DEEPSEEK_BASE_URL)
     client = openai.OpenAI(api_key=api_key, base_url=base_url, timeout=120, max_retries=max_retries)
     resp = client.chat.completions.create(
@@ -140,6 +142,15 @@ def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None, 
     """
     if model is None:
         model = config.MODEL_NAME  # 默认文本模型
+
+    # 图片大小检查
+    if image_base64:
+        try:
+            img_size = len(base64.b64decode(image_base64))
+            if img_size > config.MAX_IMAGE_SIZE:
+                raise ValueError(f"图片大小超过限制（{config.MAX_IMAGE_SIZE} 字节）")
+        except Exception as e:
+            raise ValueError(f"图片数据无效: {e}")
 
     # 构造消息
     messages = []
@@ -163,18 +174,19 @@ def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None, 
         if api_keys:
             last_error = None
             for entry in api_keys:
-                provider = entry["provider"]
+                raw_provider = entry["provider"]
+                # 标准化 provider
+                provider = config.PROVIDER_ALIASES.get(raw_provider, raw_provider)
                 api_key = entry["key"]
                 # 根据是否图片输入选择模型
                 if image_base64:
-                    # 从映射中获取该提供商的视觉模型，若没有则跳过
-                    vision_model = config.VISION_MODEL_BY_PROVIDER.get(provider)
-                    if not vision_model:
+                    vision_cfg = config.VISION_MODEL_BY_PROVIDER.get(provider)
+                    if not vision_cfg or not vision_cfg.get("supports_image"):
                         print(f"Provider {provider} 不支持视觉模型，跳过")
                         continue
-                    model_to_use = vision_model
+                    model_to_use = vision_cfg["model"]
                 else:
-                    model_to_use = model  # 文本任务使用传入的 model（可能为默认模型）
+                    model_to_use = model
                 try:
                     return _call_openai_with_key(provider, api_key, model_to_use, messages, temperature, max_retries)
                 except Exception as e:
@@ -186,7 +198,6 @@ def call_chat(prompt, max_retries=2, temperature=0.7, model=None, user_id=None, 
 
     # 回退到默认客户端
     last_error = None
-    # 如果有图片，使用默认视觉模型
     if image_base64:
         model = config.VISION_MODEL_NAME
     for attempt in range(max_retries + 1):

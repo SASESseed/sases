@@ -10,16 +10,18 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
 # 视觉模型默认名称（当使用系统默认 DeepSeek 客户端时）
 VISION_MODEL_NAME = os.environ.get("VISION_MODEL_NAME", "deepseek-v4-flash-vision-exp")
 
-# 不同提供商的视觉模型名称映射
+# 不同提供商的视觉模型名称映射，同时标记是否支持图片输入
 VISION_MODEL_BY_PROVIDER = {
-    "deepseek": "deepseek-v4-flash-vision-exp",
-    "openai": "gpt-4o-mini",
-    "moonshot": "",                        # 暂时禁用，避免错误
-    "zhipu": "glm-4v",
-    "qwen": "qwen-vl-plus",
+    "deepseek": {"model": "deepseek-v4-flash-vision-exp", "supports_image": True},
+    "openai": {"model": "gpt-4o-mini", "supports_image": True},
+    "moonshot": {"model": "moonshot-v1-8k-vision-preview", "supports_image": True},
+    "zhipu": {"model": "glm-4v", "supports_image": True},
+    "qwen": {"model": "qwen-vl-plus", "supports_image": True},
 }
 
-# 提供商基地址映射（文本模型）
+# 图片上传限制（字节），默认 5MB
+MAX_IMAGE_SIZE = int(os.environ.get("MAX_IMAGE_SIZE", 5 * 1024 * 1024))
+
 PROVIDER_BASE_URLS = {
     "deepseek": "https://api.deepseek.com/v1",
     "openai": "https://api.openai.com/v1",
@@ -28,7 +30,6 @@ PROVIDER_BASE_URLS = {
     "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
 }
 
-# 提供商别名映射（用于标准化用户输入）
 PROVIDER_ALIASES = {
     "ds": "deepseek",
     "deepseek-chat": "deepseek",

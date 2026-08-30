@@ -3,6 +3,8 @@ from typing import Dict, Any, Optional
 
 from core.harness_runtime import harness_runtime
 from core import seed_utils
+from core import config
+from core import auth_service
 
 def _keyword_match_tool(query: str):
     tools = harness_runtime.list_tools()
@@ -152,8 +154,25 @@ def execute_task(query: str, params: Optional[Dict[str, Any]] = None, user_id=No
 def execute_task_with_image(query: str, image_base64: str, user_id=None) -> Dict[str, Any]:
     """
     多模态任务执行：用户提供图片和文本，系统使用视觉模型分析图片并回答。
-    该方法暂不调用 Harness 工具，只进行多模态对话。
     """
+    # 先检查用户是否有可用的视觉模型 Key
+    if user_id is not None:
+        api_keys = auth_service.get_active_api_keys(user_id)
+        has_vision = False
+        for entry in api_keys:
+            provider = config.PROVIDER_ALIASES.get(entry["provider"], entry["provider"])
+            vision_cfg = config.VISION_MODEL_BY_PROVIDER.get(provider)
+            if vision_cfg and vision_cfg.get("supports_image"):
+                has_vision = True
+                break
+        if not has_vision:
+            return {
+                "success": False,
+                "message": "您没有配置支持图片的视觉模型 API Key，请先添加（如 DeepSeek 视觉模型或 OpenAI GPT-4o）",
+                "module_id": None,
+                "result": None
+            }
+
     try:
         answer = seed_utils.call_chat(
             query,
