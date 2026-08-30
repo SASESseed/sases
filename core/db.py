@@ -130,6 +130,25 @@ def init_db():
             timestamp TEXT
         )
         """)
+        # 安全扫描日志表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS safety_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            content_preview TEXT,
+            category TEXT,
+            detail TEXT
+        )
+        """)
+        # 篡改事件日志表
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS tamper_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            detail TEXT,
+            timestamp TEXT
+        )
+        """)
         # 为已有表添加可能缺失的字段（兼容旧库）
         for col, dtype in [
             ("state_hash", "TEXT DEFAULT ''"),
@@ -161,3 +180,6 @@ def init_db():
         # 种子池索引
         conn.execute("CREATE INDEX IF NOT EXISTS idx_external_seed_user ON external_seed_pool(user_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_main_seed_user ON main_seed_pool(user_id)")
+        # 日志索引
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_safety_log_time ON safety_log(timestamp)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tamper_log_user ON tamper_log(user_id)")
