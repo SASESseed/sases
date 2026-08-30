@@ -24,6 +24,9 @@ def init_log_table():
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
+        # 添加索引，提高查询性能
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_contrib_user ON contribution_log(user_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_contrib_event ON contribution_log(event_type)")
 
 def log_event(user_id, event_type, target_id=None, metadata=None):
     """记录一条贡献事件到数据库。"""

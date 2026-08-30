@@ -7,7 +7,7 @@ import auth
 from core import safety_scan
 from core import knowledge_base
 from core import config
-import contribution_log
+from core import contribution_log
 from core.api_routes.auth_routes import get_current_user
 
 router = APIRouter()
@@ -53,10 +53,16 @@ async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
         else:
             answer = "未找到相似任务。"
 
+    # 自动授粉关闭且命中知识库时，必须扣分成功才返回答案
     if source == "local_kb" and not auto_pollinate:
+        # 直接检查当前积分是否足够
+        if current_user["credits"] < config.QUERY_DEDUCTION:
+            raise HTTPException(status_code=402, detail="积分不足，无法查询")
+        # 尝试扣分
         success, msg = auth.deduct_credits(current_user["id"], config.QUERY_DEDUCTION, "仅查询不回流")
-        if success:
-            auth.add_system_message(current_user["id"], f"本次查询已扣除{config.QUERY_DEDUCTION}积分（自动授粉关闭）。", "SASES助手")
+        if not success:
+            raise HTTPException(status_code=402, detail=msg or "积分不足，无法查询")
+        auth.add_system_message(current_user["id"], f"本次查询已扣除{config.QUERY_DEDUCTION}积分（自动授粉关闭）。", "SASES助手")
 
     result = {"answer": answer, "source": source}
     if source == "local_kb" and not auto_pollinate:

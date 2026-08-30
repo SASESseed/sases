@@ -1,0 +1,18 @@
+{
+  "node-001": {
+    "node_id": "node-001",
+    "name": "SASES Node",
+    "description": "SASES Node",
+    "node_type": "sases_service",
+    "capabilities": [
+      "node_service"
+    ],
+    "endpoint": null,
+    "icon": null,
+    "owner_id": "self",
+    "registered_at": "2026-08-30 17:59:41",
+    "reputation": 1.0,
+    "success_count": 0,
+    "total_count": 0
+  }
+}

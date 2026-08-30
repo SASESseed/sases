@@ -43,6 +43,19 @@ class SpaceService:
                 owner_id="self"
             )
 
+    def _is_valid_node(self, node: dict) -> bool:
+        """检查节点是否包含必要字段"""
+        required_fields = ["node_id", "name", "node_type"]
+        for field in required_fields:
+            if field not in node or not node[field]:
+                return False
+        # capabilities 和 endpoint 可选，但如果存在应确保类型正确
+        if "capabilities" in node and not isinstance(node["capabilities"], list):
+            return False
+        if "endpoint" in node and node["endpoint"] is not None and not isinstance(node["endpoint"], str):
+            return False
+        return True
+
     def register_node(self, node_id: str, name: str, description: str,
                       node_type: str = "harness", capabilities: List[str] = None,
                       endpoint: str = None, icon: str = None, owner_id: str = "system") -> Dict[str, Any]:
@@ -147,14 +160,25 @@ class SpaceService:
                 response.raise_for_status()
                 remote_nodes = response.json()
                 added = 0
+                invalid = 0
+                if not isinstance(remote_nodes, list):
+                    return {"success": False, "error": "Invalid response format from peer"}
                 with self._lock:
                     for node in remote_nodes:
+                        if not isinstance(node, dict) or not self._is_valid_node(node):
+                            invalid += 1
+                            continue
                         node_id = node.get("node_id")
                         if node_id and node_id not in self.nodes:
                             self.nodes[node_id] = node
                             added += 1
                     self._save_nodes()
-                return {"success": True, "added": added, "total_local": len(self.nodes)}
+                return {
+                    "success": True,
+                    "added": added,
+                    "invalid": invalid,
+                    "total_local": len(self.nodes)
+                }
         except Exception as e:
             return {"success": False, "error": str(e)}
 

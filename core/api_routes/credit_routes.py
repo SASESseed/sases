@@ -31,12 +31,12 @@ async def update_my_settings(req: SettingsUpdateRequest, current_user=Depends(ge
     auth.update_user_settings(current_user["id"], req.auto_pollinate_enabled)
     return {"message": "设置已更新", "auto_pollinate_enabled": req.auto_pollinate_enabled}
 
-# ---------- 积分排行榜（保留，作为经济参考） ----------
+# ---------- 积分排行榜 ----------
 @router.get("/leaderboard")
 async def leaderboard(top_n: int = 10):
     return auth.get_leaderboard(top_n)
 
-# ---------- 贡献度排行榜（新增，核心声誉榜） ----------
+# ---------- 贡献度排行榜 ----------
 @router.get("/contrib_leaderboard")
 async def contrib_leaderboard(top_n: int = 10):
     ranking = contribution_log.get_contrib_leaderboard(top_n)
@@ -57,7 +57,7 @@ async def my_ledger(current_user=Depends(get_current_user)):
     ledger = auth.get_credit_ledger(current_user["id"])
     return {"ledger": ledger}
 
-# ---------- 系统消息（SASES助手） ----------
+# ---------- 系统消息 ----------
 @router.get("/assistant/messages")
 async def assistant_messages(current_user=Depends(get_current_user)):
     messages, unread = auth.get_system_messages(current_user["id"])
@@ -68,9 +68,11 @@ async def assistant_read(current_user=Depends(get_current_user)):
     auth.mark_messages_read(current_user["id"])
     return {"message": "已全部标记为已读"}
 
-# ---------- 积分发放 ----------
+# ---------- 积分发放（仅管理员） ----------
 @router.post("/award_credits")
 async def award_credits(req: AwardRequest, current_user=Depends(get_current_user)):
+    if not auth.is_admin(current_user["id"]):
+        raise HTTPException(status_code=403, detail="仅管理员可发放积分")
     auth.add_credits(req.user_id, req.amount, req.reason)
     auth.add_system_message(req.user_id, f"你获得了 {req.amount} 积分：{req.reason}", "SASES助手")
     contribution_log.log_event(

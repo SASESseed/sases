@@ -13,7 +13,7 @@ from core.db import get_db, init_db
 
 SECRET_KEY = config.SASES_SECRET_KEY
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1天
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 SIGN_KEY_FILE = config.SIGN_KEY_FILE
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -85,14 +85,18 @@ def add_credits(user_id: int, amount: int, reason: str = ""):
                      (user_id, amount, reason))
     _update_state_hash(user_id)
 
-def deduct_credits(user_id: int, amount: int, reason: str = ""):
+def deduct_credits(user_id: int, amount: int, reason: str = "") -> tuple:
+    """扣减积分，使用条件更新确保余额足够。返回 (成功, 消息)"""
+    if amount <= 0:
+        return False, "扣减金额必须大于0"
     with get_db() as conn:
-        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
-        if not user:
-            return False, "用户不存在"
-        if user["credits"] < amount:
+        # 条件更新：只有余额 >= amount 时才会扣减
+        cur = conn.execute(
+            "UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?",
+            (amount, user_id, amount)
+        )
+        if cur.rowcount == 0:
             return False, "积分不足"
-        conn.execute("UPDATE users SET credits = credits - ? WHERE id = ?", (amount, user_id))
         conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
                      (user_id, -amount, reason))
     _update_state_hash(user_id)
