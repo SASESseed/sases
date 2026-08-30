@@ -1,15 +1,15 @@
-import json, os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import json
+import os
+import time
 
 import auth
 from core import config
 from core import similarity
+from core import knowledge_base
 
 EXTERNAL_FILE = config.SEED_POOL_FILE          # seed_tasks_external.jsonl
 MAIN_FILE = config.MAIN_SEED_FILE              # seed_tasks_new.jsonl
 MERGED_FILE = config.MAIN_SEED_FILE + ".merged"
-KB_FILE = config.KB_FILE
 
 SIMILARITY_THRESHOLD = config.SIMILARITY_THRESHOLD
 
@@ -27,14 +27,8 @@ def load_jsonl(path):
 
 def load_kb_descriptions():
     """加载知识库中所有已存在的任务描述"""
-    if not os.path.exists(KB_FILE):
-        return []
-    with open(KB_FILE, "r", encoding="utf-8") as f:
-        try:
-            data = json.load(f)
-        except:
-            return []
-    return [item.get("task", "") for item in data]
+    kb = knowledge_base.load_kb()
+    return {item.get("task", "") for item in kb}
 
 def main():
     external = load_jsonl(EXTERNAL_FILE)
@@ -44,11 +38,12 @@ def main():
         print("没有外部种子需要合并。")
         return
 
-    # 加载知识库已有任务描述
+    # 加载知识库已有任务描述（现在来自 SQLite）
     kb_descs = load_kb_descriptions()
 
     # 当前所有已存在描述（主池 + 知识库）
-    existing_descs = [item.get("description", "") for item in existing] + kb_descs
+    existing_descs = {item.get("description", "") for item in existing}
+    existing_descs.update(kb_descs)
 
     new_items = []
     skipped = 0
@@ -74,7 +69,7 @@ def main():
             continue
 
         # 再检查语义相似
-        if similarity.is_similar(desc, existing_descs, threshold=SIMILARITY_THRESHOLD):
+        if similarity.is_similar(desc, list(existing_descs), threshold=SIMILARITY_THRESHOLD):
             print(f"跳过重复任务（语义相似）：{desc[:50]}...")
             if user_id is not None:
                 try:
@@ -91,7 +86,7 @@ def main():
         if "test_cases" not in seed:
             seed["test_cases"] = []
         new_items.append(seed)
-        existing_descs.append(desc)
+        existing_descs.add(desc)
 
     if not new_items:
         print("所有外部种子均为重复任务，已全部跳过。")
