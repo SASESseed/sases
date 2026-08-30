@@ -2,25 +2,35 @@ import os
 import sys
 import base64
 import pytest
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core import seed_utils, config
 
-def test_image_size_limit():
-    # 构造一个超过 1 字节限制的图片（由于 config.MAX_IMAGE_SIZE 默认 5MB，这里临时改小）
-    old_limit = config.MAX_IMAGE_SIZE
-    config.MAX_IMAGE_SIZE = 10  # 10 字节
-    small_image = base64.b64encode(b"tiny").decode()
+def test_image_size_limit(monkeypatch):
+    monkeypatch.setattr(config, "MAX_IMAGE_SIZE", 10)
+    image = base64.b64encode(b"0123456789abcdef").decode()
     with pytest.raises(ValueError):
-        seed_utils.call_chat("test", image_base64=small_image)
-    config.MAX_IMAGE_SIZE = old_limit
+        seed_utils.call_chat("test", image_base64=image)
 
-def test_image_message_format():
-    # 测试消息格式（不实际调用 API）
+def test_image_message_format(monkeypatch):
     image_base64 = base64.b64encode(b"fakeimage").decode()
-    prompt = "描述这张图片"
-    # 手动构造消息检查（可通过 monkeypatch 模拟 API 调用，这里简单验证函数不报错）
-    # 由于 call_chat 需要 API Key，我们跳过实际调用，只检查消息构造逻辑
-    # 此测试可以留空或使用 mock
-    pass
+    # 模拟默认客户端，避免真实 API 调用
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "mock response"
+    mock_completions = MagicMock()
+    mock_completions.create.return_value = mock_response
+    mock_chat = MagicMock()
+    mock_chat.completions = mock_completions
+    mock_client = MagicMock()
+    mock_client.chat = mock_chat
+    # 替换模块中的 _client
+    monkeypatch.setattr(seed_utils, "_client", mock_client)
+    result = seed_utils.call_chat("描述图片", image_base64=image_base64)
+    assert result == "mock response"
+    # 检查调用参数中包含图片
+    args, kwargs = mock_completions.create.call_args
+    messages = kwargs.get("messages") or args[0].get("messages")
+    assert messages[0]["content"][1]["type"] == "image_url"
