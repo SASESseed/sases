@@ -1,7 +1,7 @@
 # SASES
 
 **SASES** (Seed-Apollo Self-Evolving System) is a privacy-first, local-first AI self-evolving ecosystem.  
-It combines autonomous seed iteration, credit systems, pollination mechanisms, contribution ranking, an extensible harness runtime, AGI coordination, and distributed node services to create a personal AI service network.
+It combines autonomous seed iteration, credit systems, pollination mechanisms, contribution ranking, an extensible Harness runtime, AGI coordination, and distributed node services to create a personal AI service network.
 
 > **One brain, many windows.**  
 > SASES is designed to be lightweight, modular, and community-driven.
@@ -28,47 +28,78 @@ It combines autonomous seed iteration, credit systems, pollination mechanisms, c
 
 - **Harness Runtime**  
   A modular runtime for mini-apps and tools. Developers can create Harness modules with a simple manifest and `run(params)` function.  
-  Current example: unit converter.
+  Current examples: unit converter, calculator, text stats, JSON formatter, Base64 codec, string utils.
 
 - **AGI Coordinator**  
-  Accepts natural language tasks, selects the appropriate Harness tool via keyword matching or LLM reasoning, extracts parameters, and executes the task.
+  Accepts natural language tasks, selects the appropriate Harness tool via keyword matching or LLM reasoning, extracts parameters, and executes the task. Supports multimodal image input.
 
 - **Space Service (Node as a Service)**  
-  Register Harness modules and AGI services as discoverable space nodes. Supports local and remote invocation, reputation tracking, and node synchronization between peers.
+  Register Harness modules and AGI services as discoverable space nodes. Supports local and remote invocation, reputation tracking, node synchronization, and mDNS-based local network discovery.
 
 - **API Key Management**  
   Users can securely add, update, delete, and prioritize multiple API keys from different providers (DeepSeek, OpenAI, Moonshot, Zhipu, Qwen). Keys are encrypted at rest using Fernet encryption. The model router automatically selects the highest-priority active key and falls back to the system default if all user keys fail.
+
+- **Unified SQLite Storage**  
+  All persistent data (knowledge base, space nodes, seed pools, logs, user data, API keys) is stored in a single SQLite database for data integrity and transactional consistency.
 
 ---
 
 ## 🧱 Project Structure
 sases/
-├── app_full.py # FastAPI entry point
-├── main.py # Autonomous seed iteration loop
-├── process_seeds.py # Process external seed pool
-├── merge_external_seeds.py # Merge and deduplicate seeds
-├── auto_process_external.py # Monitor and auto-process seeds
+├── app_full.py # Minimal FastAPI entry point
 ├── core/
-│ ├── config.py # Centralized configuration
-│ ├── db.py # Database initialization
+│ ├── bootstrap.py # App creation, route registration, lifespan
+│ ├── config.py # Exports grouped configuration
+│ ├── config_models.py # Dataclass-based configuration groups
+│ ├── db.py # Database initialization and connection
 │ ├── auth_service.py # Authentication, credits, signatures, API keys
 │ ├── knowledge_base.py # Knowledge base management
 │ ├── contribution_log.py # Contribution logging and leaderboard
-│ ├── seed_utils.py # Code utilities and API wrapper (multi-key routing)
+│ ├── seed_utils.py # Main utility facade (re-exports from utils)
 │ ├── similarity.py # Semantic deduplication
-│ ├── sandbox.py # Safe code execution
 │ ├── safety_scan.py # Content safety scanning
 │ ├── encryption.py # Fernet encryption for API keys
-│ ├── harness_runtime.py # Harness module runtime
+│ ├── harness_loader.py # Scans and loads Harness modules
+│ ├── harness_runtime.py # Harness runtime (tool listing/invocation)
 │ ├── harness_models.py # Harness data models
 │ ├── agi_coordinator.py # AGI task coordinator
-│ └── space_service.py # Space node service and sync
+│ ├── space_service.py # Space node service facade
+│ ├── node_registry.py # Node registration and persistence
+│ ├── sync_manager.py # Peer synchronization
+│ ├── health_checker.py # Node health checks
+│ ├── discovery.py # mDNS node discovery
+│ ├── seed_store.py # Seed pool storage
+│ ├── utils/
+│ │ ├── code_utils.py # Code parsing/cleaning
+│ │ ├── sandbox.py # Safe code execution
+│ │ └── api_utils.py # API calling helpers
+│ └── api_routes/
+│ ├── auth_routes.py
+│ ├── seed_routes.py
+│ ├── credit_routes.py
+│ ├── harness_routes.py
+│ ├── agi_routes.py
+│ └── space_routes.py
 ├── harness_modules/
-│ └── unit_converter/ # Example Harness module
-│ ├── manifest.json
-│ └── main.py
-├── tests/ # Unit tests (60+ passed)
-└── static/ # Web console and chat UI
+│ ├── unit_converter/
+│ ├── calculator/
+│ ├── text_stats/
+│ ├── json_formatter/
+│ ├── base64_codec/
+│ └── string_utils/
+├── tests/ # 68 unit & integration tests
+└── static/
+├── index.html
+├── style.css
+├── favicon.svg
+└── modules/
+├── main.js
+├── utils.js
+├── auth.js
+├── chat.js
+├── contacts.js
+├── discover.js
+└── me.js
 
 text
 
@@ -79,7 +110,7 @@ text
 ### 1. Install dependencies
 
 ```bash
-pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn httpx python-dotenv cryptography
+pip install fastapi uvicorn openai chromadb rank_bm25 passlib[bcrypt] python-jose[cryptography] python-multipart scikit-learn httpx python-dotenv cryptography zeroconf
 2. Configure environment variables
 Create a .env file or set the following variables:
 
@@ -94,6 +125,8 @@ SASES_PORT=8001
 SASES_NODE_ID=node-001
 SASES_NODE_NAME=My SASES Node
 SASES_PEERS=http://other-node:8001
+SASES_NODE_TOKEN=change-me
+SASES_ENABLE_MDNS=true
 3. Start the web service
 bash
 python -m uvicorn app_full:app --reload --port 8001
@@ -102,7 +135,7 @@ Visit http://127.0.0.1:8001/static/index.html to open the console.
 🧪 Run Tests
 bash
 python -m pytest tests/ -v
-All 60+ unit tests should pass.
+All 68 unit tests should pass.
 
 🎯 Current Status
 Seed iteration loop with semantic deduplication
@@ -115,17 +148,17 @@ Pollination mechanism (manual and auto)
 
 Contribution leaderboard
 
-Harness runtime with unit converter example
+Harness runtime with six example modules
 
-AGI coordinator with keyword matching and parameter extraction
+AGI coordinator with keyword matching, parameter extraction, and multimodal image support
 
-Space service with node registration, remote invocation, and peer synchronization
+Space service with node registration, remote invocation, peer synchronization, health checks, and mDNS discovery
 
 API key management with encryption and multi-provider routing
 
-Modular route structure (core/api_routes/)
+Unified SQLite storage
 
-Basic web console with WeChat-style bottom navigation
+Modular web frontend with WeChat-style bottom navigation
 
 📜 License
 This project is licensed under the Apache License 2.0.

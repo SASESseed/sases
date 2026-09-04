@@ -1,63 +1,56 @@
-// 公共工具与全局状态
-export let token = localStorage.getItem('sases_token');
+// static/modules/utils.js
 
-export function setToken(newToken) {
-    token = newToken;
-    if (newToken) {
-        localStorage.setItem('sases_token', newToken);
-    } else {
-        localStorage.removeItem('sases_token');
+/**
+ * 初始化下拉刷新
+ * @param {HTMLElement} container - 需要监听下拉的容器
+ * @param {Function} reloadFn - 重新加载数据的异步函数
+ */
+export function initPullToRefresh(container, reloadFn) {
+  let startY = 0;
+  let pulling = false;
+  let pullDistance = 0;
+  const threshold = 60; // 下拉多少像素触发刷新
+
+  // 创建提示元素
+  const indicator = document.createElement('div');
+  indicator.className = 'pull-indicator';
+  indicator.textContent = '下拉刷新';
+  container.parentElement.insertBefore(indicator, container);
+  indicator.style.display = 'none';
+
+  container.addEventListener('touchstart', (e) => {
+    if (container.scrollTop <= 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
     }
-}
+  }, { passive: true });
 
-export function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-export function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-export async function apiFetch(url, options = {}) {
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const response = await fetch(url, { ...options, headers });
-    if (response.status === 401) {
-        showToast('登录已过期，请重新登录', 'error');
-        // 触发登出
-        if (typeof window !== 'undefined' && window.logout) {
-            window.logout();
-        }
-        throw new Error('Unauthorized');
+  container.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const currentY = e.touches[0].clientY;
+    pullDistance = currentY - startY;
+    if (pullDistance > 0 && container.scrollTop <= 0) {
+      indicator.style.display = 'block';
+      indicator.textContent = pullDistance >= threshold ? '松开刷新' : '下拉刷新';
+      if (pullDistance < threshold) {
+        // 阻止默认滚动，显示指示器
+        e.preventDefault();
+      }
     }
-    if (!response.ok) {
-        let detail = '请求失败';
-        try {
-            const data = await response.json();
-            detail = data.detail || detail;
-        } catch (e) {}
-        throw new Error(detail);
-    }
-    return response.json();
-}
+  }, { passive: false });
 
-export function switchView(viewId) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navItem = document.querySelector(`.nav-item[data-view="${viewId}"]`);
-    if (navItem) navItem.classList.add('active');
+  container.addEventListener('touchend', async () => {
+    if (!pulling) return;
+    pulling = false;
+    if (pullDistance >= threshold) {
+      indicator.textContent = '刷新中...';
+      try {
+        await reloadFn();
+      } catch (e) {
+        console.error('刷新失败', e);
+      }
+    }
+    indicator.style.display = 'none';
+    pullDistance = 0;
+  });
 }

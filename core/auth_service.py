@@ -1,315 +1,202 @@
-import os
-import json
-import time
-import hmac
-import hashlib
-from datetime import datetime, timedelta, timezone
+# core/auth_service.py
+from .db import db_cursor
+from .security import *
+from .services.api_key_service import *
 
-from passlib.context import CryptContext
-from jose import JWTError, jwt
+# ========== 用户管理 ==========
+def create_user(username, password):
+    password_hash = hash_password(password)
+    sases_id = generate_sases_id()
+    try:
+        with db_cursor(commit=True) as cur:
+            cur.execute(
+                "INSERT INTO users (username, password_hash, sases_id) VALUES (?, ?, ?)",
+                (username, password_hash, sases_id)
+            )
+            return cur.lastrowid
+    except Exception:
+        return None
 
-from core import config
-from core.db import get_db, init_db
+def get_user_by_id(user_id):
+    with db_cursor() as cur:
+        cur.execute("SELECT id, username, sases_id, credits FROM users WHERE id=?", (user_id,))
+        row = cur.fetchone()
+        if row:
+            return dict(row)
+        return None
 
-SECRET_KEY = config.SASES_SECRET_KEY
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-SIGN_KEY_FILE = config.SIGN_KEY_FILE
+def get_user_by_username(username):
+    with db_cursor() as cur:
+        cur.execute("SELECT id, username, password_hash, sases_id, credits FROM users WHERE username=?", (username,))
+        row = cur.fetchone()
+        if row:
+            return dict(row)
+        return None
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def _load_or_create_sign_key():
-    if os.path.exists(SIGN_KEY_FILE):
-        with open(SIGN_KEY_FILE, "rb") as f:
-            return f.read()
-    else:
-        key = os.urandom(32)
-        with open(SIGN_KEY_FILE, "wb") as f:
-            f.write(key)
-        return key
-
-SIGN_KEY = _load_or_create_sign_key()
-
-def sign_state(user_id: int, credits: int) -> str:
-    message = f"{user_id}:{credits}".encode()
-    return hmac.new(SIGN_KEY, message, hashlib.sha256).hexdigest()
-
-def verify_state(user_id: int, credits: int, signature: str) -> bool:
-    expected = sign_state(user_id, credits)
-    return hmac.compare_digest(expected, signature)
-
-def create_user(username: str, email: str, password: str):
-    with get_db() as conn:
-        try:
-            hash = pwd_context.hash(password)
-            conn.execute("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)",
-                         (username, email, hash))
-            user = conn.execute("SELECT id, credits FROM users WHERE username = ?", (username,)).fetchone()
-            if user:
-                conn.execute("UPDATE users SET state_hash = ? WHERE id = ?",
-                             (sign_state(user["id"], user["credits"]), user["id"]))
-            return True, "注册成功"
-        except sqlite3.IntegrityError:
-            return False, "用户名或邮箱已存在"
-
-def authenticate_user(username: str, password: str):
-    with get_db() as conn:
-        user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        if user and pwd_context.verify(password, user["password_hash"]):
-            return user
+def authenticate_user(username, password):
+    user = get_user_by_username(username)
+    if not user:
+        return None
+    if verify_password(password, user["password_hash"]):
+        return user
     return None
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def update_user_username(user_id, new_username):
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE users SET username=? WHERE id=?", (new_username, user_id))
 
-def get_user_by_id(user_id: int):
-    with get_db() as conn:
-        return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+def update_user_password(user_id, new_password):
+    password_hash = hash_password(new_password)
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash, user_id))
 
-def _update_state_hash(user_id: int):
-    with get_db() as conn:
-        user = conn.execute("SELECT credits FROM users WHERE id = ?", (user_id,)).fetchone()
-        if user:
-            new_hash = sign_state(user_id, user["credits"])
-            conn.execute("UPDATE users SET state_hash = ? WHERE id = ?", (new_hash, user_id))
-            return True
+def delete_user(user_id):
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM users WHERE id=?", (user_id,))
+
+def update_user_credits(user_id, amount):
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE users SET credits = credits + ? WHERE id=?", (amount, user_id))
+
+def add_credits(user_id, amount):
+    return update_user_credits(user_id, amount)
+
+def deduct_credits(user_id, amount):
+    return update_user_credits(user_id, -amount)
+
+def ensure_sases_id(user_id):
+    with db_cursor(commit=True) as cur:
+        cur.execute("SELECT sases_id FROM users WHERE id=?", (user_id,))
+        row = cur.fetchone()
+        sases_id = row["sases_id"] if row else None
+        if not sases_id:
+            sases_id = generate_sases_id()
+            cur.execute("UPDATE users SET sases_id=? WHERE id=?", (sases_id, user_id))
+        return sases_id
+
+# ========== 用户设置 ==========
+def get_user_settings(user_id):
+    with db_cursor() as cur:
+        cur.execute("SELECT id, username, sases_id, credits FROM users WHERE id=?", (user_id,))
+        row = cur.fetchone()
+        if row:
+            return dict(row)
+        return None
+
+def update_user_settings(user_id, settings: dict):
+    # 仅更新允许的字段
+    allowed = ['username', 'sases_id']
+    updates = {k: v for k, v in settings.items() if k in allowed}
+    if not updates:
         return False
+    set_clause = ", ".join([f"{k}=?" for k in updates.keys()])
+    values = list(updates.values()) + [user_id]
+    with db_cursor(commit=True) as cur:
+        cur.execute(f"UPDATE users SET {set_clause} WHERE id=?", values)
+    return True
 
-def add_credits(user_id: int, amount: int, reason: str = ""):
-    with get_db() as conn:
-        conn.execute("UPDATE users SET credits = credits + ? WHERE id = ?", (amount, user_id))
-        conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
-                     (user_id, amount, reason))
-    _update_state_hash(user_id)
+def get_all_user_settings():
+    with db_cursor() as cur:
+        cur.execute("SELECT id, username, sases_id, credits FROM users")
+        return [dict(row) for row in cur.fetchall()]
 
-def deduct_credits(user_id: int, amount: int, reason: str = "") -> tuple:
-    if amount <= 0:
-        return False, "扣减金额必须大于0"
-    with get_db() as conn:
-        cur = conn.execute(
-            "UPDATE users SET credits = credits - ? WHERE id = ? AND credits >= ?",
-            (amount, user_id, amount)
-        )
-        if cur.rowcount == 0:
-            return False, "积分不足"
-        conn.execute("INSERT INTO credit_ledger (user_id, amount, reason) VALUES (?, ?, ?)",
-                     (user_id, -amount, reason))
-    _update_state_hash(user_id)
-    return True, "扣除成功"
+def update_all_user_settings(settings_map: dict):
+    # settings_map: {user_id: {field: value, ...}}
+    with db_cursor(commit=True) as cur:
+        for user_id, settings in settings_map.items():
+            for field, value in settings.items():
+                if field in ['username', 'sases_id']:
+                    cur.execute(f"UPDATE users SET {field}=? WHERE id=?", (value, user_id))
+    return True
 
-def verify_user_integrity(user_id: int) -> bool:
-    with get_db() as conn:
-        user = conn.execute("SELECT credits, state_hash FROM users WHERE id = ?", (user_id,)).fetchone()
-        if not user:
-            return False
-        return verify_state(user_id, user["credits"], user["state_hash"])
+# ========== 排行榜 ==========
+def get_leaderboard(limit=50):
+    with db_cursor() as cur:
+        cur.execute("SELECT username, sases_id, credits FROM users ORDER BY credits DESC LIMIT ?", (limit,))
+        return [dict(row) for row in cur.fetchall()]
+
+# ========== 信用账本 ==========
+def get_credit_ledger(user_id=None, limit=100):
+    with db_cursor() as cur:
+        if user_id:
+            cur.execute("SELECT * FROM contribution_log WHERE user_id=? ORDER BY id DESC LIMIT ?", (user_id, limit))
+        else:
+            cur.execute("SELECT * FROM contribution_log ORDER BY id DESC LIMIT ?", (limit,))
+        return [dict(row) for row in cur.fetchall()]
+
+# ========== 系统消息 ==========
+def add_system_message(user_id, content):
+    with db_cursor(commit=True) as cur:
+        # 如果表不存在，先创建
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS system_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                content TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("INSERT INTO system_messages (user_id, content) VALUES (?, ?)", (user_id, content))
+        return cur.lastrowid
+
+def get_system_messages(user_id):
+    with db_cursor() as cur:
+        cur.execute("CREATE TABLE IF NOT EXISTS system_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, content TEXT, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+        cur.execute("SELECT * FROM system_messages WHERE user_id=? ORDER BY id DESC", (user_id,))
+        return [dict(row) for row in cur.fetchall()]
+
+def mark_messages_read(user_id, message_ids):
+    if not message_ids:
+        return
+    with db_cursor(commit=True) as cur:
+        for mid in message_ids:
+            cur.execute("UPDATE system_messages SET is_read=1 WHERE id=? AND user_id=?", (mid, user_id))
+
+# ========== 完整性校验 ==========
+def verify_user_integrity(user_id):
+    # 简单校验用户存在
+    user = get_user_by_id(user_id)
+    return user is not None
 
 def check_all_users_integrity():
-    tampered = []
-    with get_db() as conn:
-        users = conn.execute("SELECT id, credits, state_hash FROM users").fetchall()
-        for u in users:
-            if not verify_state(u["id"], u["credits"], u["state_hash"]):
-                tampered.append(u["id"])
-    return tampered
-
-def get_leaderboard(top_n=10):
-    with get_db() as conn:
-        rows = conn.execute("SELECT username, credits FROM users ORDER BY credits DESC LIMIT ?", (top_n,)).fetchall()
-        return [{"username": r["username"], "credits": r["credits"]} for r in rows]
-
-def get_credit_ledger(user_id: int, limit: int = 20):
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT amount, reason, timestamp FROM credit_ledger WHERE user_id = ? ORDER BY id DESC LIMIT ?",
-            (user_id, limit)
-        ).fetchall()
-        return [{"amount": r["amount"], "reason": r["reason"], "timestamp": r["timestamp"]} for r in rows]
-
-def add_system_message(user_id: int, content: str, title: str = "SASES助手"):
-    with get_db() as conn:
-        conn.execute(
-            "INSERT INTO system_messages (user_id, title, content) VALUES (?, ?, ?)",
-            (user_id, title, content)
-        )
-
-def get_system_messages(user_id: int, limit: int = 50):
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT id, title, content, is_read, timestamp FROM system_messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
-            (user_id, limit)
-        ).fetchall()
-        messages = [{
-            "id": r["id"],
-            "title": r["title"],
-            "content": r["content"],
-            "is_read": r["is_read"],
-            "timestamp": r["timestamp"]
-        } for r in rows]
-        unread_count = conn.execute(
-            "SELECT COUNT(*) as cnt FROM system_messages WHERE user_id = ? AND is_read = 0",
-            (user_id,)
-        ).fetchone()["cnt"]
-        return messages, unread_count
-
-def mark_messages_read(user_id: int):
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE system_messages SET is_read = 1 WHERE user_id = ? AND is_read = 0",
-            (user_id,)
-        )
-
-# ========== 通用用户设置 ==========
-def get_all_user_settings(user_id: int) -> dict:
-    settings = {}
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT key, value FROM user_settings WHERE user_id = ?",
-            (user_id,)
-        ).fetchall()
-        for r in rows:
-            try:
-                settings[r["key"]] = json.loads(r["value"])
-            except:
-                settings[r["key"]] = r["value"]
-    user = get_user_by_id(user_id)
-    if user:
-        settings["auto_pollinate_enabled"] = bool(user["auto_pollinate_enabled"])
-    return settings
-
-def update_all_user_settings(user_id: int, settings: dict) -> dict:
-    with get_db() as conn:
-        if "auto_pollinate_enabled" in settings:
-            val = settings.pop("auto_pollinate_enabled")
-            conn.execute(
-                "UPDATE users SET auto_pollinate_enabled = ? WHERE id = ?",
-                (1 if val else 0, user_id)
-            )
-        for key, value in settings.items():
-            conn.execute("""
-                INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?)
-                ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value
-            """, (user_id, key, json.dumps(value, ensure_ascii=False)))
-    return get_all_user_settings(user_id)
-
-def export_kb():
-    from core import knowledge_base
-    return knowledge_base.load_kb()
-
-def get_user_settings(user_id: int):
-    return get_all_user_settings(user_id)
-
-def update_user_settings(user_id: int, auto_pollinate_enabled: bool):
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE users SET auto_pollinate_enabled = ? WHERE id = ?",
-            (1 if auto_pollinate_enabled else 0, user_id)
-        )
-        return True
-
-# ========== API Key 管理 ==========
-def add_api_key(user_id: int, provider: str, key: str, priority: int = 1) -> bool:
-    provider = provider.strip().lower()
-    provider = config.PROVIDER_ALIASES.get(provider, provider)
-
-    from core.encryption import encrypt_text
-    encrypted = encrypt_text(key)
-    with get_db() as conn:
-        existing = conn.execute(
-            "SELECT id FROM api_keys WHERE user_id = ? AND provider = ?",
-            (user_id, provider)
-        ).fetchone()
-        if existing:
-            conn.execute(
-                "UPDATE api_keys SET encrypted_key = ?, priority = ?, is_active = 1 WHERE id = ?",
-                (encrypted, priority, existing["id"])
-            )
-        else:
-            conn.execute(
-                "INSERT INTO api_keys (user_id, provider, encrypted_key, priority) VALUES (?, ?, ?, ?)",
-                (user_id, provider, encrypted, priority)
-            )
-    return True
-
-def list_api_keys(user_id: int) -> list:
-    keys = []
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT id, provider, encrypted_key, priority, is_active FROM api_keys WHERE user_id = ? ORDER BY priority ASC",
-            (user_id,)
-        ).fetchall()
-        for r in rows:
-            keys.append({
-                "id": r["id"],
-                "provider": r["provider"],
-                "masked_key": "****" + (r["encrypted_key"][-4:] if r["encrypted_key"] else ""),
-                "priority": r["priority"],
-                "is_active": r["is_active"]
-            })
-    return keys
-
-def delete_api_key(user_id: int, key_id: int) -> bool:
-    with get_db() as conn:
-        conn.execute("DELETE FROM api_keys WHERE id = ? AND user_id = ?", (key_id, user_id))
-    return True
-
-def set_api_key_priority(user_id: int, key_id: int, priority: int) -> bool:
-    with get_db() as conn:
-        conn.execute("UPDATE api_keys SET priority = ? WHERE id = ? AND user_id = ?", (priority, key_id, user_id))
-    return True
-
-def get_active_api_keys(user_id: int) -> list:
-    from core.encryption import decrypt_text
-    result = []
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT provider, encrypted_key, priority FROM api_keys WHERE user_id = ? AND is_active = 1 ORDER BY priority ASC",
-            (user_id,)
-        ).fetchall()
-        for r in rows:
-            key = decrypt_text(r["encrypted_key"])
-            if key:
-                result.append({"provider": r["provider"], "key": key, "priority": r["priority"]})
-    return result
+    with db_cursor() as cur:
+        cur.execute("SELECT COUNT(*) as cnt FROM users")
+        return {"total_users": cur.fetchone()["cnt"]}
 
 # ========== 管理员 ==========
-def is_admin(user_id: int) -> bool:
-    with get_db() as conn:
-        row = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
-        if row and row["is_admin"] == 1:
-            return True
-        return False
+def is_admin(user_id):
+    # 假设用户表中有 is_admin 字段，如果没有则默认用户 ID 1 为管理员
+    with db_cursor() as cur:
+        try:
+            cur.execute("SELECT is_admin FROM users WHERE id=?", (user_id,))
+            row = cur.fetchone()
+            return bool(row["is_admin"]) if row else False
+        except:
+            return user_id == 1
 
-def set_admin(user_id: int, admin: bool = True):
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE users SET is_admin = ? WHERE id = ?",
-            (1 if admin else 0, user_id)
-        )
-        return True
+def set_admin(user_id, admin_status):
+    with db_cursor(commit=True) as cur:
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+        except:
+            pass
+        cur.execute("UPDATE users SET is_admin=? WHERE id=?", (1 if admin_status else 0, user_id))
 
-# ========== 防篡改锚点 ==========
-def generate_state_signature(user_id: int):
-    user = get_user_by_id(user_id)
-    if user:
-        return sign_state(user_id, user["credits"])
-    return ""
+# ========== 知识库导出 ==========
+def export_kb(user_id=None):
+    with db_cursor() as cur:
+        if user_id:
+            cur.execute("SELECT * FROM knowledge_base WHERE user_id=? ORDER BY id DESC", (user_id,))
+        else:
+            cur.execute("SELECT * FROM knowledge_base ORDER BY id DESC")
+        return [dict(row) for row in cur.fetchall()]
 
-def verify_state_signature(user_id: int, signature: str):
-    user = get_user_by_id(user_id)
-    if not user:
-        return False
-    return verify_state(user_id, user["credits"], signature)
+# ========== 状态签名（兼容旧） ==========
+generate_state_signature = sign_state
+verify_state_signature = verify_state
 
-def log_tamper_event(user_id: int, detail: str):
-    with get_db() as conn:
-        conn.execute("""
-        INSERT INTO tamper_log (user_id, detail, timestamp)
-        VALUES (?, ?, ?)
-        """, (user_id, detail, time.strftime("%Y-%m-%d %H:%M:%S")))
-
-# 初始化数据库
-init_db()
+def log_tamper_event(message):
+    # 简单记录到日志文件
+    with open("tamper.log", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now().isoformat()} - {message}\n")

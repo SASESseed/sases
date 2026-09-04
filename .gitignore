@@ -1,31 +1,28 @@
-# 密钥
-api_key.txt
-*.key
-secret_key.bin
-
-# 本地数据库与知识库
-users.db
-success_kb.json
-seed_tasks_new.jsonl
-seed_tasks_external.jsonl
-*.jsonl.bak
-
-# 日志
-safety_log.jsonl
-tamper_log.jsonl
-contribution_log.jsonl
-shared_pollinate_log.jsonl
-
-# Python 缓存
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
 
-# 系统文件
+# 密钥与配置
+secret_key.bin
+api_key_encryption.key
+.env
+*.db
+users.db
+
+# 日志与临时文件
+*.log
+*.tmp
 .DS_Store
 Thumbs.db
 
-# 环境变量
-.env
-.env.*
-!.env.example
+# Node / 前端
+node_modules/

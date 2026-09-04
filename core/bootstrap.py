@@ -1,47 +1,83 @@
+# core/bootstrap.py
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from contextlib import asynccontextmanager
 
-from core.api_routes import auth_routes, seed_routes, credit_routes, harness_routes, agi_routes, space_routes
-from core.space_service import space_service
-from core import config
-from core.discovery import NodeDiscovery
-
-# mDNS 发现服务（延迟创建，确保可配置）
-discovery = NodeDiscovery(on_peer_discovered=lambda peer_url: space_service.sync_from_peer(peer_url))
+from .db import init_db
+from .api_routes import (
+    auth_routes,
+    seed_routes,
+    credit_routes,
+    harness_routes,
+    agi_routes,
+    space_routes,
+    group_routes,
+    model_routes,
+    agent_routes,
+    chat_routes,
+    message_routes,
+    knowledge_routes,
+    stats_routes,
+    search_routes,
+    ai_circle_routes,
+    export_routes,
+    market_routes,
+    wisdom_space_routes,
+    transfer_routes,
+    user_routes,          # 新增
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动后台线程
-    space_service.start_auto_sync(interval=300)
-    space_service.start_health_check(interval=60)
-    # 如果启用了 mDNS，启动发现服务
-    if config.ENABLE_MDNS:
-        discovery.start()
+    init_db()
     yield
-    # 停止后台任务
-    if config.ENABLE_MDNS:
-        discovery.stop()
-    space_service.stop_auto_sync()
-    space_service.stop_health_check()
 
 def create_app() -> FastAPI:
-    """创建并配置 FastAPI 应用"""
-    app = FastAPI(title="SASES Full Web Service", version="0.12.0", lifespan=lifespan)
+    app = FastAPI(title="SASES", version="0.12.1", lifespan=lifespan)
 
-    # 挂载静态文件
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-    # 注册路由
     app.include_router(auth_routes.router)
     app.include_router(seed_routes.router)
     app.include_router(credit_routes.router)
     app.include_router(harness_routes.router)
     app.include_router(agi_routes.router)
     app.include_router(space_routes.router)
+    app.include_router(group_routes.router)
+    app.include_router(model_routes.router)
+    app.include_router(agent_routes.router)
+    app.include_router(chat_routes.router)
+    app.include_router(message_routes.router)
+    app.include_router(knowledge_routes.router)
+    app.include_router(stats_routes.router)
+    app.include_router(search_routes.router)
+    app.include_router(ai_circle_routes.router)
+    app.include_router(export_routes.router)
+    app.include_router(market_routes.router)
+    app.include_router(wisdom_space_routes.router)
+    app.include_router(transfer_routes.router)
+    app.include_router(user_routes.router)   # 新增
+
+    @app.get("/static/index.html", response_class=HTMLResponse)
+    async def serve_index():
+        return FileResponse("static/index.html", media_type="text/html")
+
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
     @app.get("/")
-    async def root():
-        return {"message": "SASES Full Web Service is running. Visit /static/index.html for UI."}
+    async def index():
+        return FileResponse("static/index.html", media_type="text/html")
+
+    @app.get("/favicon.ico")
+    async def favicon():
+        return FileResponse("static/favicon.svg", media_type="image/svg+xml")
 
     return app
