@@ -1,32 +1,33 @@
 // static/modules/group_chat.js
 import { api } from './api.js';
+import { t } from './i18n.js';
 
 let currentGroupId = null;
 let currentGroupName = '';
 let currentAgentId = null;
+let currentMode = 'normal';
 
 export function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
   currentGroupName = groupName;
   currentAgentId = null;
+  currentMode = 'normal';
 
-  const titleEl = document.getElementById('chat-window-title');
-  const viewEl = document.getElementById('view-chat-window');
-  const bottomNav = document.querySelector('.bottom-nav');
-  const topBar = document.querySelector('.top-bar');
+  document.getElementById('chat-window-title').textContent = groupName;
+  document.getElementById('view-chat-window').style.display = 'flex';
+  document.querySelector('.bottom-nav').style.display = 'none';
+  document.querySelector('.top-bar').style.display = 'none';
+
   const settingsBtn = document.getElementById('group-settings-btn');
-  const messagesContainer = document.getElementById('chat-messages');
-
-  if (titleEl) titleEl.textContent = groupName;
-  if (viewEl) viewEl.style.display = 'flex';
-  if (bottomNav) bottomNav.style.display = 'none';
-  if (topBar) topBar.style.display = 'none';
   if (settingsBtn) {
     settingsBtn.style.display = 'block';
     settingsBtn.onclick = openGroupSettings;
   }
 
-  if (messagesContainer) messagesContainer.innerHTML = '';
+  fetchGroupRole();
+
+  const messagesContainer = document.getElementById('chat-messages');
+  messagesContainer.innerHTML = '';
   loadGroupMessages();
 }
 
@@ -34,19 +35,13 @@ export function closeGroupChat() {
   currentGroupId = null;
   currentGroupName = '';
   currentAgentId = null;
+  currentMode = 'normal';
   window.currentGroupOwner = false;
-
-  const viewEl = document.getElementById('view-chat-window');
-  const bottomNav = document.querySelector('.bottom-nav');
-  const topBar = document.querySelector('.top-bar');
+  document.getElementById('view-chat-window').style.display = 'none';
+  document.querySelector('.bottom-nav').style.display = 'flex';
+  document.querySelector('.top-bar').style.display = 'flex';
   const settingsBtn = document.getElementById('group-settings-btn');
-  const messagesContainer = document.getElementById('chat-messages');
-
-  if (viewEl) viewEl.style.display = 'none';
-  if (bottomNav) bottomNav.style.display = 'flex';
-  if (topBar) topBar.style.display = 'flex';
   if (settingsBtn) settingsBtn.style.display = 'none';
-  if (messagesContainer) messagesContainer.innerHTML = '';
 }
 
 async function fetchGroupRole() {
@@ -60,39 +55,36 @@ async function fetchGroupRole() {
   }
 }
 
-// ==================== 群设置 ====================
+// ==================== 群设置页面 ====================
 async function openGroupSettings() {
-  // 先获取群角色，确保任务模式入口正确
-  await fetchGroupRole();
-
   const contentHtml = `
     <div class="group-settings-container">
-      <div class="wallet-card" style="margin-bottom:16px;">
-        <div class="wallet-label">群积分</div>
+      <div class="wallet-card" id="group-credits-card" style="margin-bottom:16px;">
+        <div class="wallet-label">${t('group_credits')}</div>
         <div class="wallet-balance" id="group-credits-balance">0</div>
       </div>
       <div class="me-menu">
         <div class="me-menu-item">
-          <span class="menu-label">群名称</span>
+          <span class="menu-label">${t('group_name')}</span>
           <span class="menu-value">${currentGroupName}</span>
         </div>
         <div class="me-menu-item" id="identity-switch-entry">
-          <span class="menu-label">身份切换</span>
-          <span class="menu-value" id="identity-current">以本人身份</span>
+          <span class="menu-label">${t('identity_switch')}</span>
+          <span class="menu-value" id="identity-current">${t('self_identity')}</span>
           <span class="menu-arrow">›</span>
         </div>
       </div>
-      <div class="section-title">群成员</div>
+      <div class="section-title">${t('group_members')}</div>
       <div id="group-members-container" class="me-menu">
-        <div class="subpage-placeholder">加载中...</div>
+        <div class="subpage-placeholder">${t('loading')}...</div>
       </div>
       <div style="display:flex; gap:8px; margin-top:12px;">
-        <button id="invite-member-btn" class="save-btn" style="flex:1;">邀请成员</button>
-        <button id="remove-member-btn" class="save-btn" style="flex:1; background:#ff3b30;">移除成员</button>
+        <button id="invite-member-btn" class="save-btn" style="flex:1;">${t('invite_member')}</button>
+        <button id="remove-member-btn" class="save-btn" style="flex:1; background:#ff3b30;">${t('remove_member')}</button>
       </div>
     </div>
   `;
-  window.openSubpage('群设置', contentHtml, { showMore: false });
+  window.openSubpage(t('group_settings'), contentHtml, { showMore: false });
 
   loadGroupCredits();
   loadGroupMembers();
@@ -108,31 +100,29 @@ async function openGroupSettings() {
 }
 
 async function loadGroupCredits() {
-  const balanceEl = document.getElementById('group-credits-balance');
-  if (!balanceEl) return;
   try {
     const data = await api.getGroupCredits(currentGroupId);
-    balanceEl.textContent = data.credits || 0;
+    const credits = data.credits || 0;
+    document.getElementById('group-credits-balance').textContent = credits;
   } catch (e) {
-    balanceEl.textContent = '0';
+    document.getElementById('group-credits-balance').textContent = '0';
   }
 }
 
 async function loadGroupMembers() {
-  const container = document.getElementById('group-members-container');
-  if (!container) return;
   try {
     const data = await api.getGroupMembers(currentGroupId);
     const members = data.members || [];
+    const container = document.getElementById('group-members-container');
     if (members.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无成员</div>';
+      container.innerHTML = `<div class="subpage-placeholder">${t('no_members')}</div>`;
       return;
     }
     let html = '';
     members.forEach(member => {
       const icon = member.member_type === 'agent' ? '🤖' : '👤';
       const displayName = member.display_name;
-      const role = member.role === 'owner' ? '群主' : (member.role === 'agent' ? '智能体' : '成员');
+      const role = member.role === 'owner' ? t('owner') : (member.role === 'agent' ? t('agent') : t('member'));
       html += `
         <div class="me-menu-item member-item">
           <span class="menu-icon">${icon}</span>
@@ -145,7 +135,7 @@ async function loadGroupMembers() {
     });
     container.innerHTML = html;
   } catch (e) {
-    container.innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    document.getElementById('group-members-container').innerHTML = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
 }
 
@@ -153,29 +143,25 @@ function openInviteDialog() {
   const contentHtml = `
     <div class="me-menu">
       <div class="me-menu-item">
-        <span class="menu-label">用户名 / SASES ID / 智能体 ID</span>
-        <input type="text" id="invite-input" class="inline-input" placeholder="输入用户名、SASES ID 或智能体 ID">
+        <span class="menu-label">${t('username_or_id')}</span>
+        <input type="text" id="invite-input" class="inline-input" placeholder="${t('enter_username_or_id')}">
       </div>
     </div>
-    <button class="save-btn" id="confirm-invite-btn">邀请</button>
+    <button class="save-btn" id="confirm-invite-btn">${t('invite')}</button>
   `;
-  window.openSubpage('邀请成员', contentHtml);
+  window.openSubpage(t('invite_member'), contentHtml);
 
   setTimeout(() => {
-    const input = document.getElementById('invite-input');
-    const btn = document.getElementById('confirm-invite-btn');
-    if (!input || !btn) return;
-
-    btn.addEventListener('click', async () => {
-      const value = input.value.trim();
-      if (!value) { alert('请输入用户名或 ID'); return; }
+    document.getElementById('confirm-invite-btn').addEventListener('click', async () => {
+      const input = document.getElementById('invite-input').value.trim();
+      if (!input) { alert(t('please_input_all')); return; }
       try {
-        await api.inviteToGroup(currentGroupId, value);
-        alert('邀请成功');
+        await api.inviteToGroup(currentGroupId, input);
+        alert(t('invite_success'));
         window.closeSubpage();
         openGroupSettings();
       } catch (e) {
-        alert('邀请失败：' + e.message);
+        alert(t('invite_failed') + ': ' + e.message);
       }
     });
   }, 100);
@@ -185,29 +171,25 @@ function openRemoveDialog() {
   const contentHtml = `
     <div class="me-menu">
       <div class="me-menu-item">
-        <span class="menu-label">输入要移除的成员 ID 或名称</span>
-        <input type="text" id="remove-input" class="inline-input" placeholder="输入用户 ID 或智能体 ID">
+        <span class="menu-label">${t('username_or_id')}</span>
+        <input type="text" id="remove-input" class="inline-input" placeholder="${t('enter_username_or_id')}">
       </div>
     </div>
-    <button class="save-btn" id="confirm-remove-btn" style="background:#ff3b30;">移除</button>
+    <button class="save-btn" id="confirm-remove-btn" style="background:#ff3b30;">${t('remove')}</button>
   `;
-  window.openSubpage('移除成员', contentHtml);
+  window.openSubpage(t('remove_member'), contentHtml);
 
   setTimeout(() => {
-    const input = document.getElementById('remove-input');
-    const btn = document.getElementById('confirm-remove-btn');
-    if (!input || !btn) return;
-
-    btn.addEventListener('click', async () => {
-      const value = input.value.trim();
-      if (!value) { alert('请输入成员标识'); return; }
+    document.getElementById('confirm-remove-btn').addEventListener('click', async () => {
+      const input = document.getElementById('remove-input').value.trim();
+      if (!input) { alert(t('please_input_all')); return; }
       try {
-        await api.removeGroupMember(currentGroupId, value);
-        alert('移除成功');
+        await api.removeGroupMember(currentGroupId, input);
+        alert(t('remove_success'));
         window.closeSubpage();
         openGroupSettings();
       } catch (e) {
-        alert('移除失败：' + e.message);
+        alert(t('remove_failed') + ': ' + e.message);
       }
     });
   }, 100);
@@ -216,23 +198,21 @@ function openRemoveDialog() {
 async function openAgentSwitch() {
   const contentHtml = `
     <div class="me-menu" id="agent-switch-list">
-      <div class="me-menu-item agent-option" data-agent-id="">👤 以本人身份</div>
-      <div class="subpage-placeholder">加载智能体...</div>
+      <div class="me-menu-item agent-option" data-agent-id="">👤 ${t('self_identity')}</div>
+      <div class="subpage-placeholder">${t('loading')}...</div>
     </div>
   `;
-  window.openSubpage('选择发言身份', contentHtml);
+  window.openSubpage(t('identity_switch'), contentHtml);
 
   try {
     const data = await api.listMyAgents();
     const agents = data.agents || [];
     const container = document.getElementById('agent-switch-list');
-    if (!container) return;
-
     if (agents.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无智能体</div>';
+      container.innerHTML = `<div class="subpage-placeholder">${t('no_agents')}</div>`;
       return;
     }
-    let html = '<div class="me-menu-item agent-option" data-agent-id="">👤 以本人身份</div>';
+    let html = `<div class="me-menu-item agent-option" data-agent-id="">👤 ${t('self_identity')}</div>`;
     agents.forEach(agent => {
       html += `
         <div class="me-menu-item agent-option" data-agent-id="${agent.agent_id}">
@@ -247,29 +227,27 @@ async function openAgentSwitch() {
       opt.addEventListener('click', () => {
         currentAgentId = opt.dataset.agentId || null;
         window.closeSubpage();
-        const titleEl = document.getElementById('chat-window-title');
-        if (titleEl) titleEl.textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
+        document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
+        openGroupSettings();
       });
     });
   } catch (e) {
-    const container = document.getElementById('agent-switch-list');
-    if (container) container.innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    document.getElementById('agent-switch-list').innerHTML = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
 }
 
 // ==================== 消息加载与发送 ====================
 async function loadGroupMessages() {
-  const container = document.getElementById('chat-messages');
-  if (!container) return;
   try {
     const data = await api.getGroupMessages(currentGroupId);
     const messages = data.messages || [];
+    const container = document.getElementById('chat-messages');
     container.innerHTML = '';
     messages.forEach(msg => {
       appendGroupMessage(msg.sender_name, msg.content);
     });
   } catch (e) {
-    appendGroupMessage('系统', '加载消息失败：' + e.message);
+    appendGroupMessage('系统', `${t('load_failed')}: ${e.message}`);
   }
 }
 
@@ -285,7 +263,6 @@ function appendGroupMessage(senderName, content) {
 
 export async function sendGroupMessage() {
   const input = document.getElementById('chat-input');
-  if (!input) return;
   const text = input.value.trim();
   if (!text || !currentGroupId) return;
   try {
@@ -293,6 +270,6 @@ export async function sendGroupMessage() {
     input.value = '';
     loadGroupMessages();
   } catch (e) {
-    alert('发送失败：' + e.message);
+    alert(t('send_failed') + ': ' + e.message);
   }
 }

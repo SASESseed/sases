@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { openChatWindow } from './chat.js';
 import { openGroupChat } from './group_chat.js';
 import { initPullToRefresh } from './utils.js';
+import { t } from './i18n.js';
 
 let initialized = false;
 let myAgents = [];
@@ -61,11 +62,11 @@ function generateAgentRow(agent, type) {
   const name = type === 'my' ? `${agent.name}${agent.type === 'local' ? ' <span style="color:green;font-size:12px;">授粉+2</span>' : ''}` : agent.name;
   const desc = type === 'my' ? (agent.detail || agent.capability) : `${agent.owner} · ${agent.detail}`;
   const actions = type === 'my' ? `
-    <button class="swipe-btn share-btn" data-action="share">共享</button>
-    <button class="swipe-btn delete-btn" data-action="delete">删除</button>
+    <button class="swipe-btn share-btn" data-action="share">${t('share_settings')}</button>
+    <button class="swipe-btn delete-btn" data-action="delete">${t('delete')}</button>
   ` : `
-    <button class="swipe-btn complain-btn" data-action="complain">投诉</button>
-    <button class="swipe-btn delete-btn" data-action="delete">删除</button>
+    <button class="swipe-btn complain-btn" data-action="complain">${t('complain')}</button>
+    <button class="swipe-btn delete-btn" data-action="delete">${t('delete')}</button>
   `;
 
   return `
@@ -124,7 +125,7 @@ async function renderContacts(container) {
 
   let myAgentsHtml = '';
   if (myAgents.length === 0) {
-    myAgentsHtml = '<div class="me-menu-item" style="color:#999;">暂无智能体，请先到“我的→模型管理”添加</div>';
+    myAgentsHtml = `<div class="me-menu-item" style="color:#999;">${t('empty_agents')}</div>`;
   } else {
     myAgentsHtml = '<div class="me-menu">';
     myAgents.forEach(agent => {
@@ -136,7 +137,7 @@ async function renderContacts(container) {
   let friendAgentsHtml = '';
   let letterIndexHtml = '';
   if (friendAgents.length === 0) {
-    friendAgentsHtml = '<div class="me-menu-item" style="color:#999;">暂无好友智能体</div>';
+    friendAgentsHtml = `<div class="me-menu-item" style="color:#999;">${t('no_friend_agents')}</div>`;
   } else {
     const grouped = {};
     friendAgents.forEach(agent => {
@@ -163,16 +164,16 @@ async function renderContacts(container) {
 
   container.innerHTML = `
     <div class="subpage-search-bar" style="margin-bottom:10px;">
-      <input type="text" id="contact-search-input" class="search-input" placeholder="搜索智能体名称、所有者或标签">
+      <input type="text" id="contact-search-input" class="search-input" placeholder="${t('search_placeholder')}">
     </div>
     <div class="me-menu">
-      <div class="me-menu-item" data-entry="new-agent">🧑‍🤝‍🧑 新智能体</div>
-      <div class="me-menu-item" data-entry="api-agent">🔑 API智能体</div>
-      <div class="me-menu-item" data-entry="group-chat">👥 群聊</div>
+      <div class="me-menu-item" data-entry="new-agent">🧑‍🤝‍🧑 ${t('new_agent')}</div>
+      <div class="me-menu-item" data-entry="api-agent">🔑 ${t('api_agent')}</div>
+      <div class="me-menu-item" data-entry="group-chat">👥 ${t('group_chat')}</div>
     </div>
-    <div class="section-title">我的智能体</div>
+    <div class="section-title">${t('my_agents')}</div>
     ${myAgentsHtml}
-    <div class="section-title">好友智能体</div>
+    <div class="section-title">${t('friend_agents')}</div>
     <div class="friend-list-wrapper">
       ${friendAgentsHtml}
       ${letterIndexHtml}
@@ -247,14 +248,14 @@ async function renderContacts(container) {
 function handleSwipeAction(action, agentId, agentName, agentType) {
   closeAllSwipe();
   if (action === 'share') {
-    alert(`打开共享设置：${agentName}`);
+    alert(t('share_settings') + ': ' + agentName);
   } else if (action === 'delete') {
-    if (confirm(`确定要删除“${agentName}”吗？`)) {
-      alert('删除成功（模拟）');
+    if (confirm(`${t('delete_confirm')} "${agentName}"?`)) {
+      alert(t('delete_success'));
       renderContacts(document.getElementById('contacts-list'));
     }
   } else if (action === 'complain') {
-    alert('投诉功能待实现');
+    alert(t('complain') + ' ' + t('coming_soon'));
   }
 }
 
@@ -289,26 +290,26 @@ function openAgentInfo(agentId, agentName, agentType) {
   let tags = localStorage.getItem(`agent_tags_${agentId}`) || '未设置';
   let sign = localStorage.getItem(`agent_sign_${agentId}`) || '这个智能体很懒，什么都没留下';
 
-  const typeLabel = agentType === 'my' ? '我的智能体' : '好友智能体';
-  const priceText = agentType === 'my' ? '自己使用免费' : '请咨询提供方';
+  const typeLabel = agentType === 'my' ? t('my_agents') : t('friend_agents');
+  const priceText = agentType === 'my' ? t('free_for_self') : t('ask_provider');
 
   const contentHtml = `
     <div class="agent-detail-header">
       <div class="agent-avatar-large" style="background: ${hashColor(agentId)};">${agentName.charAt(0)}</div>
       <div class="agent-detail-name">${agentName}</div>
-      ${remark ? `<div class="agent-detail-remark">备注：${remark}</div>` : ''}
+      ${remark ? `<div class="agent-detail-remark">${t('remark')}: ${remark}</div>` : ''}
       <div class="agent-detail-id">SASES ID: ${agentId}</div>
     </div>
     <div class="me-menu">
-      <div class="me-menu-item"><span class="menu-label">类型</span><span class="menu-value">${typeLabel}</span></div>
-      <div class="me-menu-item"><span class="menu-label">调用价格</span><span class="menu-value">${priceText}</span></div>
-      <div class="me-menu-item"><span class="menu-label">能力</span><span class="menu-value">${agentType === 'my' ? '本地模型/API' : '未知'}</span></div>
-      <div class="me-menu-item"><span class="menu-label">状态</span><span class="menu-value">在线</span></div>
-      <div class="me-menu-item"><span class="menu-label">标签</span><span class="menu-value">${tags}</span></div>
-      <div class="me-menu-item"><span class="menu-label">个性签名</span><span class="menu-value">${sign}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('type')}</span><span class="menu-value">${typeLabel}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('call_price_label')}</span><span class="menu-value">${priceText}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('capability')}</span><span class="menu-value">${agentType === 'my' ? '本地模型/API' : '未知'}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('status')}</span><span class="menu-value">${t('online')}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('tags')}</span><span class="menu-value">${tags}</span></div>
+      <div class="me-menu-item"><span class="menu-label">${t('signature_label')}</span><span class="menu-value">${sign}</span></div>
     </div>
     <div class="agent-detail-actions" style="margin-top:16px;">
-      <button id="send-message-btn" class="detail-action-btn">💬 发送消息</button>
+      <button id="send-message-btn" class="detail-action-btn">💬 ${t('send_message')}</button>
     </div>
   `;
 
@@ -330,15 +331,15 @@ function openAgentInfo(agentId, agentName, agentType) {
 
 function openAgentActionPage(agentId, agentName, agentType) {
   const actions = agentType === 'my' ? [
-    { label: '设置备注', action: () => { const v = prompt('请输入备注名：'); if (v) { localStorage.setItem(`agent_remark_${agentId}`, v); alert('备注已保存'); } } },
-    { label: '设置标签', action: () => { const v = prompt('请输入标签（逗号分隔）：'); if (v) { localStorage.setItem(`agent_tags_${agentId}`, v); alert('标签已保存'); } } },
-    { label: '设置个性签名', action: () => { const v = prompt('请输入个性签名：'); if (v) { localStorage.setItem(`agent_sign_${agentId}`, v); alert('签名已保存'); } } },
-    { label: '删除智能体', action: () => { if (confirm(`确定要删除“${agentName}”吗？`)) alert('删除成功（模拟）'); } }
+    { label: t('set_remark'), action: () => { const v = prompt(t('set_remark')); if (v) { localStorage.setItem(`agent_remark_${agentId}`, v); alert(t('remark_saved')); } } },
+    { label: t('set_tags'), action: () => { const v = prompt(t('set_tags')); if (v) { localStorage.setItem(`agent_tags_${agentId}`, v); alert(t('tags_saved')); } } },
+    { label: t('set_signature'), action: () => { const v = prompt(t('set_signature')); if (v) { localStorage.setItem(`agent_sign_${agentId}`, v); alert(t('signature_saved')); } } },
+    { label: t('delete_agent'), action: () => { if (confirm(`${t('delete_confirm')} "${agentName}"?`)) alert(t('delete_success')); } }
   ] : [
-    { label: '设置备注', action: () => { const v = prompt('请输入备注名：'); if (v) { localStorage.setItem(`agent_remark_${agentId}`, v); alert('备注已保存'); } } },
-    { label: '设置标签', action: () => { const v = prompt('请输入标签（逗号分隔）：'); if (v) { localStorage.setItem(`agent_tags_${agentId}`, v); alert('标签已保存'); } } },
-    { label: '投诉', action: () => alert('投诉功能待实现') },
-    { label: '删除好友', action: () => { if (confirm(`确定要删除“${agentName}”吗？`)) alert('删除成功（模拟）'); } }
+    { label: t('set_remark'), action: () => { const v = prompt(t('set_remark')); if (v) { localStorage.setItem(`agent_remark_${agentId}`, v); alert(t('remark_saved')); } } },
+    { label: t('set_tags'), action: () => { const v = prompt(t('set_tags')); if (v) { localStorage.setItem(`agent_tags_${agentId}`, v); alert(t('tags_saved')); } } },
+    { label: t('complain'), action: () => alert(t('complain') + ' ' + t('coming_soon')) },
+    { label: t('delete_friend'), action: () => { if (confirm(`${t('delete_confirm')} "${agentName}"?`)) alert(t('delete_success')); } }
   ];
 
   let listHtml = '<div class="me-menu">';
@@ -347,7 +348,7 @@ function openAgentActionPage(agentId, agentName, agentType) {
   });
   listHtml += '</div>';
 
-  window.openSubpage('更多操作', listHtml, { showMore: false });
+  window.openSubpage(t('more_actions'), listHtml, { showMore: false });
 
   setTimeout(() => {
     document.querySelectorAll('.agent-action-item').forEach((el, index) => {
@@ -363,16 +364,16 @@ function openAgentActionPage(agentId, agentName, agentType) {
 function openNewAgentPage() {
   const contentHtml = `
     <div class="subpage-search-bar">
-      <input type="text" class="search-input" id="agent-search-input" placeholder="搜索智能体名称或供应商">
-      <button class="search-btn" id="search-agent-btn">搜索</button>
+      <input type="text" class="search-input" id="agent-search-input" placeholder="${t('search_agent_placeholder')}">
+      <button class="search-btn" id="search-agent-btn">${t('search')}</button>
     </div>
     <div id="agent-search-results" class="me-menu"></div>
-    <div class="section-title" style="margin-top:20px;">收到的请求</div>
+    <div class="section-title" style="margin-top:20px;">${t('request_received')}</div>
     <div id="friend-requests-list" class="me-menu"></div>
   `;
-  window.openSubpage('新的朋友', contentHtml, {
+  window.openSubpage(t('new_friend'), contentHtml, {
     showMore: true,
-    onMore: () => window.openSubpage('添加朋友', '<div class="subpage-placeholder">添加朋友功能待实现</div>')
+    onMore: () => window.openSubpage(t('add_friend'), `<div class="subpage-placeholder">${t('add_friend_placeholder')}</div>`)
   });
 
   setTimeout(() => {
@@ -407,7 +408,7 @@ async function searchAgents(q) {
             <div class="agent-desc">${agent.owner} · ${agent.detail}</div>
             <div class="agent-id-display" style="font-size:12px;color:#999;">ID: ${agent.agent_id}</div>
           </div>
-          <button class="add-friend-btn" data-agent-id="${agent.agent_id}">添加</button>
+          <button class="add-friend-btn" data-agent-id="${agent.agent_id}">${t('add_friend')}</button>
         </div>
       `;
     });
@@ -428,9 +429,9 @@ async function searchAgents(q) {
 async function sendFriendRequest(agentId) {
   try {
     await api.sendFriendRequest(agentId);
-    alert('好友请求已发送');
+    alert(t('request_sent'));
   } catch (e) {
-    alert('发送失败：' + e.message);
+    alert(t('send_failed') + ': ' + e.message);
   }
 }
 
@@ -442,7 +443,7 @@ async function loadFriendRequests() {
     const data = await api.getFriendRequests();
     const requests = data.requests || [];
     if (requests.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无请求</div>';
+      container.innerHTML = `<div class="subpage-placeholder">${t('no_requests')}</div>`;
       return;
     }
     let html = '';
@@ -452,10 +453,10 @@ async function loadFriendRequests() {
           <div class="agent-avatar">${req.requester_name.charAt(0)}</div>
           <div class="agent-info">
             <div class="agent-name">${req.requester_name}</div>
-            <div class="agent-desc">想添加你的智能体：${req.agent_name}</div>
+            <div class="agent-desc">${t('wants_add_agent')}: ${req.agent_name}</div>
           </div>
-          <button class="accept-request-btn" data-request-id="${req.id}">接受</button>
-          <button class="reject-request-btn" data-request-id="${req.id}">拒绝</button>
+          <button class="accept-request-btn" data-request-id="${req.id}">${t('accept')}</button>
+          <button class="reject-request-btn" data-request-id="${req.id}">${t('reject')}</button>
         </div>
       `;
     });
@@ -467,9 +468,9 @@ async function loadFriendRequests() {
         const requestId = btn.dataset.requestId;
         try {
           await api.acceptFriendRequest(requestId);
-          alert('已接受');
+          alert(t('accepted'));
           loadFriendRequests();
-        } catch (err) { alert('操作失败：' + err.message); }
+        } catch (err) { alert(t('operation_failed') + ': ' + err.message); }
       });
     });
     container.querySelectorAll('.reject-request-btn').forEach(btn => {
@@ -478,9 +479,9 @@ async function loadFriendRequests() {
         const requestId = btn.dataset.requestId;
         try {
           await api.rejectFriendRequest(requestId);
-          alert('已拒绝');
+          alert(t('rejected'));
           loadFriendRequests();
-        } catch (err) { alert('操作失败：' + err.message); }
+        } catch (err) { alert(t('operation_failed') + ': ' + err.message); }
       });
     });
   } catch (e) {
@@ -491,13 +492,13 @@ async function loadFriendRequests() {
 // ==================== 群聊列表 ====================
 async function openGroupChatList() {
   let groupsHtml = '<div class="subpage-placeholder">加载中...</div>';
-  window.openSubpage('群聊', groupsHtml);
+  window.openSubpage(t('group_chat'), groupsHtml);
 
   try {
     const data = await api.listMyGroups();
     const groups = data.groups || [];
     if (groups.length === 0) {
-      groupsHtml = '<div class="subpage-placeholder">暂无群聊，点击下方创建</div>';
+      groupsHtml = `<div class="subpage-placeholder">${t('no_groups')}</div>`;
     } else {
       groupsHtml = '<div class="me-menu">';
       groups.forEach(group => {
@@ -506,7 +507,7 @@ async function openGroupChatList() {
             <span class="menu-icon">👥</span>
             <div class="menu-text">
               <div class="menu-title">${group.name}</div>
-              <div class="menu-desc">${group.member_count} 成员</div>
+              <div class="menu-desc">${group.member_count} ${t('member_count')}</div>
             </div>
           </div>
         `;
@@ -519,8 +520,8 @@ async function openGroupChatList() {
 
   const contentHtml = `
     <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input type="text" id="new-group-name" class="market-input" placeholder="群名称" style="flex:1;">
-      <button id="create-group-btn" class="save-btn" style="width:auto;">创建</button>
+      <input type="text" id="new-group-name" class="market-input" placeholder="${t('group_name')}" style="flex:1;">
+      <button id="create-group-btn" class="save-btn" style="width:auto;">${t('create_group')}</button>
     </div>
     ${groupsHtml}
   `;
@@ -530,13 +531,13 @@ async function openGroupChatList() {
   if (createBtn) {
     createBtn.addEventListener('click', async () => {
       const name = document.getElementById('new-group-name').value.trim();
-      if (!name) { alert('请输入群名称'); return; }
+      if (!name) { alert(t('please_input_all')); return; }
       try {
         await api.createGroup(name);
-        alert('创建成功');
+        alert(t('create_group_success'));
         openGroupChatList();
       } catch (e) {
-        alert('创建失败：' + e.message);
+        alert(t('create_group_failed') + ': ' + e.message);
       }
     });
   }

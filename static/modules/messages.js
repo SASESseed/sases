@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { openChatWindow } from './chat.js';
 import { initPullToRefresh } from './utils.js';
+import { t } from './i18n.js';
 
 let initialized = false;
 
@@ -18,7 +19,7 @@ async function loadConversations(container) {
     const data = await api.listConversations();
     const conversations = data.conversations || [];
     if (conversations.length === 0) {
-      container.innerHTML = '<div class="empty">暂无会话</div>';
+      container.innerHTML = `<div class="empty">${t('no_conversations')}</div>`;
       return;
     }
 
@@ -71,13 +72,13 @@ async function loadConversations(container) {
       });
     });
   } catch (e) {
-    container.innerHTML = `<div class="empty">加载失败：${e.message}</div>`;
+    container.innerHTML = `<div class="empty">${t('load_failed')}: ${e.message}</div>`;
   }
 }
 
 function showSessionActions(conversationId, pinned) {
   const action = prompt(
-    `请选择操作（输入数字）：\n1. ${pinned ? '取消置顶' : '置顶会话'}\n2. 标记为已读\n3. 删除会话\n0. 取消`
+    `${t('choose_action')}\n1. ${pinned ? t('unpin') : t('pin')}\n2. ${t('mark_read')}\n3. ${t('delete_conversation')}\n0. ${t('cancel')}`
   );
   if (action === '1') {
     togglePin(conversationId, !pinned);
@@ -93,7 +94,7 @@ async function togglePin(conversationId, pinned) {
     await api.togglePinConversation(conversationId, pinned);
     location.reload();
   } catch (e) {
-    alert('操作失败：' + e.message);
+    alert(t('operation_failed') + ': ' + e.message);
   }
 }
 
@@ -102,16 +103,16 @@ async function markRead(conversationId) {
     await api.markConversationRead(conversationId);
     location.reload();
   } catch (e) {
-    alert('操作失败：' + e.message);
+    alert(t('operation_failed') + ': ' + e.message);
   }
 }
 
 async function deleteConversation(conversationId) {
-  if (!confirm('确定删除该会话吗？聊天记录将一并删除。')) return;
+  if (!confirm(t('delete_confirm'))) return;
   try {
     await api.deleteConversation(conversationId);
     location.reload();
   } catch (e) {
-    alert('删除失败：' + e.message);
+    alert(t('delete_failed') + ': ' + e.message);
   }
 }

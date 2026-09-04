@@ -42,28 +42,45 @@ def create_conversation(user_id: int, agent_id: str = None, title: str = "新会
         """, (user_id, agent_id, title))
         return cur.lastrowid
 
-def get_messages(user_id: int, conversation_id: int, limit: int = 50, offset: int = 0):
-    """获取会话消息，支持分页"""
+def get_messages(user_id: int, conversation_id: int, limit: int = 50, offset: int = 0, after_id: int = None):
+    """获取会话消息，支持分页和增量拉取（after_id）"""
     with db_cursor() as cur:
+        # 验证会话归属
         cur.execute("SELECT id FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
         if not cur.fetchone():
             return None
-        cur.execute("""
-            SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
-                   CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
-                        WHEN m.sender = 'user' THEN '我'
-                        ELSE 'AI' END as sender_name
-            FROM messages m
-            LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
-            WHERE m.conversation_id=?
-            ORDER BY m.id DESC
-            LIMIT ? OFFSET ?
-        """, (conversation_id, limit, offset))
-        rows = cur.fetchall()
-    # 反转，使消息按时间正序返回
-    messages = [dict(row) for row in rows]
-    messages.reverse()
-    return messages
+
+        if after_id is not None:
+            # 增量拉取：只获取 id > after_id 的消息，按升序排列，不需要 limit/offset
+            cur.execute("""
+                SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
+                       CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
+                            WHEN m.sender = 'user' THEN '我'
+                            ELSE 'AI' END as sender_name
+                FROM messages m
+                LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
+                WHERE m.conversation_id=? AND m.id > ?
+                ORDER BY m.id ASC
+            """, (conversation_id, after_id))
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]
+        else:
+            # 分页获取最近消息：先倒序取 limit + offset，再反转
+            cur.execute("""
+                SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
+                       CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
+                            WHEN m.sender = 'user' THEN '我'
+                            ELSE 'AI' END as sender_name
+                FROM messages m
+                LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
+                WHERE m.conversation_id=?
+                ORDER BY m.id DESC
+                LIMIT ? OFFSET ?
+            """, (conversation_id, limit, offset))
+            rows = cur.fetchall()
+            messages = [dict(row) for row in rows]
+            messages.reverse()
+            return messages
 
 def mark_conversation_read(user_id: int, conversation_id: int):
     with db_cursor(commit=True) as cur:

@@ -1,6 +1,9 @@
 // static/modules/chat.js
 import { api } from './api.js';
+import { t } from './i18n.js';
 import { closeGroupChat, sendGroupMessage } from './group_chat.js';
+import { createContextMenu, attachLongPress, closeContextMenu, getPendingQuote, clearPendingQuote } from './message_actions.js';
+import { toggleChatPlusPanel, closeChatPlusPanel } from './chat_plus_panel.js';
 
 let chatInitialized = false;
 let currentConversationId = null;
@@ -9,10 +12,10 @@ let currentAgentType = 'my';
 let currentSenderAgentId = null;
 let currentMode = 'free';
 let isVoiceMode = false;
-let pendingQuote = null;
 let lastMessageTime = null;
+let lastMessageId = 0;
+let pollingTimer = null;
 
-// 分页状态
 const PAGE_SIZE = 50;
 let currentOffset = 0;
 let isLoadingMore = false;
@@ -97,11 +100,11 @@ function toggleVoiceMode() {
   if (isVoiceMode) {
     input.style.display = 'none';
     toggleBtn.textContent = '⌨️';
-    input.placeholder = '按住说话（模拟）';
+    input.placeholder = t('input_placeholder');
   } else {
     input.style.display = 'block';
     toggleBtn.textContent = '🎤';
-    input.placeholder = '输入消息...';
+    input.placeholder = t('input_placeholder');
   }
 }
 
@@ -111,8 +114,8 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
   currentAgentType = agentType;
   currentSenderAgentId = null;
   currentMode = 'free';
-  pendingQuote = null;
   lastMessageTime = null;
+  lastMessageId = 0;
   currentOffset = 0;
   isLoadingMore = false;
   hasMoreMessages = true;
@@ -137,13 +140,14 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
   if (input) {
     input.style.display = 'block';
     input.value = '';
+    input.placeholder = t('input_placeholder');
   }
   const toggleBtn = document.getElementById('toggle-voice-btn');
   if (toggleBtn) toggleBtn.textContent = '🎤';
   isVoiceMode = false;
 
   updateSendButtonVisibility();
-  hideQuoteBar();
+  clearPendingQuote();
   closeChatPlusPanel();
 
   const messagesContainer = document.getElementById('chat-messages');
@@ -151,6 +155,7 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
 
   if (currentConversationId) {
     loadMessages(currentConversationId);
+    startPolling();
   }
 }
 
@@ -160,11 +165,13 @@ export function closeChatWindow() {
   currentAgentType = 'my';
   currentSenderAgentId = null;
   currentMode = 'free';
-  pendingQuote = null;
   lastMessageTime = null;
+  lastMessageId = 0;
   currentOffset = 0;
   isLoadingMore = false;
   hasMoreMessages = true;
+
+  stopPolling();
 
   document.getElementById('view-chat-window').style.display = 'none';
   document.querySelector('.bottom-nav').style.display = 'flex';
@@ -175,19 +182,46 @@ export function closeChatWindow() {
   if (groupSettingsBtn) groupSettingsBtn.style.display = 'none';
   const modeBtn = document.getElementById('chat-mode-btn');
   if (modeBtn) modeBtn.style.display = 'none';
-  hideQuoteBar();
+  clearPendingQuote();
   closeChatPlusPanel();
+}
+
+function startPolling() {
+  stopPolling();
+  pollingTimer = setInterval(async () => {
+    if (!currentConversationId) return;
+    try {
+      const data = await api.getConversationMessages(currentConversationId, 50, 0, lastMessageId);
+      const newMessages = data.messages || [];
+      if (newMessages.length > 0) {
+        for (const msg of newMessages) {
+          if (msg.id === lastMessageId) continue;
+          appendMessage(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at);
+          if (msg.id > lastMessageId) lastMessageId = msg.id;
+        }
+      }
+    } catch (e) {
+      console.warn('轮询新消息失败', e);
+    }
+  }, 5000);
+}
+
+function stopPolling() {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
 }
 
 function updateModeText() {
   const modeTextEl = document.getElementById('chat-mode-text');
   if (!modeTextEl) return;
   const modeMap = {
-    'free': '自由模式',
-    'domain': '领域模式',
-    'proposition': '命题模式',
-    'normal': '普通聊天',
-    'task': '任务模式'
+    'free': t('free_mode'),
+    'domain': t('domain_mode'),
+    'proposition': t('proposition_mode'),
+    'normal': t('normal_chat'),
+    'task': t('task_mode')
   };
   modeTextEl.textContent = modeMap[currentMode] || currentMode;
 }
@@ -199,14 +233,14 @@ function openModeMenu() {
   let menuItems = [];
   if (!isGroup) {
     menuItems = [
-      { mode: 'free', label: '自由模式' },
-      { mode: 'domain', label: '领域模式' },
-      { mode: 'proposition', label: '命题模式' }
+      { mode: 'free', label: t('free_mode') },
+      { mode: 'domain', label: t('domain_mode') },
+      { mode: 'proposition', label: t('proposition_mode') }
     ];
   } else {
-    menuItems = [{ mode: 'normal', label: '普通聊天' }];
+    menuItems = [{ mode: 'normal', label: t('normal_chat') }];
     if (isOwner) {
-      menuItems.push({ mode: 'task', label: '任务模式' });
+      menuItems.push({ mode: 'task', label: t('task_mode') });
     }
   }
 
@@ -262,11 +296,12 @@ async function loadMessages(conversationId) {
     }
     messages.forEach(msg => {
       appendMessage(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at);
+      if (msg.id > lastMessageId) lastMessageId = msg.id;
     });
     currentOffset = messages.length;
     container.scrollTop = container.scrollHeight;
   } catch (err) {
-    appendMessage('assistant', `加载历史消息失败：${err.message}`, 'AI', null, new Date().toISOString());
+    appendMessage('assistant', `${t('load_failed')}: ${err.message}`, 'AI', null, new Date().toISOString());
   }
 }
 
@@ -283,7 +318,6 @@ async function handleScroll() {
       }
       if (olderMessages.length > 0) {
         const prevScrollHeight = container.scrollHeight;
-        // 在顶部插入更早的消息，不触发时间标签，避免混乱
         for (let i = olderMessages.length - 1; i >= 0; i--) {
           const msg = olderMessages[i];
           const wrapper = createMessageElement(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at, false, true);
@@ -293,7 +327,7 @@ async function handleScroll() {
       }
       currentOffset += olderMessages.length;
     } catch (e) {
-      console.error('加载更多消息失败', e);
+      console.error(t('load_failed'), e);
     } finally {
       isLoadingMore = false;
     }
@@ -326,7 +360,7 @@ function createMessageElement(role, content, senderName, messageId, timeIso, isP
     if (isPending) {
       const status = document.createElement('span');
       status.className = 'message-status pending';
-      status.textContent = '发送中...';
+      status.textContent = t('sending');
       wrapper.appendChild(status);
     }
   } else {
@@ -387,10 +421,10 @@ async function sendMessage() {
   let text = input.value.trim();
   if (!text) return;
 
+  const pendingQuote = getPendingQuote();
   if (pendingQuote) {
-    text = `> 引用：${pendingQuote}\n${text}`;
-    pendingQuote = null;
-    hideQuoteBar();
+    text = `> ${t('quote')}：${pendingQuote}\n${text}`;
+    clearPendingQuote();
   }
 
   const tempId = 'temp-' + Date.now();
@@ -434,10 +468,10 @@ function updateMessageStatus(messageId, status) {
       existingStatus.remove();
     } else if (status === 'failed') {
       existingStatus.className = 'message-status failed';
-      existingStatus.textContent = '发送失败';
+      existingStatus.textContent = t('send_failed');
       const retryBtn = document.createElement('button');
       retryBtn.className = 'retry-btn';
-      retryBtn.textContent = '重试';
+      retryBtn.textContent = t('retry');
       retryBtn.addEventListener('click', () => {
         const content = wrapper.dataset.content;
         const input = document.getElementById('chat-input');
@@ -451,105 +485,9 @@ function updateMessageStatus(messageId, status) {
   } else if (status === 'failed') {
     const statusEl = document.createElement('span');
     statusEl.className = 'message-status failed';
-    statusEl.textContent = '发送失败';
+    statusEl.textContent = t('send_failed');
     wrapper.appendChild(statusEl);
   }
-}
-
-// ==================== 长按菜单 ====================
-function createContextMenu() {
-  const oldMenu = document.getElementById('message-context-menu');
-  if (oldMenu) oldMenu.remove();
-
-  const menu = document.createElement('div');
-  menu.id = 'message-context-menu';
-  menu.className = 'message-context-menu';
-  menu.style.display = 'none';
-  document.body.appendChild(menu);
-}
-
-function showContextMenu(x, y, wrapper) {
-  const menu = document.getElementById('message-context-menu');
-  if (!menu) return;
-  menu.innerHTML = `
-    <div class="context-menu-item" data-action="quote">引用</div>
-    <div class="context-menu-item" data-action="reply">帮我回复</div>
-  `;
-  menu.style.display = 'block';
-  menu.style.left = x + 'px';
-  menu.style.top = y + 'px';
-
-  menu.querySelector('[data-action="quote"]').addEventListener('click', () => {
-    pendingQuote = wrapper.dataset.content;
-    showQuoteBar(pendingQuote);
-    closeContextMenu();
-  });
-
-  menu.querySelector('[data-action="reply"]').addEventListener('click', async () => {
-    const content = wrapper.dataset.content;
-    try {
-      const data = await api.suggestReply(content);
-      const reply = data.response || '（无建议）';
-      const input = document.getElementById('chat-input');
-      if (input) {
-        input.value = reply;
-        updateSendButtonVisibility();
-        input.focus();
-      }
-    } catch (e) {
-      alert('生成回复失败：' + e.message);
-    }
-    closeContextMenu();
-  });
-}
-
-function closeContextMenu() {
-  const menu = document.getElementById('message-context-menu');
-  if (menu) menu.style.display = 'none';
-}
-
-function attachLongPress(wrapper) {
-  let timer = null;
-  wrapper.addEventListener('touchstart', (e) => {
-    const touch = e.touches[0];
-    timer = setTimeout(() => {
-      showContextMenu(touch.clientX, touch.clientY, wrapper);
-    }, 800);
-  }, { passive: true });
-
-  wrapper.addEventListener('touchend', () => {
-    if (timer) clearTimeout(timer);
-  });
-  wrapper.addEventListener('touchmove', () => {
-    if (timer) clearTimeout(timer);
-  });
-}
-
-// ==================== 引用条 ====================
-function showQuoteBar(text) {
-  let bar = document.getElementById('quote-bar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'quote-bar';
-    bar.className = 'quote-bar';
-    bar.innerHTML = `
-      <span class="quote-text"></span>
-      <button class="quote-close">×</button>
-    `;
-    const inputArea = document.querySelector('.chat-input-area');
-    inputArea.parentElement.insertBefore(bar, inputArea);
-    bar.querySelector('.quote-close').addEventListener('click', () => {
-      pendingQuote = null;
-      hideQuoteBar();
-    });
-  }
-  bar.querySelector('.quote-text').textContent = text;
-  bar.style.display = 'flex';
-}
-
-function hideQuoteBar() {
-  const bar = document.getElementById('quote-bar');
-  if (bar) bar.style.display = 'none';
 }
 
 // ==================== 聊天信息页 ====================
@@ -562,34 +500,34 @@ function openChatInfo() {
     </div>
     <div class="me-menu">
       <div class="me-menu-item" id="switch-identity-entry">
-        <span class="menu-label">切换身份</span>
-        <span class="menu-value" id="current-identity-text">以本人身份</span>
+        <span class="menu-label">${t('identity_switch')}</span>
+        <span class="menu-value" id="current-identity-text">${t('self_identity')}</span>
         <span class="menu-arrow">›</span>
       </div>
       <div class="me-menu-item" id="set-remark-entry">
-        <span class="menu-label">设置备注和标签</span>
+        <span class="menu-label">${t('set_remark')}</span>
         <span class="menu-arrow">›</span>
       </div>
       <div class="me-menu-item" id="complain-entry">
-        <span class="menu-label">投诉</span>
+        <span class="menu-label">${t('complain')}</span>
         <span class="menu-arrow">›</span>
       </div>
       <div class="me-menu-item" id="delete-chat-entry">
-        <span class="menu-label" style="color:#ff3b30;">删除聊天</span>
+        <span class="menu-label" style="color:#ff3b30;">${t('delete_chat')}</span>
       </div>
     </div>
   `;
-  window.openSubpage('聊天信息', contentHtml, { showMore: false });
+  window.openSubpage(t('chat_info'), contentHtml, { showMore: false });
 
   setTimeout(() => {
     document.getElementById('switch-identity-entry').addEventListener('click', openIdentitySwitch);
     document.getElementById('set-remark-entry').addEventListener('click', () => {
-      const remark = prompt('请输入备注名：', chatName);
-      if (remark) alert('备注已设置（模拟）');
+      const remark = prompt(t('set_remark'), chatName);
+      if (remark) alert(t('remark_saved'));
     });
-    document.getElementById('complain-entry').addEventListener('click', () => alert('投诉功能待实现'));
+    document.getElementById('complain-entry').addEventListener('click', () => alert(t('complain') + ' ' + t('coming_soon')));
     document.getElementById('delete-chat-entry').addEventListener('click', () => {
-      if (confirm('确定删除聊天记录吗？')) alert('已删除（模拟）');
+      if (confirm(t('delete_chat_confirm'))) alert(t('delete_success'));
     });
   }, 100);
 }
@@ -597,21 +535,21 @@ function openChatInfo() {
 async function openIdentitySwitch() {
   const contentHtml = `
     <div class="me-menu" id="identity-switch-list">
-      <div class="me-menu-item identity-option" data-agent-id="">👤 以本人身份</div>
-      <div class="subpage-placeholder">加载智能体...</div>
+      <div class="me-menu-item identity-option" data-agent-id="">👤 ${t('self_identity')}</div>
+      <div class="subpage-placeholder">${t('loading')}...</div>
     </div>
   `;
-  window.openSubpage('切换身份', contentHtml);
+  window.openSubpage(t('identity_switch'), contentHtml);
 
   try {
     const data = await api.listMyAgents();
     const agents = data.agents || [];
     const container = document.getElementById('identity-switch-list');
     if (agents.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无智能体</div>';
+      container.innerHTML = `<div class="subpage-placeholder">${t('no_agents')}</div>`;
       return;
     }
-    let html = '<div class="me-menu-item identity-option" data-agent-id="">👤 以本人身份</div>';
+    let html = `<div class="me-menu-item identity-option" data-agent-id="">👤 ${t('self_identity')}</div>`;
     agents.forEach(agent => {
       html += `
         <div class="me-menu-item identity-option" data-agent-id="${agent.agent_id}">
@@ -632,58 +570,12 @@ async function openIdentitySwitch() {
       });
     });
   } catch (e) {
-    document.getElementById('identity-switch-list').innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    document.getElementById('identity-switch-list').innerHTML = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
 }
 
-// ==================== 聊天加号面板 ====================
-function toggleChatPlusPanel() {
-  const panel = document.getElementById('chat-plus-panel');
-  if (!panel) return;
-  if (panel.style.display === 'block') {
-    closeChatPlusPanel();
-  } else {
-    openChatPlusPanel();
-  }
-}
-
-function openChatPlusPanel() {
-  const panel = document.getElementById('chat-plus-panel');
-  if (!panel) return;
-  const content = document.getElementById('chat-plus-content');
-  if (content) {
-    const items = [
-      { icon: '📷', label: '相册', action: () => alert('相册功能待实现') },
-      { icon: '💰', label: '转账', action: () => alert('转账功能待实现') },
-      { icon: '🧧', label: '红包', action: () => alert('红包功能待实现') },
-      { icon: '📁', label: '文件', action: () => alert('文件功能待实现') },
-      { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
-    ];
-    let html = '<div class="chat-plus-grid">';
-    items.forEach(item => {
-      html += `
-        <div class="chat-plus-item">
-          <div class="chat-plus-icon">${item.icon}</div>
-          <div class="chat-plus-label">${item.label}</div>
-        </div>
-      `;
-    });
-    html += '</div>';
-    content.innerHTML = html;
-    content.querySelectorAll('.chat-plus-item').forEach((el, index) => {
-      el.addEventListener('click', () => {
-        closeChatPlusPanel();
-        items[index].action();
-      });
-    });
-  }
-  panel.style.display = 'block';
-}
-
-function closeChatPlusPanel() {
-  const panel = document.getElementById('chat-plus-panel');
-  if (panel) panel.style.display = 'none';
-}
+// 暴露给 message_actions.js 使用
+window.updateSendButtonVisibility = updateSendButtonVisibility;
 
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('message-context-menu');

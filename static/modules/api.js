@@ -85,16 +85,19 @@ export const api = {
   // 消息
   sendMessage: (data) => request('/messages/send', { method: 'POST', body: JSON.stringify(data) }),
   listConversations: () => request('/messages/conversations'),
-  getConversationMessages: (conversationId) => request(`/messages/conversations/${conversationId}/messages`),
+  getConversationMessages: (conversationId, limit = 50, offset = 0, afterId = null) => {
+    let url = `/messages/conversations/${conversationId}/messages?limit=${limit}&offset=${offset}`;
+    if (afterId !== null) {
+      url += `&after_id=${afterId}`;
+    }
+    return request(url);
+  },
   markConversationRead: (conversationId) => request(`/messages/${conversationId}/read`, { method: 'POST' }),
   togglePinConversation: (conversationId, pinned) => request(`/messages/${conversationId}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),
   deleteConversation: (conversationId) => request(`/messages/${conversationId}`, { method: 'DELETE' }),
 
-  // 建议回复（调用默认模型生成，不保存）
-  suggestReply: (query) => request('/agent/chat', {
-    method: 'POST',
-    body: JSON.stringify({ query })
-  }),
+  // 建议回复
+  suggestReply: (query) => request('/agent/chat', { method: 'POST', body: JSON.stringify({ query }) }),
 
   // 积分
   getBalance: () => request('/credits/balance'),

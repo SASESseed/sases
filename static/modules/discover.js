@@ -1,5 +1,6 @@
 // static/modules/discover.js
 import { api } from './api.js';
+import { t } from './i18n.js';
 
 let initialized = false;
 
@@ -10,13 +11,22 @@ export function initDiscover() {
   const container = document.getElementById('discover-content');
   if (!container) return;
 
+  renderDiscoverEntries(container);
+
+  // 监听语言变化，重新渲染入口
+  window.addEventListener('langchange', () => {
+    renderDiscoverEntries(container);
+  });
+}
+
+function renderDiscoverEntries(container) {
   const entries = [
-    { icon: '🌌', title: '智维空间', desc: 'AI 贡献节点', action: 'wisdom' },
-    { icon: '🌐', title: 'AI圈', desc: 'AI 朋友圈', action: 'ai-circle' },
-    { icon: '📷', title: '扫一扫', desc: '扫描二维码或种子', action: 'scan' },
-    { icon: '🎮', title: '游戏', desc: 'AI 游戏中心', action: 'game' },
-    { icon: '🏆', title: '排行榜', desc: '贡献排行（非积分）', action: 'leaderboard' },
-    { icon: '🧠', title: 'AI代理', desc: '智能体市场', action: 'agents' }
+    { icon: '🌌', title: t('wisdom_space'), desc: t('ai_contribution_nodes'), action: 'wisdom' },
+    { icon: '🌐', title: t('ai_circle'), desc: t('ai_moments'), action: 'ai-circle' },
+    { icon: '📷', title: t('scan'), desc: t('scan_qr_or_seed'), action: 'scan' },
+    { icon: '🎮', title: t('games'), desc: t('ai_game_center'), action: 'game' },
+    { icon: '🏆', title: t('leaderboard'), desc: t('contribution_rank'), action: 'leaderboard' },
+    { icon: '🧠', title: t('ai_agents'), desc: t('agent_market'), action: 'agents' }
   ];
 
   let html = `<div class="me-menu">`;
@@ -34,6 +44,7 @@ export function initDiscover() {
   html += `</div>`;
   container.innerHTML = html;
 
+  // 绑定点击事件
   container.querySelectorAll('[data-entry]').forEach(item => {
     item.addEventListener('click', () => {
       const action = item.dataset.action;
@@ -45,21 +56,21 @@ export function initDiscover() {
       } else if (action === 'leaderboard') {
         openLeaderboard(title);
       } else {
-        window.openSubpage(title, `<div class="subpage-placeholder">${title} 功能待实现</div>`);
+        window.openSubpage(title, `<div class="subpage-placeholder">${t('coming_soon')}</div>`);
       }
     });
   });
 }
 
 async function openWisdomSpace(title) {
-  let nodesHtml = '<div class="subpage-placeholder">加载中...</div>';
+  let nodesHtml = `<div class="subpage-placeholder">${t('loading')}</div>`;
   window.openSubpage(title, nodesHtml);
 
   try {
     const data = await api.getWisdomSpaceNodes();
     const nodes = data.nodes || [];
     if (nodes.length === 0) {
-      nodesHtml = '<div class="subpage-placeholder">暂无节点</div>';
+      nodesHtml = `<div class="subpage-placeholder">${t('no_nodes')}</div>`;
     } else {
       nodesHtml = '<div class="me-menu">';
       nodes.forEach(node => {
@@ -77,21 +88,21 @@ async function openWisdomSpace(title) {
       nodesHtml += '</div>';
     }
   } catch (e) {
-    nodesHtml = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    nodesHtml = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
 
   document.getElementById('subpage-content').innerHTML = nodesHtml;
 }
 
 async function openAiCircle(title) {
-  let postsHtml = '<div class="subpage-placeholder">加载中...</div>';
+  let postsHtml = `<div class="subpage-placeholder">${t('loading')}</div>`;
   window.openSubpage(title, postsHtml);
 
   try {
     const data = await api.getAiCirclePosts();
     const posts = data.posts || [];
     if (posts.length === 0) {
-      postsHtml = '<div class="subpage-placeholder">暂无动态</div>';
+      postsHtml = `<div class="subpage-placeholder">${t('no_posts')}</div>`;
     } else {
       postsHtml = '<div class="ai-post-list">';
       posts.forEach(post => {
@@ -110,13 +121,13 @@ async function openAiCircle(title) {
       postsHtml += '</div>';
     }
   } catch (e) {
-    postsHtml = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    postsHtml = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
 
   const contentHtml = `
     <div class="ai-publish-area">
-      <textarea id="ai-post-input" class="ai-post-input" placeholder="分享你的智能体动态..."></textarea>
-      <button id="ai-post-btn" class="save-btn">发布</button>
+      <textarea id="ai-post-input" class="ai-post-input" placeholder="${t('share_agent_moment')}"></textarea>
+      <button id="ai-post-btn" class="save-btn">${t('publish')}</button>
     </div>
     ${postsHtml}
   `;
@@ -127,28 +138,28 @@ async function openAiCircle(title) {
   if (publishBtn && postInput) {
     publishBtn.addEventListener('click', async () => {
       const content = postInput.value.trim();
-      if (!content) { alert('请输入内容'); return; }
+      if (!content) { alert(t('please_input_all')); return; }
       try {
         await api.createAiCirclePost(content, 'daily');
-        alert('发布成功');
+        alert(t('publish_success'));
         postInput.value = '';
         openAiCircle(title);
       } catch (e) {
-        alert('发布失败：' + e.message);
+        alert(t('publish_failed') + ': ' + e.message);
       }
     });
   }
 }
 
 async function openLeaderboard(title) {
-  let contentHtml = '<div class="subpage-placeholder">加载中...</div>';
+  let contentHtml = `<div class="subpage-placeholder">${t('loading')}</div>`;
   window.openSubpage(title, contentHtml);
 
   try {
     const data = await api.getLeaderboard();
     const users = data.leaderboard || [];
     if (users.length === 0) {
-      contentHtml = '<div class="subpage-placeholder">暂无排行数据</div>';
+      contentHtml = `<div class="subpage-placeholder">${t('no_data')}</div>`;
     } else {
       let listHtml = '<div class="me-menu">';
       users.forEach(user => {
@@ -167,7 +178,7 @@ async function openLeaderboard(title) {
       contentHtml = listHtml;
     }
   } catch (e) {
-    contentHtml = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    contentHtml = `<div class="subpage-placeholder">${t('load_failed')}: ${e.message}</div>`;
   }
   document.getElementById('subpage-content').innerHTML = contentHtml;
 }

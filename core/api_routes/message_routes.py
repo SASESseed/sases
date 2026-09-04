@@ -51,8 +51,8 @@ async def create_conversation(body: ConversationCreateRequest, user_id: int = De
 
 
 @router.get("/conversations/{conversation_id}/messages")
-async def get_messages(conversation_id: int, limit: int = 50, offset: int = 0, user_id: int = Depends(get_current_user)):
-    messages = message_service.get_messages(user_id, conversation_id, limit, offset)
+async def get_messages(conversation_id: int, limit: int = 50, offset: int = 0, after_id: Optional[int] = None, user_id: int = Depends(get_current_user)):
+    messages = message_service.get_messages(user_id, conversation_id, limit, offset, after_id)
     if messages is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     return {"messages": messages}
