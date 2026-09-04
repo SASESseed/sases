@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     yield
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="SASES", version="0.12.1", lifespan=lifespan)
+    app = FastAPI(title="SASES", version="0.12.3", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
