@@ -6,6 +6,8 @@ __pycache__/
 .Python
 env/
 venv/
+venv312/
+.venv/
 ENV/
 build/
 dist/
@@ -20,6 +22,7 @@ htmlcov/
 secret_key.bin
 api_key_encryption.key
 .env
+.env.local
 *.db
 users.db
 *.sqlite3
@@ -31,8 +34,15 @@ users.db
 *.log
 *.tmp
 *.swp
+*.bak
 .DS_Store
 Thumbs.db
+apollo_weather.log
+safety_log.jsonl
+contribution_log.jsonl
+shared_pollinate_log.jsonl
+seed_tasks_new.jsonl.bak
+seed_tasks_new_backup.jsonl
 
 # 编辑器
 .vscode/
@@ -44,3 +54,16 @@ node_modules/
 # ChromaDB
 kb/
 *.sqlite3
+
+# 数据库备份
+backups/
+
+# 本地 Embedding 模型（体积大，通过脚本下载）
+bge-small-zh-onnx/
+
+# 模型适配器（体积大）
+lora_adapter/
+hf_upload/
+
+# Harness 自动生成的模块（可选）
+# harness_modules/auto_*

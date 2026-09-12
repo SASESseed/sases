@@ -2,8 +2,10 @@
 import base64
 import httpx
 from datetime import datetime
+from typing import Optional
 from ..db import db_cursor
 from ..security import decrypt_api_key, normalize_provider
+from . import work_service  # 用于自由模式下的指令执行
 
 # ---------- 会话相关 ----------
 
@@ -42,45 +44,37 @@ def create_conversation(user_id: int, agent_id: str = None, title: str = "新会
         """, (user_id, agent_id, title))
         return cur.lastrowid
 
-def get_messages(user_id: int, conversation_id: int, limit: int = 50, offset: int = 0, after_id: int = None):
-    """获取会话消息，支持分页和增量拉取（after_id）"""
+def get_messages(user_id: int, conversation_id: int, limit: int = 50, offset: int = 0, after_id: Optional[int] = None):
+    """获取会话消息，支持分页和增量拉取"""
     with db_cursor() as cur:
-        # 验证会话归属
         cur.execute("SELECT id FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
         if not cur.fetchone():
             return None
 
+        query = """
+            SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
+                   CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
+                        WHEN m.sender = 'user' THEN '我'
+                        ELSE 'AI' END as sender_name
+            FROM messages m
+            LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
+            WHERE m.conversation_id=?
+        """
+        params = [conversation_id]
+
         if after_id is not None:
-            # 增量拉取：只获取 id > after_id 的消息，按升序排列，不需要 limit/offset
-            cur.execute("""
-                SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
-                       CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
-                            WHEN m.sender = 'user' THEN '我'
-                            ELSE 'AI' END as sender_name
-                FROM messages m
-                LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
-                WHERE m.conversation_id=? AND m.id > ?
-                ORDER BY m.id ASC
-            """, (conversation_id, after_id))
-            rows = cur.fetchall()
-            return [dict(row) for row in rows]
-        else:
-            # 分页获取最近消息：先倒序取 limit + offset，再反转
-            cur.execute("""
-                SELECT m.id, m.sender, m.content, m.sender_agent_id, m.created_at,
-                       CASE WHEN m.sender_agent_id IS NOT NULL THEN mc.name
-                            WHEN m.sender = 'user' THEN '我'
-                            ELSE 'AI' END as sender_name
-                FROM messages m
-                LEFT JOIN model_configs mc ON m.sender_agent_id = mc.id
-                WHERE m.conversation_id=?
-                ORDER BY m.id DESC
-                LIMIT ? OFFSET ?
-            """, (conversation_id, limit, offset))
-            rows = cur.fetchall()
-            messages = [dict(row) for row in rows]
-            messages.reverse()
-            return messages
+            query += " AND m.id > ?"
+            params.append(after_id)
+
+        query += " ORDER BY m.id DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        cur.execute(query, params)
+        rows = cur.fetchall()
+
+    messages = [dict(row) for row in rows]
+    messages.reverse()
+    return messages
 
 def mark_conversation_read(user_id: int, conversation_id: int):
     with db_cursor(commit=True) as cur:
@@ -151,7 +145,64 @@ async def call_model_with_config(model_config: dict, query: str) -> str:
 
 # ---------- 发送消息 ----------
 
-async def send_message(user_id: int, conversation_id: int, agent_id: str, content: str, sender_agent_id: str = None):
+async def send_message(
+    user_id: int,
+    conversation_id: int,
+    agent_id: str,
+    content: str,
+    sender_agent_id: str = None,
+    mode: str = "normal"
+):
+    # ========== 自由模式下执行指令 ==========
+    if mode == "free" and content.startswith("执行："):
+        command = content.replace("执行：", "", 1).strip()
+        if not command:
+            return {
+                "conversation_id": conversation_id,
+                "user_message": content,
+                "assistant_reply": "请提供要执行的命令",
+                "agent_id": agent_id,
+                "sender_agent_id": sender_agent_id,
+                "mode": mode
+            }
+        try:
+            work_result = await work_service.execute_work_command(
+                user_id=user_id,
+                conversation_id=conversation_id,
+                command=command,
+                sender_agent_id=sender_agent_id
+            )
+            return {
+                "conversation_id": conversation_id,
+                "user_message": content,
+                "assistant_reply": work_result["output"],
+                "agent_id": agent_id,
+                "sender_agent_id": sender_agent_id,
+                "mode": mode,
+                "work_result": work_result
+            }
+        except Exception as e:
+            return {
+                "conversation_id": conversation_id,
+                "user_message": content,
+                "assistant_reply": f"指令执行失败：{str(e)}",
+                "agent_id": agent_id,
+                "sender_agent_id": sender_agent_id,
+                "mode": mode
+            }
+
+    # ========== 蜂群模式在单聊中不支持 ==========
+    if mode == "swarm":
+        return {
+            "conversation_id": conversation_id,
+            "user_message": content,
+            "assistant_reply": "蜂群模式仅在群聊中可用，请切换到群聊或使用其他模式。",
+            "agent_id": agent_id,
+            "sender_agent_id": sender_agent_id,
+            "mode": mode
+        }
+
+    # ========== 普通模式或自由模式下的普通消息 ==========
     if not conversation_id:
         title = "新会话"
         if agent_id:
@@ -196,5 +247,6 @@ async def send_message(user_id: int, conversation_id: int, agent_id: str, conten
         "user_message": content,
         "assistant_reply": assistant_reply,
         "agent_id": agent_id,
-        "sender_agent_id": sender_agent_id
+        "sender_agent_id": sender_agent_id,
+        "mode": mode
     }

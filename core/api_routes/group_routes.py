@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from jose import jwt, JWTError
 
 from ..auth_service import SECRET_KEY
@@ -22,13 +22,16 @@ class GroupInviteRequest(BaseModel):
 
 
 class GroupMessageRequest(BaseModel):
-    group_id: int
     content: str
     agent_id: Optional[str] = None
 
 
 class GroupRemoveMemberRequest(BaseModel):
     username_or_id: str
+
+
+class GroupModeRequest(BaseModel):
+    mode: str  # normal 或 swarm
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -81,9 +84,9 @@ async def get_group_messages(group_id: int, user_id: int = Depends(get_current_u
 
 @router.post("/{group_id}/messages")
 async def send_group_message(group_id: int, body: GroupMessageRequest, user_id: int = Depends(get_current_user)):
-    success = group_service.send_group_message(group_id, user_id, body.content, body.agent_id)
+    success, msg = group_service.send_group_message(group_id, user_id, body.content, body.agent_id)
     if not success:
-        raise HTTPException(status_code=403, detail="发送失败")
+        raise HTTPException(status_code=400, detail=msg)
     return {"status": "sent"}
 
 
@@ -105,3 +108,13 @@ async def remove_member(group_id: int, body: GroupRemoveMemberRequest, user_id: 
     if not success:
         raise HTTPException(status_code=400, detail=msg)
     return {"status": "removed"}
+
+
+@router.post("/{group_id}/mode")
+async def set_group_mode(group_id: int, body: GroupModeRequest, user_id: int = Depends(get_current_user)):
+    if body.mode not in ("normal", "swarm"):
+        raise HTTPException(status_code=400, detail="模式只能是 normal 或 swarm")
+    success, msg = group_service.set_group_mode(group_id, body.mode, user_id)
+    if not success:
+        raise HTTPException(status_code=403, detail=msg)
+    return {"status": "updated", "mode": body.mode}

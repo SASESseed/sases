@@ -1,0 +1,15 @@
+{
+  "id": "auto_15_请读取_C__Users_xiaomai",
+  "name": "Auto Harness - 请读取 C:\\Users\\xiaomai\\Desktop\\Z",
+  "description": "自动生成的 Harness 模块，基于工作日志 #15。状态: failed",
+  "version": "1.0.0",
+  "capabilities": [
+    "command_result"
+  ],
+  "permissions": [
+    "local_command"
+  ],
+  "entrypoint": "main.py",
+  "icon": null,
+  "node_type": "harness"
+}

@@ -1,6 +1,7 @@
 // static/modules/messages.js
 import { api } from './api.js';
 import { openChatWindow } from './chat.js';
+import { openGroupChat } from './group_chat.js';
 import { initPullToRefresh } from './utils.js';
 import { t } from './i18n.js';
 
@@ -12,18 +13,35 @@ export async function initMessages() {
   if (initialized) return;
   initialized = true;
   await loadConversations(container);
+
+  // 渲染新手引导卡片
+  if (typeof window.onboarding?.renderCard === 'function') {
+    try {
+      await window.onboarding.renderCard();
+    } catch (e) {
+      console.warn('渲染引导卡片失败', e);
+    }
+  }
 }
 
 async function loadConversations(container) {
   try {
-    const data = await api.listConversations();
-    const conversations = data.conversations || [];
-    if (conversations.length === 0) {
+    const [convData, groupData] = await Promise.all([
+      api.listConversations(),
+      api.listMyGroups()
+    ]);
+
+    const conversations = convData.conversations || [];
+    const groups = groupData.groups || [];
+
+    if (conversations.length === 0 && groups.length === 0) {
       container.innerHTML = `<div class="empty">${t('no_conversations')}</div>`;
       return;
     }
 
     let html = '';
+
+    // 渲染单聊会话
     conversations.forEach(conv => {
       const agentName = conv.title || '会话';
       const lastMessage = conv.last_message || '';
@@ -33,7 +51,7 @@ async function loadConversations(container) {
       const displayLast = lastSenderName ? `${lastSenderName}: ${lastMessage}` : lastMessage;
 
       html += `
-        <div class="session-item ${pinned}" data-conversation-id="${conv.id}" data-agent-id="${conv.agent_id || ''}" data-title="${agentName}">
+        <div class="session-item ${pinned}" data-type="single" data-conversation-id="${conv.id}" data-agent-id="${conv.agent_id || ''}" data-title="${agentName}">
           <div class="session-avatar">
             ${agentName.charAt(0)}
             ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
@@ -42,13 +60,35 @@ async function loadConversations(container) {
             <div class="session-name">${agentName}</div>
             <div class="session-last">${displayLast}</div>
           </div>
-          <button class="session-more-btn" data-conversation-id="${conv.id}" data-pinned="${conv.is_pinned}">⋯</button>
+          <button class="session-more-btn" data-type="single" data-id="${conv.id}" data-pinned="${conv.is_pinned}">⋯</button>
         </div>
       `;
     });
+
+    // 渲染群聊会话
+    groups.forEach(group => {
+      const groupName = group.name || '群聊';
+      const lastMessage = group.last_message || '';
+      const lastSenderName = group.last_sender_name || '';
+      const displayLast = lastSenderName ? `${lastSenderName}: ${lastMessage}` : lastMessage;
+      const groupId = group.id;
+
+      html += `
+        <div class="session-item" data-type="group" data-group-id="${groupId}" data-title="${groupName}">
+          <div class="session-avatar">
+            ${groupName.charAt(0)}
+          </div>
+          <div class="session-info">
+            <div class="session-name">${groupName}</div>
+            <div class="session-last">${displayLast}</div>
+          </div>
+          <button class="session-more-btn" data-type="group" data-id="${groupId}">⋯</button>
+        </div>
+      `;
+    });
+
     container.innerHTML = html;
 
-    // 初始化下拉刷新
     initPullToRefresh(container, async () => {
       await loadConversations(container);
     });
@@ -56,19 +96,35 @@ async function loadConversations(container) {
     container.querySelectorAll('.session-item').forEach(item => {
       item.addEventListener('click', (e) => {
         if (e.target.closest('.session-more-btn')) return;
-        const conversationId = item.dataset.conversationId;
-        const agentId = item.dataset.agentId || null;
-        const title = item.dataset.title;
-        openChatWindow(conversationId, title, agentId);
+        const type = item.dataset.type;
+        // 上报新手引导动作：打开会话视为完成"发送消息"任务的前置
+        if (typeof window.onboarding?.report === 'function') {
+          window.onboarding.report('send_message');
+        }
+        if (type === 'single') {
+          const conversationId = item.dataset.conversationId;
+          const agentId = item.dataset.agentId || null;
+          const title = item.dataset.title;
+          openChatWindow(conversationId, title, agentId);
+        } else if (type === 'group') {
+          const groupId = item.dataset.groupId;
+          const title = item.dataset.title;
+          openGroupChat(groupId, title);
+        }
       });
     });
 
     container.querySelectorAll('.session-more-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const convId = btn.dataset.conversationId;
-        const pinned = btn.dataset.pinned === '1' ? true : false;
-        showSessionActions(convId, pinned);
+        const type = btn.dataset.type;
+        const id = btn.dataset.id;
+        if (type === 'single') {
+          const pinned = btn.dataset.pinned === '1' ? true : false;
+          showSingleSessionActions(id, pinned);
+        } else if (type === 'group') {
+          showGroupSessionActions(id);
+        }
       });
     });
   } catch (e) {
@@ -76,7 +132,7 @@ async function loadConversations(container) {
   }
 }
 
-function showSessionActions(conversationId, pinned) {
+function showSingleSessionActions(conversationId, pinned) {
   const action = prompt(
     `${t('choose_action')}\n1. ${pinned ? t('unpin') : t('pin')}\n2. ${t('mark_read')}\n3. ${t('delete_conversation')}\n0. ${t('cancel')}`
   );
@@ -86,6 +142,15 @@ function showSessionActions(conversationId, pinned) {
     markRead(conversationId);
   } else if (action === '3') {
     deleteConversation(conversationId);
+  }
+}
+
+function showGroupSessionActions(groupId) {
+  const action = prompt(
+    `${t('choose_action')}\n1. 退出群聊\n0. ${t('cancel')}`
+  );
+  if (action === '1') {
+    quitGroup(groupId);
   }
 }
 
@@ -114,5 +179,15 @@ async function deleteConversation(conversationId) {
     location.reload();
   } catch (e) {
     alert(t('delete_failed') + ': ' + e.message);
+  }
+}
+
+async function quitGroup(groupId) {
+  if (!confirm('确定退出该群聊吗？')) return;
+  try {
+    await api.removeGroupMember(groupId, 'self');
+    location.reload();
+  } catch (e) {
+    alert(t('operation_failed') + ': ' + e.message);
   }
 }

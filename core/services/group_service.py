@@ -5,7 +5,7 @@ from ..db import db_cursor
 def create_group(name: str, owner_id: int):
     """创建群聊，返回群 ID"""
     with db_cursor(commit=True) as cur:
-        cur.execute("INSERT INTO groups (name, owner_id) VALUES (?, ?)", (name, owner_id))
+        cur.execute("INSERT INTO groups (name, owner_id, mode) VALUES (?, ?, 'normal')", (name, owner_id))
         group_id = cur.lastrowid
         cur.execute("INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, 'owner')", (group_id, owner_id))
         return group_id
@@ -14,7 +14,6 @@ def create_group(name: str, owner_id: int):
 def invite_to_group(group_id: int, inviter_id: int, invitee: str):
     """邀请用户或智能体加入群聊。invitee 可以是用户名、SASES ID、智能体 ID 或智能体名称。"""
     with db_cursor() as cur:
-        # 检查邀请者是否在群中
         cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, inviter_id))
         if not cur.fetchone():
             return False, "邀请者不是群成员"
@@ -53,7 +52,7 @@ def list_user_groups(user_id: int):
     """获取用户所在的群聊列表"""
     with db_cursor() as cur:
         cur.execute("""
-            SELECT g.id, g.name, g.owner_id,
+            SELECT g.id, g.name, g.owner_id, g.mode,
                    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id) as member_count
             FROM groups g
             JOIN group_members gm2 ON g.id = gm2.group_id
@@ -65,13 +64,35 @@ def list_user_groups(user_id: int):
 
 
 def get_group_info(group_id: int):
-    """获取群基本信息"""
+    """获取群基本信息，包括模式"""
     with db_cursor() as cur:
-        cur.execute("SELECT id, name, owner_id FROM groups WHERE id=?", (group_id,))
+        cur.execute("SELECT id, name, owner_id, mode FROM groups WHERE id=?", (group_id,))
         row = cur.fetchone()
         if row:
             return dict(row)
         return None
+
+
+def get_group_mode(group_id: int):
+    """获取群模式"""
+    with db_cursor() as cur:
+        cur.execute("SELECT mode FROM groups WHERE id=?", (group_id,))
+        row = cur.fetchone()
+        return row["mode"] if row else None
+
+
+def set_group_mode(group_id: int, mode: str, user_id: int = None):
+    """设置群模式（仅群主可操作）"""
+    if user_id is not None:
+        with db_cursor() as cur:
+            cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
+            group = cur.fetchone()
+            if not group or group["owner_id"] != user_id:
+                return False, "只有群主可以切换模式"
+
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE groups SET mode=? WHERE id=?", (mode, group_id))
+        return True, "切换成功"
 
 
 def get_group_messages(group_id: int, user_id: int):
@@ -97,21 +118,27 @@ def get_group_messages(group_id: int, user_id: int):
 
 
 def send_group_message(group_id: int, sender_id: int, content: str, sender_agent_id: str = None):
-    """发送群聊消息，可为用户或智能体"""
+    """发送群聊消息，可为用户或智能体。蜂群模式下普通消息暂不处理。"""
+    # 获取当前群模式
+    mode = get_group_mode(group_id)
+    if mode == 'swarm':
+        # 蜂群模式暂未实现任务处理，返回提示
+        return False, "蜂群模式暂未开放任务功能，请切换为普通聊天模式"
+
     with db_cursor(commit=True) as cur:
         if sender_agent_id:
             # 验证智能体是否为群成员
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND agent_id=?", (group_id, sender_agent_id))
             if not cur.fetchone():
-                return False
+                return False, "智能体不在群中"
             cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content) VALUES (?, ?, ?)", (group_id, sender_agent_id, content))
         else:
             # 验证用户是否为群成员
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, sender_id))
             if not cur.fetchone():
-                return False
+                return False, "用户不在群中"
             cur.execute("INSERT INTO group_messages (group_id, sender_id, content) VALUES (?, ?, ?)", (group_id, sender_id, content))
-        return True
+        return True, "发送成功"
 
 
 def list_group_members(group_id: int):
@@ -132,20 +159,17 @@ def list_group_members(group_id: int):
 
 def get_group_credits(group_id: int):
     """获取群积分（暂返回0，后续可统计）"""
-    # 实际中可以从群积分表或贡献日志统计，这里简化
     return 0.0
 
 
 def remove_member_from_group(group_id: int, remover_id: int, member_identifier: str):
     """移除群成员（仅群主可操作）"""
     with db_cursor() as cur:
-        # 检查操作者是否为群主
         cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
         group = cur.fetchone()
         if not group or group["owner_id"] != remover_id:
             return False, "只有群主可以移除成员"
 
-        # 根据标识查找成员（支持用户 ID、智能体 ID、用户名）
         cur.execute("""
             SELECT id FROM group_members
             WHERE group_id=?

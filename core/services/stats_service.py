@@ -4,10 +4,34 @@ import json
 from ..db import db_cursor
 
 
-def get_leaderboard():
-    """获取贡献排行榜（按贡献值排序，不直接使用积分）"""
+def get_admin_user_ids():
+    """从数据库查询所有管理员用户 ID"""
     with db_cursor() as cur:
-        cur.execute("""
+        cur.execute("SELECT id FROM users WHERE is_admin=1")
+        rows = cur.fetchall()
+    return {row["id"] for row in rows}
+
+
+def get_leaderboard():
+    """获取贡献排行榜（按贡献值排序，排除管理员账号）"""
+    admin_ids = get_admin_user_ids()
+
+    # 如果没有管理员，避免 SQL 语法错误
+    if admin_ids:
+        placeholders = ','.join('?' for _ in admin_ids)
+        query = f"""
+            SELECT u.id, u.username, u.sases_id,
+                   COALESCE(SUM(cl.points), 0) AS contribution_score
+            FROM users u
+            LEFT JOIN contribution_log cl ON u.id = cl.user_id AND cl.points > 0
+            WHERE u.id NOT IN ({placeholders})
+            GROUP BY u.id
+            ORDER BY contribution_score DESC, u.id ASC
+            LIMIT 50
+        """
+        params = tuple(admin_ids)
+    else:
+        query = """
             SELECT u.id, u.username, u.sases_id,
                    COALESCE(SUM(cl.points), 0) AS contribution_score
             FROM users u
@@ -15,7 +39,11 @@ def get_leaderboard():
             GROUP BY u.id
             ORDER BY contribution_score DESC, u.id ASC
             LIMIT 50
-        """)
+        """
+        params = ()
+
+    with db_cursor() as cur:
+        cur.execute(query, params)
         rows = cur.fetchall()
 
     leaderboard = []

@@ -13,7 +13,6 @@ SECRET_KEY = os.environ.get("JWT_SECRET", "sases-dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.environ.get("REFRESH_TOKEN_EXPIRE_MINUTES", "43200"))
-SIGN_KEY_FILE = os.environ.get("SIGN_KEY_FILE", "secret_key.bin")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -40,9 +39,11 @@ def generate_sases_id() -> str:
     return "sases_" + ''.join(secrets.choice(alphabet) for _ in range(8))
 
 def encrypt_api_key(api_key: str) -> str:
+    # 当前为简单 base64，后续可升级为 Fernet
     return base64.b64encode(api_key.encode()).decode()
 
 def decrypt_api_key(encrypted: str) -> str:
+    # 对应 base64 解码
     return base64.b64decode(encrypted.encode()).decode()
 
 def normalize_provider(provider: str) -> str:
@@ -59,17 +60,10 @@ def normalize_provider(provider: str) -> str:
     else:
         return p
 
-def _load_or_create_sign_key():
-    if os.path.exists(SIGN_KEY_FILE):
-        with open(SIGN_KEY_FILE, 'rb') as f:
-            return f.read()
-    else:
-        key = os.urandom(32)
-        with open(SIGN_KEY_FILE, 'wb') as f:
-            f.write(key)
-        return key
-
-SIGN_KEY = _load_or_create_sign_key()
+# 签名密钥：从环境变量读取，若不存在则生成随机密钥（仅内存，不写文件）
+SIGN_KEY = os.environ.get("SIGN_KEY", "").encode()
+if not SIGN_KEY:
+    SIGN_KEY = os.urandom(32)  # 每次启动都会不同，适合开发环境
 
 def sign_state(data: str) -> str:
     return hmac.new(SIGN_KEY, data.encode(), hashlib.sha256).hexdigest()

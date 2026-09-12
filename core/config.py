@@ -1,3 +1,4 @@
+# core/config.py
 import os
 from dotenv import load_dotenv
 
@@ -7,6 +8,12 @@ load_dotenv()
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
+
+# ========== Embedding 配置（用于知识库语义检索） ==========
+# 优先用专用 Embedding API，未配置时回退到 DeepSeek 配置
+EMBEDDING_API_KEY = os.environ.get("EMBEDDING_API_KEY", DEEPSEEK_API_KEY)
+EMBEDDING_BASE_URL = os.environ.get("EMBEDDING_BASE_URL", DEEPSEEK_BASE_URL)
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "deepseek-embedding")
 
 # ========== 视觉/多模态模型配置 ==========
 VISION_MODEL_NAME = os.environ.get("VISION_MODEL_NAME", "deepseek-v4-flash-vision-exp")
@@ -73,6 +80,8 @@ SHARED_LOG_FILE = os.environ.get("SHARED_LOG_FILE", "shared_pollinate_log.jsonl"
 CONTRIBUTION_LOG_DB = os.environ.get("CONTRIBUTION_LOG_DB", "users.db")
 
 # ========== 相似度与积分规则 ==========
+# 注意：SIMILARITY_THRESHOLD 是旧版 TF-IDF 使用的阈值
+# 新版 knowledge_service 使用 embedding 时会用独立的阈值，不使用这个值
 SIMILARITY_THRESHOLD = float(os.environ.get("SIMILARITY_THRESHOLD", "0.30"))
 EXTERNAL_SEED_REWARD = int(os.environ.get("EXTERNAL_SEED_REWARD", "5"))
 MANUAL_POLLINATE_BASIC_REWARD = int(os.environ.get("MANUAL_POLLINATE_BASIC_REWARD", "3"))
@@ -87,3 +96,21 @@ PEER_NODES = [x.strip() for x in os.environ.get("SASES_PEERS", "").split(",") if
 # mDNS 发现
 ENABLE_MDNS = os.environ.get("SASES_ENABLE_MDNS", "false").lower() == "true"
 MDNS_SERVICE_TYPE = "_sases._tcp.local."
+
+# ========== DashScope Embedding（用于混合模式） ==========
+DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
+DASHSCOPE_BASE_URL = os.environ.get(
+    "DASHSCOPE_BASE_URL",
+    "https://dashscope.aliyuncs.com/compatible-mode/v1"
+)
+DASHSCOPE_EMBEDDING_MODEL = os.environ.get(
+    "DASHSCOPE_EMBEDDING_MODEL",
+    "text-embedding-v3"
+)
+
+# Embedding 模式：local / api / hybrid
+EMBEDDING_MODE = os.environ.get("EMBEDDING_MODE", "hybrid")
+
+# 混合模式的边界阈值
+HYBRID_LOW_THRESHOLD = float(os.environ.get("HYBRID_LOW_THRESHOLD", "0.35"))
+HYBRID_HIGH_THRESHOLD = float(os.environ.get("HYBRID_HIGH_THRESHOLD", "0.88"))

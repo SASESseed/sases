@@ -17,6 +17,7 @@ class SendMessageRequest(BaseModel):
     agent_id: Optional[str] = None
     content: str
     sender_agent_id: Optional[str] = None
+    mode: Optional[str] = "normal"  # normal / free / swarm
 
 
 class ConversationCreateRequest(BaseModel):
@@ -51,7 +52,13 @@ async def create_conversation(body: ConversationCreateRequest, user_id: int = De
 
 
 @router.get("/conversations/{conversation_id}/messages")
-async def get_messages(conversation_id: int, limit: int = 50, offset: int = 0, after_id: Optional[int] = None, user_id: int = Depends(get_current_user)):
+async def get_messages(
+    conversation_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    after_id: Optional[int] = None,
+    user_id: int = Depends(get_current_user)
+):
     messages = message_service.get_messages(user_id, conversation_id, limit, offset, after_id)
     if messages is None:
         raise HTTPException(status_code=404, detail="会话不存在")
@@ -65,7 +72,8 @@ async def send_message(body: SendMessageRequest, user_id: int = Depends(get_curr
         conversation_id=body.conversation_id,
         agent_id=body.agent_id,
         content=body.content,
-        sender_agent_id=body.sender_agent_id
+        sender_agent_id=body.sender_agent_id,
+        mode=body.mode
     )
     return result
 

@@ -6,11 +6,22 @@ import { initChat, openChatWindow, closeChatWindow } from './chat.js';
 import { initContacts } from './contacts.js';
 import { initDiscover } from './discover.js';
 import { initMe } from './me.js';
+import './me_models.js';
+import './me_wallet.js';
+import './compute_wallet.js';
+import './me_settings.js';
+import './me_memory.js';
+import './pet.js';
+import './base.js';
+import './onboarding.js';
+import { openSubpage, closeSubpage } from './subpage.js';
 import { openGroupChat, closeGroupChat } from './group_chat.js';
 import { openGlobalSearch } from './search.js';
 import { initSideDrawer } from './sidebar.js';
 import { showPlusMenu } from './plus_menu.js';
 import { t, setLang, getLang } from './i18n.js';
+
+window.initMe = initMe;
 
 document.addEventListener('DOMContentLoaded', () => {
   window.currentGroupChat = false;
@@ -25,17 +36,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function applyLanguage() {
   const lang = getLang();
+  const isEn = lang === 'en';
 
-  // 设置登录界面
-  document.getElementById('login-title').textContent = t('login_title');
-  document.getElementById('login-subtitle').textContent = t('login_subtitle');
-  document.getElementById('login-username').placeholder = t('login_username_placeholder');
-  document.getElementById('login-password').placeholder = t('login_password_placeholder');
-  document.getElementById('login-btn').textContent = t('login_button');
-  document.getElementById('go-register').textContent = t('register_link');
-  document.getElementById('forgot-password').textContent = t('forgot_password');
+  // ========== 登录界面 ==========
+  const loginTitle = document.getElementById('login-title');
+  if (loginTitle) loginTitle.textContent = t('login_title');
+  const loginSubtitle = document.getElementById('login-subtitle');
+  if (loginSubtitle) loginSubtitle.textContent = t('login_subtitle');
+  const loginUsername = document.getElementById('login-username');
+  if (loginUsername) loginUsername.placeholder = t('login_username_placeholder');
+  const loginPassword = document.getElementById('login-password');
+  if (loginPassword) loginPassword.placeholder = t('login_password_placeholder');
+  const loginBtn = document.getElementById('login-btn');
+  if (loginBtn) loginBtn.textContent = t('login_button');
 
-  // 设置底部导航
+  // 注册 / 找回密码
+  const goRegister = document.getElementById('go-register');
+  if (goRegister) goRegister.textContent = isEn ? 'Register' : '注册新账号';
+  const forgotPassword = document.getElementById('forgot-password');
+  if (forgotPassword) forgotPassword.textContent = isEn ? 'Forgot Password' : '找回密码';
+
+  // 用户协议行
+  const agreementText = document.getElementById('agreement-text');
+  if (agreementText) {
+    const userAgreementLink = document.getElementById('user-agreement-link');
+    const privacyPolicyLink = document.getElementById('privacy-policy-link');
+    if (userAgreementLink) userAgreementLink.textContent = isEn ? 'User Agreement' : '用户协议';
+    if (privacyPolicyLink) privacyPolicyLink.textContent = isEn ? 'Privacy Policy' : '隐私政策';
+    agreementText.innerHTML = isEn
+      ? `I have read and agree to <a href="#" id="user-agreement-link">User Agreement</a> and <a href="#" id="privacy-policy-link">Privacy Policy</a>`
+      : `我已阅读并同意 <a href="#" id="user-agreement-link">用户协议</a> 和 <a href="#" id="privacy-policy-link">隐私政策</a>`;
+  }
+
+  // ========== 底部导航 ==========
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const view = btn.dataset.view;
     if (view === 'messages') btn.textContent = t('nav_messages');
@@ -44,7 +77,7 @@ function applyLanguage() {
     else if (view === 'me') btn.textContent = t('nav_me');
   });
 
-  // 设置当前顶部标题
+  // ========== 顶部标题 ==========
   const activeView = document.querySelector('.nav-btn.active')?.dataset.view;
   if (activeView) {
     const titles = {
@@ -53,35 +86,19 @@ function applyLanguage() {
       discover: t('nav_discover'),
       me: t('nav_me')
     };
-    document.getElementById('top-title').textContent = titles[activeView] || 'SASES';
+    const topTitle = document.getElementById('top-title');
+    if (topTitle) topTitle.textContent = titles[activeView] || 'SASES';
   }
-
-  // 更新侧边栏菜单项文本
-  updateSidebarLanguage();
-}
-
-function updateSidebarLanguage() {
-  const harnessLabel = document.getElementById('label-harness');
-  if (harnessLabel) harnessLabel.textContent = t('harness_tools');
-  const pollinationLabel = document.getElementById('label-pollination');
-  if (pollinationLabel) pollinationLabel.textContent = t('pollination_switch');
-  const marketLabel = document.getElementById('label-market');
-  if (marketLabel) marketLabel.textContent = t('market');
-  const miniAppsLabel = document.getElementById('label-mini-apps');
-  if (miniAppsLabel) miniAppsLabel.textContent = t('mini_apps');
-  const drawerTitle = document.getElementById('side-drawer-title');
-  if (drawerTitle) drawerTitle.textContent = t('menu');
 }
 
 function initLoginUI() {
   const loginBtn = document.getElementById('login-btn');
-  const registerLink = document.getElementById('go-register');
   const usernameInput = document.getElementById('login-username');
   const passwordInput = document.getElementById('login-password');
   const agreeCheckbox = document.getElementById('agree-checkbox');
   const langButtons = document.querySelectorAll('.lang-btn');
 
-  if (!loginBtn || !usernameInput || !passwordInput || !registerLink || !agreeCheckbox) return;
+  if (!loginBtn || !usernameInput || !passwordInput || !agreeCheckbox) return;
 
   langButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -91,11 +108,6 @@ function initLoginUI() {
       langButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
-  });
-
-  registerLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    alert('注册功能请点击登录按钮下方链接');
   });
 
   loginBtn.addEventListener('click', async () => {
@@ -143,6 +155,7 @@ function enterMainApp() {
 
 function activateMainView(viewName) {
   closeChatWindow();
+  window.__currentReturnAction = null;
   closeSubpage();
 
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewName));
@@ -156,15 +169,18 @@ function activateMainView(viewName) {
     discover: t('nav_discover'),
     me: t('nav_me')
   };
-  document.getElementById('top-title').textContent = titles[viewName] || 'SASES';
+  const topTitle = document.getElementById('top-title');
+  if (topTitle) topTitle.textContent = titles[viewName] || 'SASES';
 
   const topLeft = document.getElementById('top-left');
   if (topLeft) {
     topLeft.style.display = viewName === 'messages' ? 'flex' : 'none';
   }
 
-  const showActions = viewName !== 'me';
-  document.getElementById('top-actions').style.display = showActions ? 'flex' : 'none';
+  const topActions = document.getElementById('top-actions');
+  if (topActions) {
+    topActions.style.display = viewName !== 'me' ? 'flex' : 'none';
+  }
 
   if (viewName === 'messages') initMessages();
   if (viewName === 'contacts') initContacts();
@@ -188,59 +204,3 @@ function initTopActions() {
   if (searchBtn) searchBtn.addEventListener('click', openGlobalSearch);
   if (plusBtn) plusBtn.addEventListener('click', showPlusMenu);
 }
-
-// ==================== 二级页面控制 ====================
-export function openSubpage(title, contentHtml, options = {}) {
-  const subpageTitle = document.getElementById('subpage-title');
-  const subpageContent = document.getElementById('subpage-content');
-  if (!subpageTitle || !subpageContent) return;
-
-  subpageTitle.textContent = title;
-  subpageContent.innerHTML = contentHtml;
-
-  const bottomNav = document.querySelector('.bottom-nav');
-  const topBar = document.querySelector('.top-bar');
-  if (bottomNav) bottomNav.style.display = 'none';
-  if (topBar) topBar.style.display = 'none';
-
-  const avatarEl = document.getElementById('subpage-avatar');
-  if (avatarEl) {
-    if (options.avatarHtml) {
-      avatarEl.innerHTML = options.avatarHtml;
-      avatarEl.style.display = 'flex';
-    } else {
-      avatarEl.style.display = 'none';
-    }
-  }
-
-  const moreBtn = document.getElementById('subpage-more-btn');
-  if (moreBtn) {
-    if (options.showMore) {
-      moreBtn.style.display = 'block';
-      moreBtn.onclick = options.onMore || (() => alert('更多操作待实现'));
-    } else {
-      moreBtn.style.display = 'none';
-      moreBtn.onclick = null;
-    }
-  }
-
-  const backBtn = document.getElementById('subpage-back-btn');
-  if (backBtn) {
-    backBtn.onclick = closeSubpage;
-  }
-
-  const subpage = document.getElementById('view-subpage');
-  if (subpage) subpage.style.display = 'flex';
-}
-
-export function closeSubpage() {
-  const subpage = document.getElementById('view-subpage');
-  if (subpage) subpage.style.display = 'none';
-  const bottomNav = document.querySelector('.bottom-nav');
-  const topBar = document.querySelector('.top-bar');
-  if (bottomNav) bottomNav.style.display = 'flex';
-  if (topBar) topBar.style.display = 'flex';
-}
-
-window.openSubpage = openSubpage;
-window.closeSubpage = closeSubpage;

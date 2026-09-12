@@ -22,20 +22,34 @@ async function request(url, options = {}) {
   });
 
   if (!response.ok) {
-    let errorText = '';
+    const text = await response.text();
+    let errorText = text;
     try {
-      const errData = await response.json();
-      errorText = errData.detail || JSON.stringify(errData);
+      const errData = JSON.parse(text);
+      if (typeof errData === 'string') {
+        errorText = errData;
+      } else if (errData.detail) {
+        errorText = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+      } else {
+        errorText = JSON.stringify(errData);
+      }
     } catch {
-      errorText = await response.text();
+      errorText = text;
     }
     const error = new Error(errorText || `HTTP ${response.status}`);
     error.status = response.status;
+    error.data = text;
     throw error;
   }
 
   if (response.status === 204) return null;
-  return await response.json();
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 export const api = {
@@ -49,12 +63,13 @@ export const api = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
     }).then(async resp => {
+      const text = await resp.text();
       if (!resp.ok) {
-        let errText = '';
-        try { errText = (await resp.json()).detail || ''; } catch { errText = await resp.text(); }
+        let errText = text;
+        try { errText = JSON.parse(text).detail || text; } catch {}
         throw new Error(errText || `登录失败 (${resp.status})`);
       }
-      return resp.json();
+      return JSON.parse(text);
     });
   },
   register: (username, password) =>
@@ -85,19 +100,180 @@ export const api = {
   // 消息
   sendMessage: (data) => request('/messages/send', { method: 'POST', body: JSON.stringify(data) }),
   listConversations: () => request('/messages/conversations'),
-  getConversationMessages: (conversationId, limit = 50, offset = 0, afterId = null) => {
-    let url = `/messages/conversations/${conversationId}/messages?limit=${limit}&offset=${offset}`;
-    if (afterId !== null) {
-      url += `&after_id=${afterId}`;
-    }
-    return request(url);
-  },
+  getConversationMessages: (conversationId, limit = 50, offset = 0) => request(`/messages/conversations/${conversationId}/messages?limit=${limit}&offset=${offset}`),
   markConversationRead: (conversationId) => request(`/messages/${conversationId}/read`, { method: 'POST' }),
   togglePinConversation: (conversationId, pinned) => request(`/messages/${conversationId}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),
   deleteConversation: (conversationId) => request(`/messages/${conversationId}`, { method: 'DELETE' }),
 
   // 建议回复
   suggestReply: (query) => request('/agent/chat', { method: 'POST', body: JSON.stringify({ query }) }),
+
+  // 工作模式（指令执行）
+  workExecute: (conversationId, command, senderAgentId = null) => request('/work/execute', {
+    method: 'POST',
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      command: command,
+      sender_agent_id: senderAgentId
+    })
+  }),
+  getWorkLogs: (limit = 50) => request(`/work/logs?limit=${limit}`),
+
+  // 指挥官任务
+  commanderExecute: (conversationId, task, senderAgentId = null) => request('/commander/execute', {
+    method: 'POST',
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      task: task,
+      sender_agent_id: senderAgentId
+    })
+  }),
+
+  // 质量保障
+  submitFalsify: (title, detail, sourceId = null) => request('/quality/falsify', {
+    method: 'POST',
+    body: JSON.stringify({ title, detail, source_id: sourceId })
+  }),
+  listQualityIssues: (source = null, mine = false, limit = 50) => {
+    let url = `/quality/issues?limit=${limit}&mine=${mine}`;
+    if (source) url += `&source=${encodeURIComponent(source)}`;
+    return request(url);
+  },
+  getQualityStatistics: () => request('/quality/statistics'),
+  getRescuePool: (limit = 20) => request(`/quality/rescue-pool?limit=${limit}`),
+  triggerDebugScan: (sampleLimit = 20) => request(`/quality/debug/scan?sample_limit=${sampleLimit}`, { method: 'POST' }),
+
+  // 解救任务（旧表，保留兼容）
+  generateRescueTasks: (limit = 10) => request('/rescue/generate', { method: 'POST', body: JSON.stringify({ limit }) }),
+  listRescueTasks: (limit = 50) => request(`/rescue/tasks?limit=${limit}`),
+  getRescueTask: (taskId) => request(`/rescue/tasks/${taskId}`),
+  acceptRescueTask: (taskId, agentId = null) => request('/rescue/accept', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId, agent_id: agentId })
+  }),
+  analyzeRescueTask: (taskId, agentId = null, previousFailure = null) => request('/rescue/analyze', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId, agent_id: agentId, previous_failure: previousFailure })
+  }),
+  verifyRescueTask: (taskId) => request('/rescue/verify', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId })
+  }),
+  abandonRescueTask: (taskId) => request('/rescue/abandon', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId })
+  }),
+  getMyRescueTasks: (limit = 50) => request(`/rescue/my-tasks?limit=${limit}`),
+  getRescueStatistics: () => request('/rescue/statistics'),
+
+  // 云宠战役
+  listYunchongTasks: () => request('/yunchong/tasks'),
+  getYunchongRefreshInfo: () => request('/yunchong/refresh-info'),
+  refreshYunchongTasks: () => request('/yunchong/refresh', { method: 'POST' }),
+  getYunchongTask: (taskId) => request(`/yunchong/tasks/${taskId}`),
+  acceptYunchongTask: (taskId) => request('/yunchong/accept', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId })
+  }),
+  abandonYunchongTask: (taskId) => request('/yunchong/abandon', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId })
+  }),
+  analyzeYunchongTask: (taskId, agentId = null, previousFailure = null, useOfficial = true) => request('/yunchong/analyze', {
+    method: 'POST',
+    body: JSON.stringify({
+      task_id: taskId,
+      agent_id: agentId,
+      previous_failure: previousFailure,
+      use_official: useOfficial
+    })
+  }),
+  verifyYunchongTask: (taskId) => request('/yunchong/verify', {
+    method: 'POST',
+    body: JSON.stringify({ task_id: taskId })
+  }),
+  getYunchongOfficialUsage: () => request('/yunchong/official-agent/usage'),
+  getMyYunchongTasks: (limit = 50) => request(`/yunchong/my-tasks?limit=${limit}`),
+
+  // 宠物系统
+  getPetList: (limit = 100) => request(`/pet/list?limit=${limit}`),
+  getPet: (petId) => request(`/pet/${petId}`),
+  feedPet: (petId, expAmount = 10) => request('/pet/feed', {
+    method: 'POST',
+    body: JSON.stringify({ pet_id: petId, exp_amount: expAmount })
+  }),
+  evolvePet: (petId) => request('/pet/evolve', {
+    method: 'POST',
+    body: JSON.stringify({ pet_id: petId })
+  }),
+  strengthenPet: (petId, attribute = 'strength') => request('/pet/strengthen', {
+    method: 'POST',
+    body: JSON.stringify({ pet_id: petId, attribute })
+  }),
+  awakenPet: (petId) => request('/pet/awaken', {
+    method: 'POST',
+    body: JSON.stringify({ pet_id: petId })
+  }),
+  releasePet: (petId) => request('/pet/release', {
+    method: 'POST',
+    body: JSON.stringify({ pet_id: petId })
+  }),
+  getAllGameResources: () => request('/pet/resources/all'),
+  getPetStatistics: () => request('/pet/statistics/overview'),
+
+  // 基地系统
+  getBaseOverview: () => request('/base/overview'),
+  listBaseFacilities: () => request('/base/facilities'),
+  getBaseFacility: (facilityType) => request(`/base/facility/${encodeURIComponent(facilityType)}`),
+  getBaseUpgradeCost: (facilityType) => request(`/base/facility/${encodeURIComponent(facilityType)}/upgrade-cost`),
+  upgradeBaseFacility: (facilityType) => request('/base/upgrade', {
+    method: 'POST',
+    body: JSON.stringify({ facility_type: facilityType })
+  }),
+  collectBaseOutput: (facilityType) => request('/base/collect', {
+    method: 'POST',
+    body: JSON.stringify({ facility_type: facilityType })
+  }),
+  assignBaseCaptain: (facilityType, petId) => request('/base/assign-captain', {
+    method: 'POST',
+    body: JSON.stringify({ facility_type: facilityType, pet_id: petId })
+  }),
+  assignBaseMember: (facilityType, petId) => request('/base/assign-member', {
+    method: 'POST',
+    body: JSON.stringify({ facility_type: facilityType, pet_id: petId })
+  }),
+  removeBaseMember: (facilityType, petId) => request('/base/remove-member', {
+    method: 'POST',
+    body: JSON.stringify({ facility_type: facilityType, pet_id: petId })
+  }),
+
+  // 数据库备份
+  listBackups: () => request('/backup/list'),
+  createBackup: () => request('/backup/create', { method: 'POST' }),
+  cleanupBackups: () => request('/backup/cleanup', { method: 'POST' }),
+
+  // 新手引导
+  getOnboardingStatus: () => request('/onboarding/status'),
+  completeOnboardingStep: (action) => request('/onboarding/complete-step', { method: 'POST', body: JSON.stringify({ action }) }),
+  resetOnboarding: () => request('/onboarding/reset', { method: 'POST' }),
+
+  // 官方算力服务
+  getComputeBalance: () => request('/compute/balance'),
+  listComputeServices: () => request('/compute/services'),
+  getComputePricing: () => request('/compute/pricing'),
+  rechargeCompute: (pkg) => request('/compute/recharge', { method: 'POST', body: JSON.stringify({ package: pkg }) }),
+  exchangeCompute: (creditsAmount) => request('/compute/exchange', { method: 'POST', body: JSON.stringify({ credits_amount: creditsAmount }) }),
+  consumeCompute: (serviceKey, detail = '') => request('/compute/consume', { method: 'POST', body: JSON.stringify({ service_key: serviceKey, detail }) }),
+  getComputeTransactions: (limit = 50) => request(`/compute/transactions?limit=${limit}`),
+
+  // 记忆库
+  rememberMemory: (data) => request('/memory/remember', { method: 'POST', body: JSON.stringify(data) }),
+  recallMemory: (query, top_k = 5, memory_type = null) => request('/memory/recall', {
+    method: 'POST',
+    body: JSON.stringify({ query, top_k, memory_type })
+  }),
+  getMemoryByType: (memory_type, top_k = 5) => request(`/memory/type/${memory_type}?top_k=${top_k}`),
+  deleteMemory: (memoryId) => request(`/memory/${memoryId}`, { method: 'DELETE' }),
 
   // 积分
   getBalance: () => request('/credits/balance'),
@@ -141,6 +317,7 @@ export const api = {
   getGroupMembers: (group_id) => request(`/group/${group_id}/members`),
   getGroupCredits: (group_id) => request(`/group/${group_id}/credits`),
   removeGroupMember: (group_id, username_or_id) => request(`/group/${group_id}/remove-member`, { method: 'POST', body: JSON.stringify({ username_or_id }) }),
+  setGroupMode: (group_id, mode) => request(`/group/${group_id}/mode`, { method: 'POST', body: JSON.stringify({ mode }) }),
 
   // 转账红包
   transferCredits: (receiver_id, amount, message) => request('/transfer/transfer', { method: 'POST', body: JSON.stringify({ receiver_id, amount, message }) }),

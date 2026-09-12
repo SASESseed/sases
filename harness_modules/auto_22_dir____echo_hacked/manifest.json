@@ -1,0 +1,15 @@
+{
+  "id": "auto_22_dir____echo_hacked",
+  "name": "Auto Harness - dir && echo hacked",
+  "description": "自动生成的 Harness 模块，基于工作日志 #22。状态: blocked",
+  "version": "1.0.0",
+  "capabilities": [
+    "command_result"
+  ],
+  "permissions": [
+    "local_command"
+  ],
+  "entrypoint": "main.py",
+  "icon": null,
+  "node_type": "harness"
+}
