@@ -80,3 +80,14 @@ upload_pack.zip
 
 # Local build script
 build_benchmark.py
+
+# Training manifest test output
+test_manifest_output/
+
+# Training data (regenerable from success_kb.json)
+finetune_*.jsonl
+
+# Temp / local scripts
+新建 Python Script.py
+setup.bat
+setup.sh
