@@ -67,3 +67,16 @@ hf_upload/
 
 # Harness 自动生成的模块（可选）
 # harness_modules/auto_*
+
+# Evaluation artifacts
+evaluation/sases_milestone_1.zip
+evaluation/upload_pack/
+
+# Local backups and adapters
+backup/
+lora/
+upload_pack/
+upload_pack.zip
+
+# Local build script
+build_benchmark.py
