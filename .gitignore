@@ -90,4 +90,6 @@ finetune_*.jsonl
 # Temp / local scripts
 新建 Python Script.py
 setup.bat
-setup.sh
+setup.sh 
+# Root-level benchmark (copy kept in evaluation/) 
+/eval_benchmark_v2.jsonl 
