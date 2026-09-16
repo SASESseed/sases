@@ -21,13 +21,41 @@ MODEL = config.MODEL_NAME
 
 COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任务，你需要拆解为可执行的 Windows CMD 命令序列。
 
-规则：
+【工作目录】
+命令在项目根目录 C:\\Users\\xiaomai\\sases 下执行。
+
+【规则】
 1. 每个命令必须是单行的 Windows CMD 命令
 2. 最多 5 步
 3. 只输出 JSON 数组，格式：[{"step":1,"description":"...","command":"..."},...]
 4. 不要输出任何其他文字，不要用 markdown 代码块
 5. 禁止 uvicorn 等服务器启停命令
 6. 如果任务模糊，输出：[{"step":1,"description":"任务模糊","command":"echo 请提供更具体的任务说明"}]
+
+【跨步骤引用语法（重要）】
+如果后续步骤需要用到前面步骤的输出，用占位符 {{stepN}} 引用。
+例如：
+[
+  {"step": 1, "description": "定位文件", "command": "dir /s /b discover.js"},
+  {"step": 2, "description": "在找到的文件里搜索", "command": "findstr /n \\"function\\" {{step1}}"}
+]
+执行器会自动把 {{step1}} 替换为第 1 步的第一行输出。
+
+【常用命令】
+- 列出目录：dir <路径>
+- 查找文件：dir /s /b <文件名>
+- 查看文件内容：type <文件路径>
+- 在文件中搜索：findstr /n "关键词" <文件路径>
+- 只显示文件名：dir /b
+- 当前路径：cd
+- 当前用户：whoami
+
+【会话上下文】
+你会看到"最近的会话历史"，其中包含之前任务的消息。**如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。**
+
+【路径规则】
+- 已知项目结构：static/modules/ 放前端 JS，core/ 放后端 Python
+- 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
 """
 
 SUMMARY_SYSTEM_PROMPT = """请根据用户任务和执行结果，用一句话总结这次任务的结果。直接输出总结，不要任何前缀。"""
@@ -90,6 +118,54 @@ def pick_swarm_agents(user_id: int) -> tuple:
             executor_id = commander_id
 
     return commander_id, executor_id
+
+
+def _get_conversation_history(conversation_id: int, limit: int = 10) -> str:
+    """读取会话最近 N 条消息，格式化为文本上下文"""
+    if not conversation_id:
+        return ""
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            SELECT sender, content, sender_agent_id
+            FROM messages
+            WHERE conversation_id=?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (conversation_id, limit)
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+
+    if not rows:
+        return ""
+
+    rows.reverse()  # 按时间正序
+
+    lines = []
+    for r in rows:
+        content = (r.get("content") or "").strip()
+        # 跳过协议消息
+        if content.startswith("[TASK]:") or content.startswith("[STEP_DONE]:"):
+            continue
+        # 跳过空消息
+        if not content:
+            continue
+        # 截断过长内容
+        if len(content) > 200:
+            content = content[:200] + "..."
+
+        sender = r.get("sender", "?")
+        if sender == "user":
+            who = "用户"
+        else:
+            who = "AI"
+        lines.append(f"{who}: {content}")
+
+    if not lines:
+        return ""
+
+    return "\n".join(lines[-limit:])
 
 
 def _insert_message(conversation_id: int, content: str, sender_agent_id: Optional[str] = None):
@@ -166,10 +242,25 @@ async def plan_task(
         _insert_message(conversation_id, err_msg, sender_agent_id=None)
         return {"status": "no_agent", "message": "用户没有可用智能体"}
 
+    # 读取会话历史（在插入用户消息之前，避免包含自己）
+    history_text = _get_conversation_history(conversation_id, limit=10)
+
     _insert_message(conversation_id, user_input, sender_agent_id=None)
 
+    # 构造带上下文的 prompt
+    if history_text:
+        full_prompt = f"""【最近的会话历史】
+{history_text}
+
+【用户当前任务】
+{user_input}
+
+请根据上下文拆解为命令序列。"""
+    else:
+        full_prompt = user_input
+
     try:
-        raw = await _call_llm(user_input, COMMANDER_SYSTEM_PROMPT)
+        raw = await _call_llm(full_prompt, COMMANDER_SYSTEM_PROMPT)
     except Exception as e:
         err_msg = f"[SUMMARY]:任务拆解失败：{str(e)}"
         _insert_message(conversation_id, err_msg, sender_agent_id=commander_id)
@@ -177,7 +268,6 @@ async def plan_task(
 
     steps = _parse_plan(raw)
     if not steps:
-        # 拆解失败：生成一个"待反馈"的 task_id，让前端显示反馈按钮
         task_id = f"noplan_{int(time.time() * 1000)}"
         _pending[task_id] = {
             "user_id": user_id,
@@ -192,7 +282,6 @@ async def plan_task(
             "cancelled": True,
             "no_plan": True
         }
-        # 不往会话写 [SUMMARY]，让前端直接显示回复
         return {
             "status": "no_plan",
             "message": "无法拆解任务",
@@ -236,7 +325,6 @@ def cancel_task(task_id: str, user_id: int) -> Dict[str, Any]:
     if task["user_id"] != user_id:
         return {"status": "forbidden", "message": "无权取消该任务"}
 
-    # 如果已经是 no_plan 状态，直接返回
     if task.get("no_plan"):
         del _pending[task_id]
         return {"status": "cancelled", "task_id": task_id}
@@ -262,7 +350,6 @@ def submit_feedback(
     if task_id and task_id in _pending and _pending[task_id]["user_id"] == user_id:
         task = _pending[task_id]
         task["cancelled"] = True
-        # 只有真正在执行的 task 才往会话写取消消息；no_plan 的不写
         if not task.get("no_plan"):
             conv_id = task["conversation_id"]
             cmd_id = task["commander_id"]

@@ -1,5 +1,16 @@
 // static/modules/chat_ui.js
 
+// ========== HTML 转义 ==========
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ========== 指令消息渲染 ==========
 export function appendWorkMessage(role, content, senderName = null) {
   const messages = document.getElementById('chat-messages');
@@ -7,7 +18,7 @@ export function appendWorkMessage(role, content, senderName = null) {
 
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
-  wrapper.style.flexDirection = 'row'; // 显式指定，避免 CSS 覆盖
+  wrapper.style.flexDirection = 'row';
   wrapper.style.alignItems = 'flex-start';
   wrapper.style.margin = '8px 12px';
   if (role === 'user') {
@@ -39,11 +50,11 @@ export function appendWorkMessage(role, content, senderName = null) {
   if (role === 'user') {
     bubble.style.background = '#007aff';
     bubble.style.color = '#fff';
-    bubble.innerHTML = `<div style="font-weight:600;">💻 ${content}</div>`;
+    bubble.innerHTML = `<div style="font-weight:600;">💻 ${escapeHtml(content)}</div>`;
   } else {
     bubble.style.background = '#f0f0f0';
     bubble.style.color = '#333';
-    bubble.innerHTML = `<div style="font-weight:600; margin-bottom:6px;">📋 执行结果</div><pre style="margin:0; white-space:pre-wrap; word-break:break-word;">${content}</pre>`;
+    bubble.innerHTML = `<div style="font-weight:600; margin-bottom:6px;">📋 执行结果</div><pre style="margin:0; white-space:pre-wrap; word-break:break-word;">${escapeHtml(content)}</pre>`;
   }
 
   if (role === 'user') {
@@ -62,7 +73,7 @@ export function appendWorkMessage(role, content, senderName = null) {
 export function createMessageElement(role, content, senderName, messageId, timeIso, isPending = false, skipTimeTag = false, chatState = null) {
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
-  wrapper.style.flexDirection = 'row'; // 显式指定，避免 CSS 覆盖
+  wrapper.style.flexDirection = 'row';
   wrapper.style.alignItems = 'flex-start';
   wrapper.style.margin = '8px 12px';
   wrapper.dataset.messageId = messageId || '';
@@ -105,7 +116,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
   }
 
   if (role === 'user' && senderName && senderName !== '我') {
-    bubble.innerHTML = `<span style="font-weight:600;">${senderName}:</span> ${content}`;
+    bubble.innerHTML = `<span style="font-weight:600;">${escapeHtml(senderName)}:</span> ${escapeHtml(content)}`;
   } else {
     bubble.textContent = content;
   }

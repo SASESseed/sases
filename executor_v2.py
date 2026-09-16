@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import requests, time, json, sys, subprocess, datetime
+import requests, time, json, sys, subprocess, datetime, re
 
 BASE_URL = "http://127.0.0.1:8001"
 
@@ -21,7 +21,7 @@ def send_message(token, conv_id, content, agent_id):
         json={"conversation_id": conv_id, "content": content, "sender_agent_id": agent_id},
         headers={"Authorization": f"Bearer {token}"})
 
-def report_work(token, conv_id, command, output, status, duration_ms, agent_id):
+def #report_work(token, conv_id, command, output, status, duration_ms, agent_id):
     requests.post(f"{BASE_URL}/work/report",
         json={"conversation_id": conv_id, "command": command, "output": output,
               "status": status, "duration_ms": duration_ms, "sender_agent_id": agent_id},
@@ -30,7 +30,15 @@ def report_work(token, conv_id, command, output, status, duration_ms, agent_id):
 def execute_command(cmd, timeout=30):
     start = datetime.datetime.now()
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace"
+        )
         output = (result.stdout or "") + (result.stderr or "")
         status = "success" if result.returncode == 0 else "failed"
     except subprocess.TimeoutExpired:
@@ -39,6 +47,32 @@ def execute_command(cmd, timeout=30):
         output, status = f"命令执行异常: {e}", "error"
     dur = int((datetime.datetime.now() - start).total_seconds() * 1000)
     return output, status, dur
+
+
+def substitute_placeholders(cmd, previous_outputs):
+    """
+    替换命令中的 {{stepN}} 占位符
+    取第 N 步输出的第一行非空内容
+    """
+    if not previous_outputs:
+        return cmd
+
+    def replace_match(match):
+        step_num = int(match.group(1))
+        if step_num in previous_outputs:
+            output = previous_outputs[step_num]
+            # 取第一行非空内容
+            for line in output.split("\n"):
+                line = line.strip()
+                if line:
+                    return line
+        return match.group(0)  # 找不到就保留原样
+
+    # 支持 {{step1}} 和 {step1} 两种写法
+    cmd = re.sub(r'\{\{step(\d+)\}\}', replace_match, cmd)
+    cmd = re.sub(r'\{step(\d+)\}', replace_match, cmd)
+    return cmd
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 6:
@@ -78,16 +112,30 @@ if __name__ == "__main__":
             steps = task.get("steps", [])
             print(f"\n[执行者] 收到任务 {task_id}，共 {len(steps)} 步")
 
+            # 存储每步的输出，供后续步骤引用
+            previous_outputs = {}
+
             for step in steps:
                 step_id = step.get("step")
                 desc = step.get("description", "")
-                cmd = step.get("command", "")
+                cmd_raw = step.get("command", "")
+
+                # 替换占位符
+                cmd = substitute_placeholders(cmd_raw, previous_outputs)
+
                 print(f"  步骤 {step_id}: {desc}")
-                print(f"    命令: {cmd}")
+                if cmd != cmd_raw:
+                    print(f"    原命令: {cmd_raw}")
+                    print(f"    替换后: {cmd}")
+                else:
+                    print(f"    命令: {cmd}")
 
                 output, status, dur = execute_command(cmd)
                 print(f"    结果: {status} ({dur}ms)")
                 print(f"    输出: {output[:200]}")
+
+                # 保存本步输出
+                previous_outputs[step_id] = output
 
                 step_done = {
                     "task_id": task_id,
