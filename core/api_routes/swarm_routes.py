@@ -6,6 +6,7 @@ from typing import Optional
 from jose import jwt, JWTError
 
 from ..auth_service import SECRET_KEY
+from ..db import db_cursor
 from ..services import swarm_service
 
 router = APIRouter(prefix="/swarm", tags=["swarm"])
@@ -72,3 +73,102 @@ async def feedback(body: SwarmFeedbackRequest, user_id: int = Depends(get_curren
         note=body.note or ""
     )
     return result
+
+
+@router.get("/reviews")
+async def list_reviews(
+    limit: int = 50,
+    task_id: Optional[str] = None,
+    user_id: int = Depends(get_current_user)
+):
+    """查询审核日志：只返回当前用户所属会话的记录"""
+    if limit < 1:
+        limit = 1
+    if limit > 500:
+        limit = 500
+
+    with db_cursor() as cur:
+        if task_id:
+            cur.execute(
+                """
+                SELECT r.id, r.task_id, r.conversation_id, r.step_id,
+                       r.command, r.exec_status, r.review_result,
+                       r.review_reason, r.output_preview, r.created_at
+                FROM swarm_reviews r
+                JOIN conversations c ON r.conversation_id = c.id
+                WHERE c.user_id = ? AND r.task_id = ?
+                ORDER BY r.id DESC LIMIT ?
+                """,
+                (user_id, task_id, limit)
+            )
+        else:
+            cur.execute(
+                """
+                SELECT r.id, r.task_id, r.conversation_id, r.step_id,
+                       r.command, r.exec_status, r.review_result,
+                       r.review_reason, r.output_preview, r.created_at
+                FROM swarm_reviews r
+                JOIN conversations c ON r.conversation_id = c.id
+                WHERE c.user_id = ?
+                ORDER BY r.id DESC LIMIT ?
+                """,
+                (user_id, limit)
+            )
+        rows = [dict(r) for r in cur.fetchall()]
+
+    return {"reviews": rows, "count": len(rows)}
+
+
+@router.get("/reviews/stats")
+async def review_stats(user_id: int = Depends(get_current_user)):
+    """审核统计：按 exec_status 和 review_result 聚合"""
+    with db_cursor() as cur:
+        # 按执行状态统计
+        cur.execute(
+            """
+            SELECT r.exec_status, COUNT(*) as cnt
+            FROM swarm_reviews r
+            JOIN conversations c ON r.conversation_id = c.id
+            WHERE c.user_id = ?
+            GROUP BY r.exec_status
+            """,
+            (user_id,)
+        )
+        by_status = {row["exec_status"]: row["cnt"] for row in cur.fetchall()}
+
+        # 按审核结果统计
+        cur.execute(
+            """
+            SELECT r.review_result, COUNT(*) as cnt
+            FROM swarm_reviews r
+            JOIN conversations c ON r.conversation_id = c.id
+            WHERE c.user_id = ?
+            GROUP BY r.review_result
+            """,
+            (user_id,)
+        )
+        by_review = {row["review_result"]: row["cnt"] for row in cur.fetchall()}
+
+        # 最常失败的命令 Top 10
+        cur.execute(
+            """
+            SELECT r.command, COUNT(*) as cnt
+            FROM swarm_reviews r
+            JOIN conversations c ON r.conversation_id = c.id
+            WHERE c.user_id = ? AND r.review_result = 'retry'
+            GROUP BY r.command
+            ORDER BY cnt DESC
+            LIMIT 10
+            """,
+            (user_id,)
+        )
+        top_failed = [
+            {"command": row["command"], "count": row["cnt"]}
+            for row in cur.fetchall()
+        ]
+
+    return {
+        "by_exec_status": by_status,
+        "by_review_result": by_review,
+        "top_failed_commands": top_failed
+    }

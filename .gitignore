@@ -96,3 +96,6 @@ setup.sh
  
 # Harness auto-generated modules 
 harness_modules/ 
+
+echo test_reviews_api.zip >> .gitignore
+test_reviews_api.zip 

@@ -320,6 +320,10 @@ def init_db():
         _ensure_column(cur, "safety_memory", "tags", "TEXT")
         _ensure_column(cur, "safety_memory", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
         _ensure_column(cur, "safety_memory", "expires_at", "TEXT")
+        # 新增字段（记忆库重构 v0.15.0）
+        _ensure_column(cur, "safety_memory", "task_id", "TEXT")
+        _ensure_column(cur, "safety_memory", "embedding", "BLOB")
+        _ensure_column(cur, "safety_memory", "content_hash", "TEXT")
 
         # ========== 工作日志表 ==========
         cur.execute("""
@@ -585,6 +589,9 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_batch ON yunchong_tasks(batch_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_expires ON yunchong_tasks(expires_at)")
+        # 记忆库索引（v0.15.0）
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_task ON safety_memory(task_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_hash ON safety_memory(content_hash)")
 
 if __name__ == '__main__':
     init_db()

@@ -21,6 +21,7 @@ class RememberRequest(BaseModel):
     importance: float = 0.5
     full_data: Optional[dict] = None
     expires_at: Optional[str] = None
+    task_id: Optional[str] = None
 
 
 class RecallRequest(BaseModel):
@@ -51,7 +52,8 @@ async def remember(body: RememberRequest, user_id: int = Depends(get_current_use
         tags=body.tags,
         importance=body.importance,
         full_data=body.full_data,
-        expires_at=body.expires_at
+        expires_at=body.expires_at,
+        task_id=body.task_id
     )
     return {"memory_id": memory_id, "status": "remembered"}
 
