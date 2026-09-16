@@ -9,6 +9,7 @@ import openai
 
 from .. import config
 from ..db import db_cursor
+from . import memory_service
 
 client = openai.OpenAI(
     api_key=config.DEEPSEEK_API_KEY,
@@ -19,6 +20,7 @@ client = openai.OpenAI(
 
 MODEL = config.MODEL_NAME
 
+# ========== 修复 3：prompt 禁用 if ==========
 COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任务，你需要拆解为可执行的 Windows CMD 命令序列。
 
 【工作目录】
@@ -30,7 +32,8 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 3. 只输出 JSON 数组，格式：[{"step":1,"description":"...","command":"..."},...]
 4. 不要输出任何其他文字，不要用 markdown 代码块
 5. 禁止 uvicorn 等服务器启停命令
-6. 如果任务模糊，输出：[{"step":1,"description":"任务模糊","command":"echo 请提供更具体的任务说明"}]
+6. 禁止使用 if、for、while 等控制流语句，只用简单命令
+7. 如果任务模糊，输出：[{"step":1,"description":"任务模糊","command":"echo 请提供更具体的任务说明"}]
 
 【跨步骤引用语法（重要）】
 如果后续步骤需要用到前面步骤的输出，用占位符 {{stepN}} 引用。
@@ -51,7 +54,7 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 - 当前用户：whoami
 
 【会话上下文】
-你会看到"最近的会话历史"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。
+你会看到"最近的会话历史"和"相关历史经验"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。如果历史经验中有类似任务的成功拆解，可以参考。
 
 【路径规则】
 - 已知项目结构：static/modules/ 放前端 JS，core/ 放后端 Python
@@ -68,6 +71,7 @@ REPLAN_SYSTEM_PROMPT = """你是 SASES 指挥官。之前的命令执行失败�
 3. 每步一个命令，Windows CMD 单行命令
 4. 最多 5 步
 5. 禁止 uvicorn 等服务器启停命令
+6. 禁止使用 if、for、while 等控制流语句
 
 【重拆策略】
 - 如果失败原因是"文件找不到"：尝试用 dir /s /b 搜索相似文件名
@@ -97,31 +101,32 @@ ERROR_KEYWORDS = [
 
 COMMANDS_THAT_SHOULD_OUTPUT = ("dir", "ls", "type", "cat", "findstr", "grep", "find", "where")
 
+UNRECOVERABLE_KEYWORDS = ["找不到文件", "系统找不到", "文件不存在", "拒绝访问", "Access is denied"]
 
+
+# ========== 修复 2：review_step 处理 skipped ==========
 def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, str]:
     """审核员：判断单步是否通过，返回 (result, reason)"""
-    # 1. 明确失败
     if status in ("failed", "timeout", "error"):
         return "retry", f"命令状态: {status}"
 
-    # 1.5 被安全策略拦截
     if status == "blocked":
         return "retry", "命令被安全策略拒绝"
 
-    # 2. 输出含错误关键字
+    if status == "skipped":
+        return "retry", "跳过：依赖步骤失败"
+
     output_str = output or ""
     output_lower = output_str.lower()
     for kw in ERROR_KEYWORDS:
         if kw.lower() in output_lower:
             return "retry", f"输出含错误: {kw}"
 
-    # 3. 应有输出的命令，输出为空
     cmd = (step.get("command") or "").strip()
     cmd_first = cmd.split()[0].lower() if cmd.split() else ""
     if cmd_first in COMMANDS_THAT_SHOULD_OUTPUT and not output_str.strip():
         return "retry", "命令应有输出但为空"
 
-    # 4. 通过
     return "pass", ""
 
 
@@ -321,6 +326,8 @@ async def _call_llm(prompt: str, system_prompt: str = "", max_tokens: int = 500)
 
 
 def _parse_plan(raw: str) -> Optional[List[Dict[str, Any]]]:
+    if not raw:
+        return None
     raw = raw.strip()
     if raw.startswith("```"):
         lines = raw.split("\n")
@@ -363,18 +370,42 @@ async def plan_task(
 
     history_text = _get_conversation_history(conversation_id, limit=10)
 
+    # ========== 读取相关记忆 ==========
+    memory_text = ""
+    try:
+        memories = memory_service.recall(
+            user_id=user_id,
+            query=user_input,
+            top_k=2
+        )
+        memories = memories[:2]
+        if memories:
+            lines = []
+            for m in memories:
+                content = (m.get("content") or "").replace("\n", " ")[:120]
+                lines.append(f"- {content}")
+            memory_text = "\n".join(lines)
+            print(f"[swarm] 检索到 {len(memories)} 条相关记忆")
+        else:
+            print(f"[swarm] 检索到 0 条相关记忆")
+    except Exception as e:
+        print(f"[swarm] 记忆检索失败: {e}")
+
     _insert_message(conversation_id, user_input, sender_agent_id=None)
 
+    # 构造 prompt
+    prompt_parts = []
+    if memory_text:
+        prompt_parts.append(f"【相关历史经验（仅供参考）】\n{memory_text}")
     if history_text:
-        full_prompt = f"""【最近的会话历史】
-{history_text}
-
-【用户当前任务】
-{user_input}
-
-请根据上下文拆解为命令序列。"""
-    else:
-        full_prompt = user_input
+        prompt_parts.append(f"【最近的会话历史】\n{history_text}")
+    prompt_parts.append(f"【用户当前任务】\n{user_input}")
+    prompt_parts.append(
+        "请拆解为命令序列。\n"
+        "必须只输出 JSON 数组，格式：[{\"step\":1,\"description\":\"...\",\"command\":\"...\"}]\n"
+        "不要输出任何其他文字，不要用 markdown 代码块。"
+    )
+    full_prompt = "\n\n".join(prompt_parts)
 
     try:
         raw = await _call_llm(full_prompt, COMMANDER_SYSTEM_PROMPT)
@@ -385,6 +416,7 @@ async def plan_task(
 
     steps = _parse_plan(raw)
     if not steps:
+        print(f"[swarm] 拆解失败，LLM 原始返回: {raw[:500]!r}")
         task_id = f"noplan_{int(time.time() * 1000)}"
         _pending[task_id] = {
             "user_id": user_id,
@@ -506,12 +538,10 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
     if not failed_info:
         return None
 
-    # 判断是否为不可恢复错误
-    unrecoverable_keywords = ["找不到文件", "系统找不到", "文件不存在", "拒绝访问", "Access is denied"]
     all_unrecoverable = True
     for f in failed_info:
         output = (f.get("output_preview") or "") + (f.get("failure_reason") or "")
-        if not any(kw in output for kw in unrecoverable_keywords):
+        if not any(kw in output for kw in UNRECOVERABLE_KEYWORDS):
             all_unrecoverable = False
             break
 
@@ -532,6 +562,7 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
 2. 格式：[{{"step":1,"description":"...","command":"..."}}]
 3. 如果是"文件找不到"，请先尝试搜索类似文件名
 4. 用 {{{{stepN}}}} 引用前序步骤的输出
+5. 禁止使用 if、for、while 等控制流语句
 
 只输出 JSON 数组，现在开始："""
 
@@ -601,6 +632,26 @@ async def handle_step_done(
 
     print(f"[swarm] step {step_id} 审核: {review_result} | {review_reason}")
 
+    # ========== 单步失败时写失败记忆 ==========
+    if review_result == "retry":
+        try:
+            fail_cmd = original_step.get("command", "")
+            fail_content = (
+                f"命令「{fail_cmd[:150]}」执行失败。\n"
+                f"失败原因：{review_reason}"
+            )
+            memory_service.remember(
+                user_id=task["user_id"],
+                memory_type="failure_pattern",
+                content=fail_content,
+                task_id=task_id,
+                importance=0.5,
+                tags="failure,swarm"
+            )
+            print(f"[swarm] 失败记忆已写入")
+        except Exception as e:
+            print(f"[swarm] 写失败记忆失败: {e}")
+
     # 审核日志入库
     try:
         _log_review(
@@ -618,7 +669,6 @@ async def handle_step_done(
 
     # 全部完成
     if len(task["done"]) >= len(task["steps"]):
-        # 检查失败/拦截
         failed = [r for r in task["results"] if r.get("review") == "retry"]
         blocked = [r for r in task["results"] if r.get("status") == "blocked"]
 
@@ -661,6 +711,29 @@ async def handle_step_done(
         else:
             if failed:
                 print(f"[swarm] 重试次数已达上限，标记失败并汇总")
+            else:
+                # 全部通过 → 写成功记忆
+                try:
+                    steps_desc = "\n".join(
+                        f"  {r['step']}. {r.get('command', '')[:80]}"
+                        for r in task["results"]
+                    )
+                    success_content = (
+                        f"任务「{task['user_text']}」成功完成。\n"
+                        f"使用命令：\n{steps_desc}"
+                    )
+                    memory_service.remember(
+                        user_id=task["user_id"],
+                        memory_type="task_result",
+                        content=success_content,
+                        task_id=task_id,
+                        importance=0.6,
+                        tags="success,swarm"
+                    )
+                    print(f"[swarm] 成功记忆已写入")
+                except Exception as e:
+                    print(f"[swarm] 写成功记忆失败: {e}")
+
             summary = await _summarize(task["user_text"], task["results"])
             summary_msg = f"[SUMMARY]:{summary}"
             _insert_message(conversation_id, summary_msg, sender_agent_id=task["commander_id"])

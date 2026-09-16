@@ -141,6 +141,11 @@ def substitute_placeholders(cmd, previous_outputs):
     return cmd
 
 
+def has_unresolved_placeholder(cmd):
+    """检查命令中是否还有未替换的占位符"""
+    return bool(re.search(r'\{\{?step\d+\}?\}', cmd))
+
+
 def handle_task(token, conv_id, executor_id, task):
     task_id = task.get("task_id")
     steps = task.get("steps", [])
@@ -159,6 +164,22 @@ def handle_task(token, conv_id, executor_id, task):
         if cmd != cmd_raw:
             print(f"    原命令: {cmd_raw}")
             print(f"    替换后: {cmd}")
+
+        # ========== 检查依赖步骤是否失败 ==========
+        if has_unresolved_placeholder(cmd):
+            print(f"    ⚠️ 占位符未替换，依赖步骤失败，跳过本步")
+            step_done = {
+                "task_id": task_id,
+                "step": step_id,
+                "description": desc,
+                "status": "skipped",
+                "output": "跳过：依赖的步骤失败（占位符未替换）",
+                "duration_ms": 0
+            }
+            send_message(token, conv_id,
+                "[STEP_DONE]:" + json.dumps(step_done, ensure_ascii=False),
+                executor_id)
+            continue
 
         # ========== 安全检查 ==========
         is_safe, reason = is_command_safe(cmd)

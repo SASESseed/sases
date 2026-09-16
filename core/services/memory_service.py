@@ -10,6 +10,7 @@ from .local_embedding import LocalEmbedding
 # ========== Embedding 单例 ==========
 _embedder = None
 
+
 def _get_embedder():
     global _embedder
     if _embedder is None:
@@ -19,9 +20,11 @@ def _get_embedder():
 
 # ========== 常量 ==========
 DEDUP_SIMILARITY_THRESHOLD = 0.95       # 语义去重阈值
-RECALL_SIMILARITY_THRESHOLD = 0.65      # 检索最低相似度（BGE 中文模型分布集中，需提高）
+RECALL_SIMILARITY_THRESHOLD = 0.55      # 检索最低相似度
 MAX_CANDIDATES = 200                    # 单次检索候选上限
 
+
+# ========== 内部工具 ==========
 
 def _compute_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -54,6 +57,8 @@ def _cosine_sim(a, b) -> float:
     return float(np.dot(a, b) / (na * nb))
 
 
+# ========== 核心接口 ==========
+
 def remember(
     user_id: int,
     memory_type: str,
@@ -67,11 +72,11 @@ def remember(
     task_id: str = None,
     enable_dedup: bool = True
 ) -> int:
-    """写入一条安全记忆（带语义去重）"""
+    """写入一条安全记忆（带 hash + 语义双层去重）"""
     full_data_json = json.dumps(full_data, ensure_ascii=False) if full_data else None
     content_hash = _compute_hash(content)
 
-    # 1. Hash 去重
+    # 1. Hash 精确去重
     if enable_dedup:
         with db_cursor() as cur:
             cur.execute(
@@ -96,16 +101,16 @@ def remember(
 
     # 3. 语义去重
     if enable_dedup and emb is not None:
-        query_vec = np.asarray(emb, dtype=np.float32).flatten()
         with db_cursor() as cur:
             cur.execute(
                 "SELECT id, embedding FROM safety_memory WHERE user_id=? AND memory_type=? AND embedding IS NOT NULL LIMIT ?",
                 (user_id, memory_type, MAX_CANDIDATES)
             )
             rows = cur.fetchall()
+        query_emb = np.asarray(emb, dtype=np.float32).flatten()
         for row in rows:
             old_emb = _blob_to_embed(row["embedding"])
-            sim = _cosine_sim(query_vec, old_emb)
+            sim = _cosine_sim(query_emb, old_emb)
             if sim >= DEDUP_SIMILARITY_THRESHOLD:
                 with db_cursor(commit=True) as cur2:
                     cur2.execute(
