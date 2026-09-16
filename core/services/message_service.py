@@ -1,11 +1,12 @@
 # core/services/message_service.py
 import base64
+import json
 import httpx
 from datetime import datetime
 from typing import Optional
 from ..db import db_cursor
 from ..security import decrypt_api_key, normalize_provider
-from . import work_service  # 用于自由模式下的指令执行
+from . import work_service
 
 # ---------- 会话相关 ----------
 
@@ -45,7 +46,6 @@ def create_conversation(user_id: int, agent_id: str = None, title: str = "新会
         return cur.lastrowid
 
 def get_messages(user_id: int, conversation_id: int, limit: int = 50, offset: int = 0, after_id: Optional[int] = None):
-    """获取会话消息，支持分页和增量拉取"""
     with db_cursor() as cur:
         cur.execute("SELECT id FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
         if not cur.fetchone():
@@ -153,6 +153,93 @@ async def send_message(
     sender_agent_id: str = None,
     mode: str = "normal"
 ):
+    print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
+
+    # ========== 自然语言意图分流 ==========
+    if (
+        mode in ("normal", "free")
+        and content
+        and content.strip()
+        and not content.startswith("[")
+        and not content.startswith("执行：")
+    ):
+        try:
+            from . import intent_service, swarm_service
+
+            is_task = await intent_service.is_task_intent(content)
+            print(f"[MSG_DEBUG] is_task={is_task}")
+
+            if is_task:
+                if not conversation_id:
+                    title = "蜂群任务"
+                    if agent_id:
+                        with db_cursor() as cur:
+                            cur.execute("SELECT name FROM model_configs WHERE id=?", (agent_id,))
+                            row = cur.fetchone()
+                            if row:
+                                title = row["name"]
+                    conversation_id = create_conversation(user_id, agent_id, title)
+
+                plan_result = await swarm_service.plan_task(
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    user_input=content
+                )
+                print(f"[MSG_DEBUG] plan_result={plan_result}")
+
+                status = plan_result.get("status", "")
+                if status == "planned":
+                    reply = "已启动执行，请稍候…"
+                elif status == "no_plan":
+                    reply = "没有识别出可执行的命令。如果这不是任务，请点下方按钮。"
+                elif status == "no_agent":
+                    reply = "未找到可用智能体，请先在模型管理中创建。"
+                else:
+                    reply = "执行失败，请重试。"
+
+                return {
+                    "conversation_id": conversation_id,
+                    "user_message": content,
+                    "assistant_reply": reply,
+                    "agent_id": agent_id,
+                    "sender_agent_id": sender_agent_id,
+                    "mode": mode,
+                    "swarm": True,
+                    "swarm_status": status,
+                    "task_id": plan_result.get("task_id")
+                }
+        except Exception as e:
+            import traceback
+            print(f"[MSG_DEBUG] 分流异常: {e}")
+            traceback.print_exc()
+
+    # ========== 蜂群模式：执行者汇报 [STEP_DONE] ==========
+    if content.startswith("[STEP_DONE]:") and sender_agent_id:
+        try:
+            step_payload = json.loads(content[len("[STEP_DONE]:"):])
+        except json.JSONDecodeError:
+            return {"status": "error", "message": "步骤汇报格式错误"}
+
+        with db_cursor(commit=True) as cur:
+            cur.execute(
+                "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
+                (conversation_id, content, sender_agent_id)
+            )
+            cur.execute(
+                "UPDATE conversations SET updated_at=? WHERE id=?",
+                (datetime.now().isoformat(), conversation_id)
+            )
+
+        from . import swarm_service
+        swarm_result = await swarm_service.handle_step_done(conversation_id, step_payload, sender_agent_id)
+
+        return {
+            "status": "step_received",
+            "conversation_id": conversation_id,
+            "sender_agent_id": sender_agent_id,
+            "swarm": swarm_result
+        }
+
     # ========== 自由模式下执行指令 ==========
     if mode == "free" and content.startswith("执行："):
         command = content.replace("执行：", "", 1).strip()

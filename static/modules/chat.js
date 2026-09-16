@@ -34,7 +34,6 @@ function handleSend() {
   if (!text) return;
 
   if (chatState.mode === 'free') {
-    // 支持全角：和半角:
     const execMatch = text.match(/^执行[：:]\s*(.+)$/);
     if (execMatch) {
       const command = execMatch[1].trim();
@@ -97,13 +96,134 @@ async function sendMessage() {
     updateMessageStatus(tempId, 'sent');
     appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
 
-    // 上报新手引导动作：发送第一条消息（Day 1）
+    // 蜂群任务：显示操作按钮
+    if (data.swarm && data.task_id) {
+      showSwarmActionButtons(data.task_id, text, data.swarm_status);
+    }
+
     if (typeof window.onboarding?.report === 'function') {
       window.onboarding.report('send_message');
     }
   } catch (err) {
     updateMessageStatus(tempId, 'failed');
   }
+}
+
+// ========== 蜂群任务操作按钮（取消 + 误判反馈） ==========
+function showSwarmActionButtons(taskId, originalInput, swarmStatus) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex';
+  wrap.style.justifyContent = 'center';
+  wrap.style.gap = '10px';
+  wrap.style.margin = '6px 12px';
+  wrap.id = `swarm-actions-${taskId}`;
+
+  // —— 取消按钮（只在真正执行时显示） ——
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '⏹ 取消执行';
+  cancelBtn.style.padding = '6px 16px';
+  cancelBtn.style.fontSize = '13px';
+  cancelBtn.style.border = '1px solid #ff3b30';
+  cancelBtn.style.color = '#ff3b30';
+  cancelBtn.style.background = '#fff';
+  cancelBtn.style.borderRadius = '16px';
+  cancelBtn.style.cursor = 'pointer';
+  cancelBtn.style.transition = 'all 0.2s';
+  cancelBtn.onmouseenter = () => { cancelBtn.style.background = '#fff5f5'; };
+  cancelBtn.onmouseleave = () => { cancelBtn.style.background = '#fff'; };
+
+  cancelBtn.onclick = async () => {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = '已取消';
+    cancelBtn.style.color = '#999';
+    cancelBtn.style.borderColor = '#999';
+    cancelBtn.style.cursor = 'default';
+    try {
+      const token = localStorage.getItem('sases_token');
+      await fetch('/swarm/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ task_id: taskId })
+      });
+    } catch (e) {
+      console.error('取消失败', e);
+    }
+    setTimeout(() => {
+      if (wrap.parentNode) wrap.remove();
+    }, 1500);
+  };
+
+  // —— 误判反馈按钮（始终显示） ——
+  const feedbackBtn = document.createElement('button');
+  feedbackBtn.textContent = '❌ 这不是任务';
+  feedbackBtn.style.padding = '6px 16px';
+  feedbackBtn.style.fontSize = '13px';
+  feedbackBtn.style.border = '1px solid #888';
+  feedbackBtn.style.color = '#666';
+  feedbackBtn.style.background = '#fff';
+  feedbackBtn.style.borderRadius = '16px';
+  feedbackBtn.style.cursor = 'pointer';
+  feedbackBtn.style.transition = 'all 0.2s';
+  feedbackBtn.onmouseenter = () => { feedbackBtn.style.background = '#f5f5f5'; };
+  feedbackBtn.onmouseleave = () => { feedbackBtn.style.background = '#fff'; };
+
+  feedbackBtn.onclick = async () => {
+    feedbackBtn.disabled = true;
+    feedbackBtn.textContent = '已记录';
+    feedbackBtn.style.color = '#999';
+    feedbackBtn.style.borderColor = '#ccc';
+    feedbackBtn.style.cursor = 'default';
+
+    // 取消按钮也一并置灰（如果在）
+    if (cancelBtn.parentNode) {
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = '已取消';
+      cancelBtn.style.color = '#ccc';
+      cancelBtn.style.borderColor = '#ccc';
+      cancelBtn.style.cursor = 'default';
+    }
+
+    try {
+      const token = localStorage.getItem('sases_token');
+      await fetch('/swarm/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          task_id: taskId,
+          original_input: originalInput,
+          feedback_type: 'false_positive'
+        })
+      });
+    } catch (e) {
+      console.error('反馈失败', e);
+    }
+    setTimeout(() => {
+      if (wrap.parentNode) wrap.remove();
+    }, 1500);
+  };
+
+  // 组装：只有 planned 状态才显示"取消执行"
+  if (swarmStatus === 'planned') {
+    wrap.appendChild(cancelBtn);
+  }
+  wrap.appendChild(feedbackBtn);
+
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+
+  // 10 秒后自动消失
+  setTimeout(() => {
+    if (wrap.parentNode) wrap.remove();
+  }, 10000);
 }
 
 function handleBack() {

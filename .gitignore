@@ -93,3 +93,6 @@ setup.bat
 setup.sh 
 # Root-level benchmark (copy kept in evaluation/) 
 /eval_benchmark_v2.jsonl 
+ 
+# Harness auto-generated modules 
+harness_modules/ 

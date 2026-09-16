@@ -10,6 +10,7 @@ from .db import init_db, db_cursor
 from .services import memory_service
 from .services import debug_service
 from .services import rescue_service
+from .services import swarm_service
 from . import backup_service
 from .api_routes import (
     auth_routes,
@@ -44,6 +45,7 @@ from .api_routes import (
     onboarding_routes,
     compute_routes,
     yunchong_routes,
+    swarm_routes,
 )
 
 
@@ -66,7 +68,7 @@ async def periodic_summary_task():
 
 
 async def periodic_rescue_maintenance():
-    """每5分钟回收超时任务"""
+    """每 5 分钟回收超时任务"""
     while True:
         try:
             reclaim_result = await asyncio.to_thread(rescue_service.reclaim_expired_tasks, 30)
@@ -145,6 +147,7 @@ def create_app() -> FastAPI:
     app.include_router(onboarding_routes.router)
     app.include_router(compute_routes.router)
     app.include_router(yunchong_routes.router)
+    app.include_router(swarm_routes.router)
 
     @app.get("/static/index.html", response_class=HTMLResponse)
     async def serve_index():
