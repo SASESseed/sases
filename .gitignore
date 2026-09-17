@@ -79,9 +79,6 @@ lora/
 upload_pack/
 upload_pack.zip
 
-# Local build script
-build_benchmark.py
-
 # Training manifest test output
 test_manifest_output/
 
@@ -98,3 +95,9 @@ setup.sh
 
 # Test artifacts
 test_reviews_api.zip
+
+# Archived scripts (not tracked)
+archive_v1/
+
+# Script output
+scripts/*/output/
