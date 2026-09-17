@@ -6,15 +6,10 @@ BASE_URL = "http://127.0.0.1:8001"
 # ========== 安全配置 ==========
 
 ALLOWED_COMMANDS = {
-    # 目录
     "dir", "ls", "tree",
-    # 文件内容
     "type", "cat", "head", "tail",
-    # 搜索
     "findstr", "find", "grep", "where",
-    # 系统信息
     "echo", "pwd", "cd", "whoami", "hostname",
-    # 统计
     "wc",
 }
 
@@ -25,43 +20,29 @@ DEFAULT_TIMEOUT = 30
 
 
 def is_command_safe(cmd):
-    """检查命令是否安全，返回 (is_safe, reason)"""
     if not cmd or not cmd.strip():
         return False, "命令为空"
-
-    # 1. 危险字符检查
     for ch in DANGEROUS_CHARS:
         if ch in cmd:
             return False, f"包含禁止字符: {repr(ch)}"
-
-    # 2. 按管道符拆分，逐段检查
     parts = [p.strip() for p in cmd.split('|')]
     if any(not p for p in parts):
         return False, "存在空的管道段"
-
     for part in parts:
         tokens = part.split()
         if not tokens:
             continue
-
         base = tokens[0].lower()
-
-        # 去掉路径前缀（拒绝带路径的命令）
         if '\\' in base or '/' in base:
             return False, f"命令含路径: {base}"
-
-        # 去掉 .exe/.bat/.cmd 后缀
         if base.endswith('.exe') or base.endswith('.bat') or base.endswith('.cmd'):
             base = base.rsplit('.', 1)[0]
-
         if base not in ALLOWED_COMMANDS:
             return False, f"命令不在白名单: {base}"
-
     return True, ""
 
 
 def smart_decode(raw_bytes):
-    """智能解码：依次尝试 utf-8、gbk、latin-1"""
     if not raw_bytes:
         return ""
     for enc in ["utf-8", "gbk", "latin-1"]:
@@ -97,10 +78,7 @@ def execute_command(cmd, timeout=DEFAULT_TIMEOUT):
     start = datetime.datetime.now()
     try:
         result = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            timeout=timeout
+            cmd, shell=True, capture_output=True, timeout=timeout
         )
         output = smart_decode(result.stdout or b"") + smart_decode(result.stderr or b"")
         status = "success" if result.returncode == 0 else "failed"
@@ -109,12 +87,38 @@ def execute_command(cmd, timeout=DEFAULT_TIMEOUT):
     except Exception as e:
         output, status = f"命令执行异常: {e}", "error"
 
-    # 输出长度限制
     if len(output) > MAX_OUTPUT_LENGTH:
         output = output[:MAX_OUTPUT_LENGTH] + f"\n... (已截断，原长 {len(output)} 字符)"
 
     dur = int((datetime.datetime.now() - start).total_seconds() * 1000)
     return output, status, dur
+
+
+def call_harness(token, module_id, params):
+    """调用后端 Harness 接口"""
+    start = datetime.datetime.now()
+    try:
+        resp = requests.post(
+            f"{BASE_URL}/harness/execute",
+            json={"module_id": module_id, "params": params},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30
+        )
+        dur = int((datetime.datetime.now() - start).total_seconds() * 1000)
+        if resp.status_code != 200:
+            return f"Harness 调用失败 ({resp.status_code}): {resp.text[:200]}", "failed", dur
+
+        data = resp.json()
+        result = data.get("result", {})
+        if isinstance(result, dict):
+            if result.get("success") is False:
+                return f"Harness 失败: {result.get('error', '')}", "failed", dur
+            output = result.get("text") or json.dumps(result, ensure_ascii=False)
+            return output[:MAX_OUTPUT_LENGTH], "success", dur
+        return str(result)[:MAX_OUTPUT_LENGTH], "success", dur
+    except Exception as e:
+        dur = int((datetime.datetime.now() - start).total_seconds() * 1000)
+        return f"Harness 调用异常: {e}", "error", dur
 
 
 def substitute_placeholders(cmd, previous_outputs):
@@ -141,11 +145,6 @@ def substitute_placeholders(cmd, previous_outputs):
     return cmd
 
 
-def has_unresolved_placeholder(cmd):
-    """检查命令中是否还有未替换的占位符"""
-    return bool(re.search(r'\{\{?step\d+\}?\}', cmd))
-
-
 def handle_task(token, conv_id, executor_id, task):
     task_id = task.get("task_id")
     steps = task.get("steps", [])
@@ -156,47 +155,58 @@ def handle_task(token, conv_id, executor_id, task):
     for step in steps:
         step_id = step.get("step")
         desc = step.get("description", "")
-        cmd_raw = step.get("command", "")
+        step_type = step.get("type", "command")
 
-        cmd = substitute_placeholders(cmd_raw, previous_outputs)
+        if step_type == "harness":
+            # ========== Harness 步骤 ==========
+            module_id = step.get("module_id", "")
+            params = step.get("params", {})
+            print(f"  步骤 {step_id}: {desc}")
+            print(f"    [Harness] {module_id}({params})")
 
-        print(f"  步骤 {step_id}: {desc}")
-        if cmd != cmd_raw:
-            print(f"    原命令: {cmd_raw}")
-            print(f"    替换后: {cmd}")
-
-        # ========== 检查依赖步骤是否失败 ==========
-        if has_unresolved_placeholder(cmd):
-            print(f"    ⚠️ 占位符未替换，依赖步骤失败，跳过本步")
-            step_done = {
-                "task_id": task_id,
-                "step": step_id,
-                "description": desc,
-                "status": "skipped",
-                "output": "跳过：依赖的步骤失败（占位符未替换）",
-                "duration_ms": 0
-            }
-            send_message(token, conv_id,
-                "[STEP_DONE]:" + json.dumps(step_done, ensure_ascii=False),
-                executor_id)
-            continue
-
-        # ========== 安全检查 ==========
-        is_safe, reason = is_command_safe(cmd)
-        if not is_safe:
-            print(f"    ⛔ 命令被拒绝: {reason}")
-            output = f"命令被安全策略拒绝: {reason}"
-            status = "blocked"
-            dur = 0
-        else:
-            print(f"    命令: {cmd}")
-            output, status, dur = execute_command(cmd)
+            output, status, dur = call_harness(token, module_id, params)
             print(f"    结果: {status} ({dur}ms)")
             print(f"    输出: {output[:200]}")
+        else:
+            # ========== 命令步骤 ==========
+            cmd_raw = step.get("command", "")
+            cmd = substitute_placeholders(cmd_raw, previous_outputs)
 
-        # 只有执行成功才记录输出（供后续步骤引用）
-        if status == "success":
-            previous_outputs[step_id] = output
+            print(f"  步骤 {step_id}: {desc}")
+
+            if "{{step" in cmd or "{step" in cmd:
+                print(f"    ⚠️ 占位符未替换，依赖步骤失败，跳过本步")
+                step_done = {
+                    "task_id": task_id,
+                    "step": step_id,
+                    "description": desc,
+                    "status": "skipped",
+                    "output": "跳过：依赖的步骤失败（占位符未替换）",
+                    "duration_ms": 0
+                }
+                send_message(token, conv_id,
+                    "[STEP_DONE]:" + json.dumps(step_done, ensure_ascii=False),
+                    executor_id)
+                continue
+
+            if cmd != cmd_raw:
+                print(f"    原命令: {cmd_raw}")
+                print(f"    替换后: {cmd}")
+
+            is_safe, reason = is_command_safe(cmd)
+            if not is_safe:
+                print(f"    ⛔ 命令被拒绝: {reason}")
+                output = f"命令被安全策略拒绝: {reason}"
+                status = "blocked"
+                dur = 0
+            else:
+                print(f"    命令: {cmd}")
+                output, status, dur = execute_command(cmd)
+                print(f"    结果: {status} ({dur}ms)")
+                print(f"    输出: {output[:200]}")
+
+            if status == "success":
+                previous_outputs[step_id] = output
 
         step_done = {
             "task_id": task_id,
@@ -225,6 +235,7 @@ if __name__ == "__main__":
     token = login(username, password)
     print("执行者已登录，等待任务...")
     print(f"安全策略: 白名单 {len(ALLOWED_COMMANDS)} 条命令，禁止字符 {len(DANGEROUS_CHARS)} 个")
+    print(f"支持步骤类型: command / harness")
 
     last_id = 0
     msgs = get_new_messages(token, conv_id, 0)

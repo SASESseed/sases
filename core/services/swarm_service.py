@@ -20,7 +20,6 @@ client = openai.OpenAI(
 
 MODEL = config.MODEL_NAME
 
-# ========== 修复 3：prompt 禁用 if ==========
 COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任务，你需要拆解为可执行的 Windows CMD 命令序列。
 
 【工作目录】
@@ -32,7 +31,7 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 3. 只输出 JSON 数组，格式：[{"step":1,"description":"...","command":"..."},...]
 4. 不要输出任何其他文字，不要用 markdown 代码块
 5. 禁止 uvicorn 等服务器启停命令
-6. 禁止使用 if、for、while 等控制流语句，只用简单命令
+6. 禁止使用 if 条件语句，只用简单命令
 7. 如果任务模糊，输出：[{"step":1,"description":"任务模糊","command":"echo 请提供更具体的任务说明"}]
 
 【跨步骤引用语法（重要）】
@@ -53,8 +52,13 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 - 当前路径：cd
 - 当前用户：whoami
 
+【可用 Harness 工具】
+- web_fetch：抓取网页文本。当用户要求"抓取网页"、"获取网页内容"、"查看某个链接"时使用。
+  格式：{"step":1,"type":"harness","module_id":"web_fetch","params":{"url":"https://..."},"description":"抓取网页"}
+  注意：harness 类型的步骤不需要 command 字段，而是用 type/module_id/params 三个字段。
+
 【会话上下文】
-你会看到"最近的会话历史"和"相关历史经验"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。如果历史经验中有类似任务的成功拆解，可以参考。
+你会看到"最近的会话历史"和"相关历史经验"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。
 
 【路径规则】
 - 已知项目结构：static/modules/ 放前端 JS，core/ 放后端 Python
@@ -71,7 +75,6 @@ REPLAN_SYSTEM_PROMPT = """你是 SASES 指挥官。之前的命令执行失败�
 3. 每步一个命令，Windows CMD 单行命令
 4. 最多 5 步
 5. 禁止 uvicorn 等服务器启停命令
-6. 禁止使用 if、for、while 等控制流语句
 
 【重拆策略】
 - 如果失败原因是"文件找不到"：尝试用 dir /s /b 搜索相似文件名
@@ -104,9 +107,7 @@ COMMANDS_THAT_SHOULD_OUTPUT = ("dir", "ls", "type", "cat", "findstr", "grep", "f
 UNRECOVERABLE_KEYWORDS = ["找不到文件", "系统找不到", "文件不存在", "拒绝访问", "Access is denied"]
 
 
-# ========== 修复 2：review_step 处理 skipped ==========
 def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, str]:
-    """审核员：判断单步是否通过，返回 (result, reason)"""
     if status in ("failed", "timeout", "error"):
         return "retry", f"命令状态: {status}"
 
@@ -271,6 +272,8 @@ def _get_conversation_history(conversation_id: int, limit: int = 10) -> str:
             continue
         if content.startswith("[RETRY_TASK]:"):
             continue
+        if content.startswith("[TASK_DRAFT]:"):
+            continue
         if not content:
             continue
         if len(content) > 200:
@@ -356,8 +359,10 @@ async def plan_task(
     user_input: str,
     commander_id: str = None,
     executor_id: str = None,
-    timeout: int = 30
+    timeout: int = 30,
+    require_confirmation: bool = False
 ) -> Dict[str, Any]:
+    """指挥官拆解任务。require_confirmation=True 时发 [TASK_DRAFT]，等待用户确认。"""
     if not commander_id or not executor_id:
         auto_cmd, auto_exec = pick_swarm_agents(user_id)
         commander_id = commander_id or auto_cmd
@@ -370,33 +375,48 @@ async def plan_task(
 
     history_text = _get_conversation_history(conversation_id, limit=10)
 
-    # ========== 读取相关记忆 ==========
-    memory_text = ""
+    # 读记忆
+    success_text = ""
+    failure_text = ""
     try:
-        memories = memory_service.recall(
-            user_id=user_id,
-            query=user_input,
-            top_k=2
-        )
-        memories = memories[:2]
-        if memories:
+        success_memories = memory_service.recall(
+            user_id=user_id, query=user_input, top_k=2, memory_type="task_result"
+        )[:2]
+        if success_memories:
             lines = []
-            for m in memories:
+            for m in success_memories:
                 content = (m.get("content") or "").replace("\n", " ")[:120]
                 lines.append(f"- {content}")
-            memory_text = "\n".join(lines)
-            print(f"[swarm] 检索到 {len(memories)} 条相关记忆")
+            success_text = "\n".join(lines)
+            print(f"[swarm] 检索到 {len(success_memories)} 条成功经验")
         else:
-            print(f"[swarm] 检索到 0 条相关记忆")
+            print(f"[swarm] 检索到 0 条成功经验")
     except Exception as e:
-        print(f"[swarm] 记忆检索失败: {e}")
+        print(f"[swarm] 成功记忆检索失败: {e}")
+
+    try:
+        failure_memories = memory_service.recall(
+            user_id=user_id, query=user_input, top_k=2, memory_type="failure_pattern"
+        )[:2]
+        if failure_memories:
+            lines = []
+            for m in failure_memories:
+                content = (m.get("content") or "").replace("\n", " ")[:120]
+                lines.append(f"- {content}")
+            failure_text = "\n".join(lines)
+            print(f"[swarm] 检索到 {len(failure_memories)} 条失败教训")
+        else:
+            print(f"[swarm] 检索到 0 条失败教训")
+    except Exception as e:
+        print(f"[swarm] 失败记忆检索失败: {e}")
 
     _insert_message(conversation_id, user_input, sender_agent_id=None)
 
-    # 构造 prompt
     prompt_parts = []
-    if memory_text:
-        prompt_parts.append(f"【相关历史经验（仅供参考）】\n{memory_text}")
+    if success_text:
+        prompt_parts.append(f"【可参考的成功经验】\n{success_text}")
+    if failure_text:
+        prompt_parts.append(f"【需要避免的失败教训】\n{failure_text}")
     if history_text:
         prompt_parts.append(f"【最近的会话历史】\n{history_text}")
     prompt_parts.append(f"【用户当前任务】\n{user_input}")
@@ -432,13 +452,41 @@ async def plan_task(
             "no_plan": True,
             "retry_count": 0,
         }
-        return {
-            "status": "no_plan",
-            "message": "无法拆解任务",
-            "task_id": task_id
-        }
+        return {"status": "no_plan", "message": "无法拆解任务", "task_id": task_id}
 
     task_id = f"t_{int(time.time() * 1000)}"
+
+    if require_confirmation:
+        # ========== 草稿模式：不直接下发，等用户确认 ==========
+        _pending[task_id] = {
+            "user_id": user_id,
+            "conversation_id": conversation_id,
+            "user_text": user_input,
+            "steps": steps,
+            "results": [],
+            "done": set(),
+            "commander_id": commander_id,
+            "executor_id": executor_id,
+            "created_at": datetime.now().isoformat(),
+            "cancelled": False,
+            "no_plan": False,
+            "retry_count": 0,
+            "is_draft": True,
+        }
+        draft_payload = {"task_id": task_id, "steps": steps}
+        draft_msg = "[TASK_DRAFT]:" + json.dumps(draft_payload, ensure_ascii=False)
+        _insert_message(conversation_id, draft_msg, sender_agent_id=commander_id)
+        print(f"[swarm] 草稿模式：任务 {task_id} 已生成草稿，等待用户确认")
+        return {
+            "status": "draft",
+            "task_id": task_id,
+            "steps": steps,
+            "conversation_id": conversation_id,
+            "commander_id": commander_id,
+            "executor_id": executor_id
+        }
+
+    # ========== 直接执行模式 ==========
     _pending[task_id] = {
         "user_id": user_id,
         "conversation_id": conversation_id,
@@ -452,6 +500,7 @@ async def plan_task(
         "cancelled": False,
         "no_plan": False,
         "retry_count": 0,
+        "is_draft": False,
     }
 
     task_payload = {"task_id": task_id, "steps": steps}
@@ -466,6 +515,58 @@ async def plan_task(
         "commander_id": commander_id,
         "executor_id": executor_id
     }
+
+
+def confirm_task(
+    task_id: str,
+    user_id: int,
+    edited_steps: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """用户确认草稿任务，可携带编辑后的步骤"""
+    if task_id not in _pending:
+        return {"status": "not_found", "message": "任务不存在"}
+
+    task = _pending[task_id]
+    if task["user_id"] != user_id:
+        return {"status": "forbidden", "message": "无权确认该任务"}
+
+    if not task.get("is_draft"):
+        return {"status": "not_draft", "message": "该任务不是草稿"}
+
+    # 用户可编辑步骤
+    if edited_steps:
+        task["steps"] = edited_steps[:5]
+        print(f"[swarm] 用户已编辑草稿 {task_id}，新步骤数: {len(edited_steps)}")
+
+    task["is_draft"] = False
+
+    # 发送正式 [TASK]
+    task_payload = {"task_id": task_id, "steps": task["steps"]}
+    task_msg = "[TASK]:" + json.dumps(task_payload, ensure_ascii=False)
+    _insert_message(task["conversation_id"], task_msg, sender_agent_id=task["commander_id"])
+
+    print(f"[swarm] 草稿 {task_id} 已确认，下发执行")
+    return {
+        "status": "confirmed",
+        "task_id": task_id,
+        "steps": task["steps"]
+    }
+
+
+def reject_task(task_id: str, user_id: int) -> Dict[str, Any]:
+    """用户拒绝草稿任务"""
+    if task_id not in _pending:
+        return {"status": "not_found"}
+
+    task = _pending[task_id]
+    if task["user_id"] != user_id:
+        return {"status": "forbidden"}
+
+    del _pending[task_id]
+
+    reject_msg = "[SUMMARY]:任务草稿已被用户取消。"
+    _insert_message(task["conversation_id"], reject_msg, sender_agent_id=task["commander_id"])
+    return {"status": "rejected", "task_id": task_id}
 
 
 def cancel_task(task_id: str, user_id: int) -> Dict[str, Any]:
@@ -501,7 +602,7 @@ def submit_feedback(
     if task_id and task_id in _pending and _pending[task_id]["user_id"] == user_id:
         task = _pending[task_id]
         task["cancelled"] = True
-        if not task.get("no_plan"):
+        if not task.get("no_plan") and not task.get("is_draft"):
             conv_id = task["conversation_id"]
             cmd_id = task["commander_id"]
             cancel_msg = "[SUMMARY]:已取消，并记录为误判。"
@@ -523,7 +624,6 @@ def submit_feedback(
 
 
 async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    """针对失败的步骤，让指挥官重拆"""
     failed_info = []
     for r in task["results"]:
         if r.get("review") == "retry":
@@ -562,7 +662,6 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
 2. 格式：[{{"step":1,"description":"...","command":"..."}}]
 3. 如果是"文件找不到"，请先尝试搜索类似文件名
 4. 用 {{{{stepN}}}} 引用前序步骤的输出
-5. 禁止使用 if、for、while 等控制流语句
 
 只输出 JSON 数组，现在开始："""
 
@@ -593,7 +692,6 @@ async def handle_step_done(
     payload: Dict[str, Any],
     executor_id: str
 ) -> Optional[Dict[str, Any]]:
-    """处理执行者汇报的 [STEP_DONE]:，含审核员判定"""
     task_id = payload.get("task_id")
     step_id = payload.get("step")
     if not task_id or task_id not in _pending:
@@ -605,7 +703,6 @@ async def handle_step_done(
         del _pending[task_id]
         return {"status": "cancelled", "task_id": task_id}
 
-    # 找到原始步骤
     original_step = None
     for s in task["steps"]:
         if s.get("step") == step_id:
@@ -614,7 +711,6 @@ async def handle_step_done(
     if original_step is None:
         original_step = {"step": step_id, "command": ""}
 
-    # 审核员判断
     status = payload.get("status", "unknown")
     output = payload.get("output", "")
     review_result, review_reason = review_step(original_step, status, output)
@@ -632,7 +728,6 @@ async def handle_step_done(
 
     print(f"[swarm] step {step_id} 审核: {review_result} | {review_reason}")
 
-    # ========== 单步失败时写失败记忆 ==========
     if review_result == "retry":
         try:
             fail_cmd = original_step.get("command", "")
@@ -652,7 +747,6 @@ async def handle_step_done(
         except Exception as e:
             print(f"[swarm] 写失败记忆失败: {e}")
 
-    # 审核日志入库
     try:
         _log_review(
             task_id=task_id,
@@ -667,12 +761,10 @@ async def handle_step_done(
     except Exception as e:
         print(f"[swarm] 审核日志入库失败: {e}")
 
-    # 全部完成
     if len(task["done"]) >= len(task["steps"]):
         failed = [r for r in task["results"] if r.get("review") == "retry"]
         blocked = [r for r in task["results"] if r.get("status") == "blocked"]
 
-        # 有命令被安全策略拒绝 → 直接汇总，不重拆
         if blocked:
             print(f"[swarm] 发现 {len(blocked)} 个被拒绝的命令，跳过重拆")
             summary = await _summarize(task["user_text"], task["results"])
@@ -712,7 +804,6 @@ async def handle_step_done(
             if failed:
                 print(f"[swarm] 重试次数已达上限，标记失败并汇总")
             else:
-                # 全部通过 → 写成功记忆
                 try:
                     steps_desc = "\n".join(
                         f"  {r['step']}. {r.get('command', '')[:80]}"

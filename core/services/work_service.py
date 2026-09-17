@@ -17,6 +17,9 @@ WORK_MODE_CREDIT_ENABLED = True
 WORK_MODE_CREDIT_PER_TASK = 2
 FREE_DAILY_TASKS = 3
 
+# 自动生成 Harness 开关（关闭）
+AUTO_GENERATE_HARNESS = False
+
 # SASES 助手默认 ID
 SASES_ASSISTANT_AGENT_ID = "sases_assistant"
 
@@ -273,9 +276,9 @@ async def execute_work_command(
     )
     insert_assistant_message(conversation_id, log_content, SASES_ASSISTANT_AGENT_ID)
 
-    # 生成 Harness 并自动重新加载
+    # 生成 Harness 并自动重新加载（已关闭自动生成）
     harness_module_id = None
-    if result["status"] not in ("blocked", "timeout", "error"):
+    if AUTO_GENERATE_HARNESS and result["status"] not in ("blocked", "timeout", "error"):
         try:
             harness_module_id = await asyncio.to_thread(
                 generate_harness_from_log, log_id, command, result["output"], result["status"]
@@ -344,11 +347,12 @@ async def report_work_result(
     )
     insert_assistant_message(conversation_id, log_content, SASES_ASSISTANT_AGENT_ID)
 
-    try:
-        await asyncio.to_thread(generate_harness_from_log, log_id, command, output, status)
-        await asyncio.to_thread(try_reload_harness)
-    except Exception:
-        pass
+    if AUTO_GENERATE_HARNESS:
+        try:
+            await asyncio.to_thread(generate_harness_from_log, log_id, command, output, status)
+            await asyncio.to_thread(try_reload_harness)
+        except Exception:
+            pass
 
     return {
         "log_id": log_id,

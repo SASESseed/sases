@@ -145,6 +145,14 @@ async def call_model_with_config(model_config: dict, query: str) -> str:
 
 # ---------- 发送消息 ----------
 
+# 草稿确认模式全局开关：True 时所有任务都走草稿，False 时默认直接执行
+# 用户可用"草稿："前缀单独触发草稿模式
+REQUIRE_TASK_CONFIRMATION = False
+
+# 草稿模式前缀（全角冒号和半角冒号都可以）
+DRAFT_PREFIXES = ("草稿：", "草稿:", "编辑：", "编辑:")
+
+
 async def send_message(
     user_id: int,
     conversation_id: int,
@@ -154,6 +162,15 @@ async def send_message(
     mode: str = "normal"
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
+
+    # ========== 检测草稿前缀 ==========
+    require_confirmation = REQUIRE_TASK_CONFIRMATION
+    for prefix in DRAFT_PREFIXES:
+        if content.startswith(prefix):
+            require_confirmation = True
+            content = content[len(prefix):].strip()
+            print(f"[MSG_DEBUG] 检测到草稿前缀，切换为草稿模式")
+            break
 
     # ========== 自然语言意图分流 ==========
     if (
@@ -183,12 +200,15 @@ async def send_message(
                 plan_result = await swarm_service.plan_task(
                     user_id=user_id,
                     conversation_id=conversation_id,
-                    user_input=content
+                    user_input=content,
+                    require_confirmation=require_confirmation
                 )
                 print(f"[MSG_DEBUG] plan_result={plan_result}")
 
                 status = plan_result.get("status", "")
-                if status == "planned":
+                if status == "draft":
+                    reply = "已生成任务草稿，请在下方编辑后确认执行。"
+                elif status == "planned":
                     reply = "已启动执行，请稍候…"
                 elif status == "no_plan":
                     reply = "没有识别出可执行的命令。如果这不是任务，请点下方按钮。"
@@ -206,7 +226,8 @@ async def send_message(
                     "mode": mode,
                     "swarm": True,
                     "swarm_status": status,
-                    "task_id": plan_result.get("task_id")
+                    "task_id": plan_result.get("task_id"),
+                    "steps": plan_result.get("steps", [])
                 }
         except Exception as e:
             import traceback

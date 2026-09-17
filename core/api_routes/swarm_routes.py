@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from jose import jwt, JWTError
 
 from ..auth_service import SECRET_KEY
@@ -19,6 +19,12 @@ class SwarmPlanRequest(BaseModel):
     commander_id: Optional[str] = None
     executor_id: Optional[str] = None
     timeout: int = 30
+    require_confirmation: bool = False
+
+
+class SwarmConfirmRequest(BaseModel):
+    task_id: str
+    edited_steps: Optional[List[Dict[str, Any]]] = None
 
 
 class SwarmCancelRequest(BaseModel):
@@ -52,8 +58,26 @@ async def plan(body: SwarmPlanRequest, user_id: int = Depends(get_current_user))
         user_input=body.user_input.strip(),
         commander_id=body.commander_id,
         executor_id=body.executor_id,
-        timeout=body.timeout
+        timeout=body.timeout,
+        require_confirmation=body.require_confirmation
     )
+    return result
+
+
+@router.post("/confirm")
+async def confirm(body: SwarmConfirmRequest, user_id: int = Depends(get_current_user)):
+    """用户确认或编辑草稿任务后，下发执行"""
+    if not body.task_id:
+        raise HTTPException(status_code=400, detail="task_id 不能为空")
+    result = swarm_service.confirm_task(
+        task_id=body.task_id,
+        user_id=user_id,
+        edited_steps=body.edited_steps
+    )
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail=result.get("message", "任务不存在"))
+    if result.get("status") == "forbidden":
+        raise HTTPException(status_code=403, detail=result.get("message", "无权操作"))
     return result
 
 
@@ -123,7 +147,6 @@ async def list_reviews(
 async def review_stats(user_id: int = Depends(get_current_user)):
     """审核统计：按 exec_status 和 review_result 聚合"""
     with db_cursor() as cur:
-        # 按执行状态统计
         cur.execute(
             """
             SELECT r.exec_status, COUNT(*) as cnt
@@ -136,7 +159,6 @@ async def review_stats(user_id: int = Depends(get_current_user)):
         )
         by_status = {row["exec_status"]: row["cnt"] for row in cur.fetchall()}
 
-        # 按审核结果统计
         cur.execute(
             """
             SELECT r.review_result, COUNT(*) as cnt
@@ -149,7 +171,6 @@ async def review_stats(user_id: int = Depends(get_current_user)):
         )
         by_review = {row["review_result"]: row["cnt"] for row in cur.fetchall()}
 
-        # 最常失败的命令 Top 10
         cur.execute(
             """
             SELECT r.command, COUNT(*) as cnt

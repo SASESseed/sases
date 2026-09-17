@@ -65,8 +65,9 @@ bge-small-zh-onnx/
 lora_adapter/
 hf_upload/
 
-# Harness 自动生成的模块（可选）
-# harness_modules/auto_*
+# Harness 模块：忽略自动生成的和缓存，保留手写的
+harness_modules/auto_*/
+harness_modules/*/__pycache__/
 
 # Evaluation artifacts
 evaluation/sases_milestone_1.zip
@@ -90,12 +91,10 @@ finetune_*.jsonl
 # Temp / local scripts
 新建 Python Script.py
 setup.bat
-setup.sh 
-# Root-level benchmark (copy kept in evaluation/) 
-/eval_benchmark_v2.jsonl 
- 
-# Harness auto-generated modules 
-harness_modules/ 
+setup.sh
 
-echo test_reviews_api.zip >> .gitignore
-test_reviews_api.zip 
+# Root-level benchmark (copy kept in evaluation/)
+/eval_benchmark_v2.jsonl
+
+# Test artifacts
+test_reviews_api.zip
