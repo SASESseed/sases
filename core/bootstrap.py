@@ -11,6 +11,7 @@ from .services import memory_service
 from .services import debug_service
 from .services import rescue_service
 from .services import swarm_service
+from .services import executor_service
 from . import backup_service
 from .api_routes import (
     auth_routes,
@@ -95,6 +96,7 @@ async def lifespan(app: FastAPI):
     debug_task = asyncio.create_task(debug_service.periodic_debug_scan(interval_hours=6, sample_limit=20))
     rescue_task = asyncio.create_task(periodic_rescue_maintenance())
     backup_task = asyncio.create_task(backup_service.periodic_backup_task())
+    executor_task = asyncio.create_task(executor_service.start_background_executor())
 
     yield
 
@@ -102,10 +104,11 @@ async def lifespan(app: FastAPI):
     debug_task.cancel()
     rescue_task.cancel()
     backup_task.cancel()
+    executor_task.cancel()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="SASES", version="0.12.1", lifespan=lifespan)
+    app = FastAPI(title="SASES", version="0.15.3", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

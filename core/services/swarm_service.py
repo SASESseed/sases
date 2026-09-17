@@ -131,12 +131,138 @@ def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, st
     return "pass", ""
 
 
-# ========== 全局状态 ==========
-
+# ========== 全局内存缓存 ==========
 _pending: Dict[str, Dict[str, Any]] = {}
 _feedback_table_ready = False
 _review_table_ready = False
 
+
+# ========== 数据库同步 ==========
+
+def _save_pending(task: Dict[str, Any]):
+    """把任务写入数据库（存在则更新）"""
+    try:
+        with db_cursor(commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO swarm_pending_tasks
+                (task_id, conversation_id, user_id, commander_id, executor_id,
+                 user_text, steps, results, done_steps, retry_count,
+                 is_draft, cancelled, no_plan, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(task_id) DO UPDATE SET
+                    conversation_id=excluded.conversation_id,
+                    user_id=excluded.user_id,
+                    commander_id=excluded.commander_id,
+                    executor_id=excluded.executor_id,
+                    user_text=excluded.user_text,
+                    steps=excluded.steps,
+                    results=excluded.results,
+                    done_steps=excluded.done_steps,
+                    retry_count=excluded.retry_count,
+                    is_draft=excluded.is_draft,
+                    cancelled=excluded.cancelled,
+                    no_plan=excluded.no_plan,
+                    status=excluded.status,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    task["task_id"],
+                    task.get("conversation_id"),
+                    task["user_id"],
+                    task.get("commander_id"),
+                    task.get("executor_id"),
+                    task.get("user_text", ""),
+                    json.dumps(task.get("steps", []), ensure_ascii=False),
+                    json.dumps(task.get("results", []), ensure_ascii=False),
+                    json.dumps(sorted(list(task.get("done", set()))), ensure_ascii=False),
+                    task.get("retry_count", 0),
+                    1 if task.get("is_draft") else 0,
+                    1 if task.get("cancelled") else 0,
+                    1 if task.get("no_plan") else 0,
+                    _derive_status(task),
+                    task.get("created_at", datetime.now().isoformat()),
+                    datetime.now().isoformat(),
+                )
+            )
+    except Exception as e:
+        print(f"[swarm] DB 写入失败: {e}")
+
+
+def _derive_status(task: Dict[str, Any]) -> str:
+    if task.get("cancelled"):
+        return "cancelled"
+    if task.get("no_plan"):
+        return "no_plan"
+    if task.get("is_draft"):
+        return "draft"
+    if len(task.get("done", set())) >= len(task.get("steps", [])):
+        return "completed"
+    if len(task.get("done", set())) > 0:
+        return "running"
+    return "pending"
+
+
+def _delete_pending_from_db(task_id: str):
+    try:
+        with db_cursor(commit=True) as cur:
+            cur.execute("DELETE FROM swarm_pending_tasks WHERE task_id=?", (task_id,))
+    except Exception as e:
+        print(f"[swarm] DB 删除失败: {e}")
+
+
+def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
+    """从数据库加载单个任务"""
+    try:
+        with db_cursor() as cur:
+            cur.execute("SELECT * FROM swarm_pending_tasks WHERE task_id=?", (task_id,))
+            row = cur.fetchone()
+        if not row:
+            return None
+        row = dict(row)
+        return {
+            "task_id": row["task_id"],
+            "conversation_id": row["conversation_id"],
+            "user_id": row["user_id"],
+            "commander_id": row["commander_id"],
+            "executor_id": row["executor_id"],
+            "user_text": row["user_text"] or "",
+            "steps": json.loads(row["steps"] or "[]"),
+            "results": json.loads(row["results"] or "[]"),
+            "done": set(json.loads(row["done_steps"] or "[]")),
+            "retry_count": row["retry_count"] or 0,
+            "is_draft": bool(row["is_draft"]),
+            "cancelled": bool(row["cancelled"]),
+            "no_plan": bool(row["no_plan"]),
+            "created_at": row["created_at"],
+        }
+    except Exception as e:
+        print(f"[swarm] DB 加载失败: {e}")
+        return None
+
+
+def restore_pending_tasks():
+    """后端启动时从数据库恢复所有未完成的任务"""
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "SELECT task_id FROM swarm_pending_tasks WHERE status IN ('pending', 'running', 'draft')"
+            )
+            rows = cur.fetchall()
+        count = 0
+        for row in rows:
+            task = _load_pending(row["task_id"])
+            if task:
+                _pending[task["task_id"]] = task
+                count += 1
+        print(f"[swarm] 已恢复 {count} 个待处理任务")
+        return count
+    except Exception as e:
+        print(f"[swarm] 恢复任务失败: {e}")
+        return 0
+
+
+# ========== 表格初始化 ==========
 
 def _ensure_feedback_table():
     global _feedback_table_ready
@@ -192,15 +318,10 @@ def _log_review(task_id, conversation_id, step_id, command, exec_status,
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                task_id,
-                conversation_id,
-                step_id,
-                (command or "")[:500],
-                exec_status,
-                review_result,
-                review_reason,
-                (output or "")[:200],
-                datetime.now().isoformat()
+                task_id, conversation_id, step_id,
+                (command or "")[:500], exec_status,
+                review_result, review_reason,
+                (output or "")[:200], datetime.now().isoformat()
             )
         )
 
@@ -362,7 +483,6 @@ async def plan_task(
     timeout: int = 30,
     require_confirmation: bool = False
 ) -> Dict[str, Any]:
-    """指挥官拆解任务。require_confirmation=True 时发 [TASK_DRAFT]，等待用户确认。"""
     if not commander_id or not executor_id:
         auto_cmd, auto_exec = pick_swarm_agents(user_id)
         commander_id = commander_id or auto_cmd
@@ -375,7 +495,6 @@ async def plan_task(
 
     history_text = _get_conversation_history(conversation_id, limit=10)
 
-    # 读记忆
     success_text = ""
     failure_text = ""
     try:
@@ -438,9 +557,10 @@ async def plan_task(
     if not steps:
         print(f"[swarm] 拆解失败，LLM 原始返回: {raw[:500]!r}")
         task_id = f"noplan_{int(time.time() * 1000)}"
-        _pending[task_id] = {
-            "user_id": user_id,
+        task = {
+            "task_id": task_id,
             "conversation_id": conversation_id,
+            "user_id": user_id,
             "user_text": user_input,
             "steps": [],
             "results": [],
@@ -451,28 +571,35 @@ async def plan_task(
             "cancelled": True,
             "no_plan": True,
             "retry_count": 0,
+            "is_draft": False,
         }
+        _pending[task_id] = task
+        _save_pending(task)
         return {"status": "no_plan", "message": "无法拆解任务", "task_id": task_id}
 
     task_id = f"t_{int(time.time() * 1000)}"
 
-    if require_confirmation:
-        # ========== 草稿模式：不直接下发，等用户确认 ==========
-        _pending[task_id] = {
-            "user_id": user_id,
-            "conversation_id": conversation_id,
-            "user_text": user_input,
-            "steps": steps,
-            "results": [],
-            "done": set(),
-            "commander_id": commander_id,
-            "executor_id": executor_id,
-            "created_at": datetime.now().isoformat(),
-            "cancelled": False,
-            "no_plan": False,
-            "retry_count": 0,
-            "is_draft": True,
-        }
+    is_draft = bool(require_confirmation)
+    task = {
+        "task_id": task_id,
+        "conversation_id": conversation_id,
+        "user_id": user_id,
+        "user_text": user_input,
+        "steps": steps,
+        "results": [],
+        "done": set(),
+        "commander_id": commander_id,
+        "executor_id": executor_id,
+        "created_at": datetime.now().isoformat(),
+        "cancelled": False,
+        "no_plan": False,
+        "retry_count": 0,
+        "is_draft": is_draft,
+    }
+    _pending[task_id] = task
+    _save_pending(task)
+
+    if is_draft:
         draft_payload = {"task_id": task_id, "steps": steps}
         draft_msg = "[TASK_DRAFT]:" + json.dumps(draft_payload, ensure_ascii=False)
         _insert_message(conversation_id, draft_msg, sender_agent_id=commander_id)
@@ -485,23 +612,6 @@ async def plan_task(
             "commander_id": commander_id,
             "executor_id": executor_id
         }
-
-    # ========== 直接执行模式 ==========
-    _pending[task_id] = {
-        "user_id": user_id,
-        "conversation_id": conversation_id,
-        "user_text": user_input,
-        "steps": steps,
-        "results": [],
-        "done": set(),
-        "commander_id": commander_id,
-        "executor_id": executor_id,
-        "created_at": datetime.now().isoformat(),
-        "cancelled": False,
-        "no_plan": False,
-        "retry_count": 0,
-        "is_draft": False,
-    }
 
     task_payload = {"task_id": task_id, "steps": steps}
     task_msg = "[TASK]:" + json.dumps(task_payload, ensure_ascii=False)
@@ -522,7 +632,6 @@ def confirm_task(
     user_id: int,
     edited_steps: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
-    """用户确认草稿任务，可携带编辑后的步骤"""
     if task_id not in _pending:
         return {"status": "not_found", "message": "任务不存在"}
 
@@ -533,14 +642,13 @@ def confirm_task(
     if not task.get("is_draft"):
         return {"status": "not_draft", "message": "该任务不是草稿"}
 
-    # 用户可编辑步骤
     if edited_steps:
         task["steps"] = edited_steps[:5]
         print(f"[swarm] 用户已编辑草稿 {task_id}，新步骤数: {len(edited_steps)}")
 
     task["is_draft"] = False
+    _save_pending(task)
 
-    # 发送正式 [TASK]
     task_payload = {"task_id": task_id, "steps": task["steps"]}
     task_msg = "[TASK]:" + json.dumps(task_payload, ensure_ascii=False)
     _insert_message(task["conversation_id"], task_msg, sender_agent_id=task["commander_id"])
@@ -554,7 +662,6 @@ def confirm_task(
 
 
 def reject_task(task_id: str, user_id: int) -> Dict[str, Any]:
-    """用户拒绝草稿任务"""
     if task_id not in _pending:
         return {"status": "not_found"}
 
@@ -562,10 +669,9 @@ def reject_task(task_id: str, user_id: int) -> Dict[str, Any]:
     if task["user_id"] != user_id:
         return {"status": "forbidden"}
 
+    _insert_message(task["conversation_id"], "[SUMMARY]:任务草稿已被用户取消。", sender_agent_id=task["commander_id"])
     del _pending[task_id]
-
-    reject_msg = "[SUMMARY]:任务草稿已被用户取消。"
-    _insert_message(task["conversation_id"], reject_msg, sender_agent_id=task["commander_id"])
+    _delete_pending_from_db(task_id)
     return {"status": "rejected", "task_id": task_id}
 
 
@@ -579,11 +685,12 @@ def cancel_task(task_id: str, user_id: int) -> Dict[str, Any]:
 
     if task.get("no_plan"):
         del _pending[task_id]
+        _delete_pending_from_db(task_id)
         return {"status": "cancelled", "task_id": task_id}
 
     task["cancelled"] = True
-    cancel_msg = f"[SUMMARY]:任务已取消。"
-    _insert_message(task["conversation_id"], cancel_msg, sender_agent_id=task["commander_id"])
+    _save_pending(task)
+    _insert_message(task["conversation_id"], "[SUMMARY]:任务已取消。", sender_agent_id=task["commander_id"])
     return {"status": "cancelled", "task_id": task_id}
 
 
@@ -603,11 +710,9 @@ def submit_feedback(
         task = _pending[task_id]
         task["cancelled"] = True
         if not task.get("no_plan") and not task.get("is_draft"):
-            conv_id = task["conversation_id"]
-            cmd_id = task["commander_id"]
-            cancel_msg = "[SUMMARY]:已取消，并记录为误判。"
-            _insert_message(conv_id, cancel_msg, sender_agent_id=cmd_id)
+            _insert_message(task["conversation_id"], "[SUMMARY]:已取消，并记录为误判。", sender_agent_id=task["commander_id"])
         del _pending[task_id]
+        _delete_pending_from_db(task_id)
 
     with db_cursor(commit=True) as cur:
         cur.execute(
@@ -694,13 +799,22 @@ async def handle_step_done(
 ) -> Optional[Dict[str, Any]]:
     task_id = payload.get("task_id")
     step_id = payload.get("step")
-    if not task_id or task_id not in _pending:
+    if not task_id:
         return None
+
+    # 内存没有就从数据库加载
+    if task_id not in _pending:
+        task = _load_pending(task_id)
+        if task:
+            _pending[task_id] = task
+        else:
+            return None
 
     task = _pending[task_id]
 
     if task.get("cancelled"):
         del _pending[task_id]
+        _delete_pending_from_db(task_id)
         return {"status": "cancelled", "task_id": task_id}
 
     original_step = None
@@ -725,6 +839,7 @@ async def handle_step_done(
         "reason": review_reason,
         "output": (output or "")[:300],
     })
+    _save_pending(task)
 
     print(f"[swarm] step {step_id} 审核: {review_result} | {review_reason}")
 
@@ -768,9 +883,9 @@ async def handle_step_done(
         if blocked:
             print(f"[swarm] 发现 {len(blocked)} 个被拒绝的命令，跳过重拆")
             summary = await _summarize(task["user_text"], task["results"])
-            summary_msg = f"[SUMMARY]:{summary}"
-            _insert_message(conversation_id, summary_msg, sender_agent_id=task["commander_id"])
+            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
             del _pending[task_id]
+            _delete_pending_from_db(task_id)
             return {"status": "completed_with_blocks", "task_id": task_id}
 
         if failed and task["retry_count"] < 2:
@@ -782,6 +897,7 @@ async def handle_step_done(
                 task["results"] = []
                 task["done"] = set()
                 task["steps"] = new_steps
+                _save_pending(task)
 
                 retry_payload = {"task_id": task_id, "steps": new_steps}
                 retry_msg = "[RETRY_TASK]:" + json.dumps(retry_payload, ensure_ascii=False)
@@ -796,9 +912,9 @@ async def handle_step_done(
             else:
                 print(f"[swarm] 重拆失败或跳过，直接汇总")
                 summary = await _summarize(task["user_text"], task["results"])
-                summary_msg = f"[SUMMARY]:{summary}"
-                _insert_message(conversation_id, summary_msg, sender_agent_id=task["commander_id"])
+                _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
                 del _pending[task_id]
+                _delete_pending_from_db(task_id)
                 return {"status": "completed_with_failures", "task_id": task_id}
         else:
             if failed:
@@ -826,9 +942,9 @@ async def handle_step_done(
                     print(f"[swarm] 写成功记忆失败: {e}")
 
             summary = await _summarize(task["user_text"], task["results"])
-            summary_msg = f"[SUMMARY]:{summary}"
-            _insert_message(conversation_id, summary_msg, sender_agent_id=task["commander_id"])
+            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
             del _pending[task_id]
+            _delete_pending_from_db(task_id)
             return {"status": "completed", "task_id": task_id, "summary": summary}
 
     return {

@@ -585,6 +585,31 @@ def init_db():
                     VALUES (?, ?, ?, ?, 1)
                 """, (key, name, desc, cost))
 
+        # ========== 蜂群待处理任务表 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS swarm_pending_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT UNIQUE NOT NULL,
+                conversation_id INTEGER,
+                user_id INTEGER NOT NULL,
+                commander_id TEXT,
+                executor_id TEXT,
+                user_text TEXT,
+                steps TEXT,
+                results TEXT,
+                done_steps TEXT,
+                retry_count INTEGER DEFAULT 0,
+                is_draft INTEGER DEFAULT 0,
+                cancelled INTEGER DEFAULT 0,
+                no_plan INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+            )
+        """)
+
         # ========== 索引 ==========
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_batch ON yunchong_tasks(batch_id)")
@@ -592,6 +617,10 @@ def init_db():
         # 记忆库索引（v0.15.0）
         cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_task ON safety_memory(task_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_hash ON safety_memory(content_hash)")
+        # 蜂群待处理任务索引（v0.16.0）
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_task ON swarm_pending_tasks(task_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_status ON swarm_pending_tasks(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_conv ON swarm_pending_tasks(conversation_id)")
 
 if __name__ == '__main__':
     init_db()
