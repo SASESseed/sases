@@ -2,7 +2,7 @@
 
 
 
-\*\*Release Date:\*\* 2026-09-17
+\*\*Release Date:\*\* 2026-09-18
 
 \*\*Previous Version:\*\* v0.15.2
 
@@ -12,25 +12,61 @@
 
 
 
-The executor is now \*\*integrated into the backend process\*\*. Users no longer need to start `executor\_v2.py` manually. Any conversation in `free` mode triggers automatic execution.
+Executor is now integrated into the backend process. Users no longer need to start `executor\_v2.py` manually.
 
 
 
-\## Architecture Change
+This release consolidates v0.15.1 (memory integration), v0.15.2 (draft mode + web\_fetch), and v0.15.3 (backend executor) into a single version.
 
 
 
-\### Before
+\## v0.15.1 — Memory Integration
 
 
 
-&#x20;   Backend (app\_full.py) → creates \[TASK] messages
+\- Commander reads `task\_result` and `failure\_pattern` memories separately
 
-&#x20;   External script (executor\_v2.py) → user must start manually with conversation\_id
+\- Reviewer writes failure memories on retry
+
+\- Recalled memory capped at 120 chars
 
 
 
-\### After
+\## v0.15.2 — Draft Mode + Web Fetch
+
+
+
+\- `草稿：` prefix triggers draft mode
+
+\- Frontend renders editable draft editor
+
+\- `web\_fetch` Harness tool for fetching web pages
+
+\- Intent recognition: URL pattern detection
+
+\- `AUTO\_GENERATE\_HARNESS = False` — disabled auto-generation of auto\_\* modules
+
+
+
+\## v0.15.3 — Backend Executor
+
+
+
+\- New `core/services/executor\_service.py`
+
+\- New table `swarm\_pending\_tasks` for task persistence
+
+\- `bootstrap.py` starts background executor task
+
+\- Task auto-recovery on backend restart
+
+\- Global concurrency limit (3 parallel tasks)
+
+\- Any conversation in `free` mode triggers auto-execution
+
+
+
+\## Architecture
 
 
 
@@ -40,9 +76,9 @@ The executor is now \*\*integrated into the backend process\*\*. Users no longer
 
 &#x20;     ├── Background executor (async task)
 
-&#x20;     │     Scans swarm\_pending\_tasks table every 3 seconds
+&#x20;     │     Scans swarm\_pending\_tasks every 3 seconds
 
-&#x20;     │     Executes commands or harness tools
+&#x20;     │     Executes commands / harness tools
 
 &#x20;     │     Reports via swarm\_service.handle\_step\_done
 
@@ -50,83 +86,7 @@ The executor is now \*\*integrated into the backend process\*\*. Users no longer
 
 
 
-\## New Features
-
-
-
-\### 1. Task Persistence
-
-
-
-New table `swarm\_pending\_tasks` stores all tasks. On backend restart, `restore\_pending\_tasks()` reloads them and continues execution.
-
-
-
-\### 2. Global Concurrency Control
-
-
-
-`MAX\_CONCURRENT\_TASKS = 3` via asyncio.Semaphore. Multiple conversations can execute in parallel but capped at 3.
-
-
-
-\### 3. Auto Agent Matching
-
-
-
-`pick\_swarm\_agents(user\_id)` selects commander/executor by:
-
-1\. Name contains "指挥" / "commander" → commander
-
-2\. Name contains "执行" / "executor" → executor
-
-3\. Fallback: first agent = commander, second = executor
-
-
-
-\### 4. Any Conversation Support
-
-
-
-The background executor scans all conversations. No conversation\_id binding required.
-
-
-
-\## Technical Details
-
-
-
-\### New Files
-
-
-
-| File | Purpose |
-
-|------|---------|
-
-| `core/services/executor\_service.py` | Background executor (250 lines) |
-
-| `swarm\_pending\_tasks` table | Task persistence |
-
-
-
-\### Modified Files
-
-
-
-| File | Change |
-
-|------|--------|
-
-| `core/db.py` | + swarm\_pending\_tasks table |
-
-| `core/services/swarm\_service.py` | + database sync, + restore\_pending\_tasks |
-
-| `core/bootstrap.py` | + background executor task |
-
-
-
-\### Executor Safety
+\## Security
 
 
 
@@ -138,15 +98,13 @@ The background executor scans all conversations. No conversation\_id binding req
 
 | Dangerous chars | `\& < > ^ % ; \\` $ \\n \\r` |
 
-| Timeout | 30 seconds per command |
+| Timeout | 30 seconds |
 
 | Output limit | 2000 chars |
 
-| Harness support | `type: "harness"` steps |
 
 
-
-\## Testing Results
+\## Testing
 
 
 
@@ -158,8 +116,6 @@ The background executor scans all conversations. No conversation\_id binding req
 
 &#x20;   \[executor] ▶ 开始执行任务 t\_1789660577486
 
-&#x20;   \[executor] task=t\_1789660577486 step=1 type=command
-
 &#x20;   \[executor]   结果: success (64ms)
 
 &#x20;   \[swarm] step 1 审核: pass |
@@ -170,25 +126,25 @@ The background executor scans all conversations. No conversation\_id binding req
 
 
 
-\## Known Limitations
-
-
-
-1\. \*\*Backend crash recovery\*\* — if backend crashes mid-command, task resumes from beginning, may re-execute
-
-2\. \*\*No conversation-level lock yet\*\* — two tasks in same conversation may interleave
-
-3\. \*\*`executor\_v2.py` deprecated\*\* — moved to `tools/executor\_v2\_debug.py`
-
-
-
 \## Migration Notes
 
 
 
-\- Users no longer need to run `python executor\_v2.py ...`
+\- `executor\_v2.py` is deprecated. Manual startup no longer needed.
 
-\- Backend automatically recovers unfinished tasks on restart
+\- Users only need to configure agents in "模型管理".
 
-\- Any conversation in `free` mode will auto-execute tasks
+\- Backend automatically matches commander/executor by agent names.
+
+
+
+\## Known Limitations
+
+
+
+1\. Backend crash mid-command may re-execute the task from start
+
+2\. No conversation-level lock (parallel tasks in same conversation may interleave)
+
+3\. `if` commands still forbidden in commander prompt
 
