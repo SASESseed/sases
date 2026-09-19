@@ -233,7 +233,8 @@ async def send_message(
                     _chunks = project_service.retrieve_project_chunks(content, top_k=3)
                     if _chunks and _chunks[0].get('score', 0) > 0.55:
                         _ctx = project_service.format_chunks_for_prompt(_chunks)
-                        _ans_prompt = _ctx + ' 【用户问】 ' + content
+                        from . import context_service
+                        _ans_prompt = context_service.build_enriched_prompt(user_id, conversation_id, content, _ctx)
                         if agent_id:
                             with db_cursor() as _cur:
                                 _cur.execute('SELECT * FROM model_configs WHERE id=? AND user_id=?', (agent_id, user_id))
