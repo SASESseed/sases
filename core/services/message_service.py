@@ -162,7 +162,8 @@ async def send_message(
     mode: str = "normal"
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
-    _supervisor_id = sender_agent_id or agent_id  # 调度者 ID
+    _supervisor_id = sender_agent_id or agent_id
+    print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
 
     # ========== 检测草稿前缀 ==========
