@@ -152,6 +152,7 @@ async def lifespan(app: FastAPI):
     executor_task.cancel()
     cleanup_task.cancel()
     pattern_task.cancel()
+    git_push_task.cancel()
 
 
 def create_app() -> FastAPI:

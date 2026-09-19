@@ -255,6 +255,59 @@ def _refresh_domain_counts():
             )
 
 
+def retrieve_patterns(user_input, domain='dev', top_k=3, min_confidence=0.5):
+    '检索相关 pattern'
+    with db_cursor() as cur:
+        cur.execute(
+            'SELECT id, pattern_key, pattern_type, context_signature, role, evidence, confidence, hit_count, status FROM interaction_patterns WHERE status IN (?, ?) AND confidence >= ? ORDER BY hit_count DESC, confidence DESC LIMIT 50',
+            ('active', 'tentative', min_confidence)
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+
+    if not rows:
+        return []
+
+    try:
+        query_vec = np.asarray(_get_embedder().get_embedding(user_input), dtype=np.float32).flatten()
+    except Exception as e:
+        print(f'[pattern] 查询 embedding 失败: {e}')
+        return rows[:top_k]
+
+    scored = []
+    for r in rows:
+        try:
+            txt = r.get('evidence') or r.get('pattern_key') or ''
+            r_emb = np.asarray(_get_embedder().get_embedding(txt), dtype=np.float32).flatten()
+            sim = _cosine_sim(query_vec, r_emb)
+            scored.append((sim, r))
+        except Exception:
+            continue
+
+    if not scored:
+        return rows[:top_k]
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    results = []
+    for sim, r in scored[:top_k]:
+        r['_similarity'] = round(sim, 4)
+        results.append(r)
+    return results
+
+
+def format_patterns_for_prompt(patterns, max_chars=100):
+    '格式化为可注入 prompt 的文本'
+    if not patterns:
+        return ''
+    lines = ['【历史模式】']
+    for p in patterns:
+        ptype = p.get('pattern_type') or ''
+        ev = (p.get('evidence') or '')[:max_chars]
+        conf = p.get('confidence') or 0
+        lines.append('- [' + ptype + '] ' + ev + ' (置信度' + str(round(conf, 2)) + ')')
+    return chr(10).join(lines)
+
+
+
 def get_stats():
     """返回经验库统计"""
     _refresh_domain_counts()
