@@ -795,6 +795,11 @@ async def plan_task(
 
     steps = _parse_plan(raw)
     if not steps:
+        if raw.strip() == "[DONE]":
+            print("[swarm] 指挥官判定任务完成")
+            return {"status": "done", "message": "任务完成", "task_id": None}
+
+
         print(f"[swarm] 拆解失败，LLM 原始返回: {raw[:500]!r}")
         task_id = f"noplan_{int(time.time() * 1000)}"
         task = {
@@ -1196,13 +1201,16 @@ async def handle_step_done(
                     _continue, _next_input = await supervisor_service.check_and_continue(_run_id, summary)
                     if _continue and _next_input:
                         print(f"[supervisor] run {_run_id} 继续下一轮")
-                        await plan_task(
+                        _next_result = await plan_task(
                             user_id=task["user_id"],
                             conversation_id=conversation_id,
                             user_input=_next_input,
                             supervisor_id=task.get("supervisor_id"),
                             supervisor_run_id=_run_id,
                         )
+                        if isinstance(_next_result, dict) and _next_result.get("status") == "done":
+                            supervisor_service.finish_run(_run_id, "completed")
+                            print(f"[supervisor] run {_run_id} 已完成（[DONE]）")
                     else:
                         supervisor_service.finish_run(_run_id, "completed")
                         print(f"[supervisor] run {_run_id} 已完成")
