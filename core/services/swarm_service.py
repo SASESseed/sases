@@ -724,6 +724,10 @@ async def plan_task(
 
 
     prompt_parts = []
+    if pattern_text:
+        prompt_parts.append(pattern_text)
+
+
     if project_text:
         prompt_parts.append(project_text)
 

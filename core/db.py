@@ -717,6 +717,25 @@ def init_db():
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # ========== 执行笔记表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS execution_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT,
+                user_id INTEGER,
+                user_input TEXT NOT NULL,
+                summary TEXT,
+                outcome TEXT DEFAULT 'success',
+                steps_digest TEXT,
+                embedding BLOB,
+                content_hash TEXT,
+                status TEXT DEFAULT 'active',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_hash ON execution_notes(content_hash)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_task ON execution_notes(task_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_status ON execution_notes(status)")
         # ========== 索引 ==========
         # 云宠战役
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
