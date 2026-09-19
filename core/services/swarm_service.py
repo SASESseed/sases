@@ -636,7 +636,8 @@ async def plan_task(
     commander_id: str = None,
     executor_id: str = None,
     timeout: int = 30,
-    require_confirmation: bool = False
+    require_confirmation: bool = False,
+    supervisor_id: str = None
 ) -> Dict[str, Any]:
     if conversation_id and _has_active_task_in_conversation(conversation_id):
         err_msg = "[SUMMARY]:当前会话有正在执行的任务，请等待完成或取消后再提交新任务。"
