@@ -740,6 +740,24 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_hash ON execution_notes(content_hash)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_task ON execution_notes(task_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_exnotes_status ON execution_notes(status)")
+        # ========== 附件表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT UNIQUE NOT NULL,
+                user_id INTEGER NOT NULL,
+                original_name TEXT,
+                stored_path TEXT NOT NULL,
+                mime_type TEXT,
+                size_bytes INTEGER DEFAULT 0,
+                kind TEXT DEFAULT 'file',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_attach_user ON attachments(user_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_attach_fileid ON attachments(file_id)")
+
         # ========== 索引 ==========
         # 云宠战役
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
