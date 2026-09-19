@@ -27,7 +27,7 @@ ALLOWED_COMMANDS = {
     "wc",
 }
 
-DANGEROUS_CHARS = ['&', '<', '>', '^', '%', ';', '`', '$', '\n', '\r']
+DANGEROUS_CHARS = ['&', '<', '>', '^', '%', '`', '$', '\n', '\r']
 
 MAX_OUTPUT_LENGTH = 2000
 DEFAULT_TIMEOUT = 30
@@ -163,6 +163,17 @@ def _substitute_placeholders(cmd: str, previous_outputs: Dict[int, str]) -> str:
     return cmd
 
 
+def _substitute_params(params: Any, previous_outputs: Dict[int, str]) -> Any:
+    """递归替换 params 里所有字符串值中的占位符"""
+    if isinstance(params, dict):
+        return {k: _substitute_params(v, previous_outputs) for k, v in params.items()}
+    if isinstance(params, list):
+        return [_substitute_params(v, previous_outputs) for v in params]
+    if isinstance(params, str):
+        return _substitute_placeholders(params, previous_outputs)
+    return params
+
+
 # ========== 汇报 ==========
 
 async def _report_step_done(conversation_id: int, payload: Dict[str, Any], executor_id: str):
@@ -219,8 +230,12 @@ async def _execute_task(task: Dict[str, Any]):
 
         if step_type == "harness":
             module_id = step.get("module_id", "")
-            params = step.get("params", {})
+            params_raw = step.get("params", {})
+            # 对 params 里所有字符串值做占位符替换
+            params = _substitute_params(params_raw, previous_outputs)
+            print(f"[executor]   harness params: {json.dumps(params, ensure_ascii=False)[:300]}")
             output, status, dur = await _run_harness(module_id, params)
+            print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
         else:
             cmd_raw = step.get("command", "")
             cmd = _substitute_placeholders(cmd_raw, previous_outputs)

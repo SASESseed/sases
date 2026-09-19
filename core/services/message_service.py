@@ -181,7 +181,36 @@ async def send_message(
         and not content.startswith("执行：")
     ):
         try:
-            from . import intent_service, swarm_service
+            from . import intent_service, swarm_service, project_service
+            _OP_VERBS = ('列出', '查看', '打开', '运行', '抓取', '下载', '找到', '查找', '搜索', '读取', '删除', '帮我', '请帮')
+            _first8 = content.strip()[:8]
+            _is_operation = any(_first8.startswith(v) for v in _OP_VERBS)
+
+            if not _is_operation:
+                try:
+                    _chunks = project_service.retrieve_project_chunks(content, top_k=3)
+                    if _chunks and _chunks[0].get('score', 0) > 0.55:
+                        _ctx = project_service.format_chunks_for_prompt(_chunks)
+                        _ans_prompt = _ctx + ' 【用户问】 ' + content
+                        if agent_id:
+                            with db_cursor() as _cur:
+                                _cur.execute('SELECT * FROM model_configs WHERE id=? AND user_id=?', (agent_id, user_id))
+                                _mr = _cur.fetchone()
+                            if _mr:
+                                _mr = dict(_mr)
+                                with db_cursor(commit=True) as _cur:
+                                    _cur.execute('INSERT INTO messages (conversation_id, sender, content) VALUES (?, ?, ?)', (conversation_id, 'user', content))
+                                try:
+                                    _reply = await call_model_with_config(_mr, _ans_prompt)
+                                except Exception as _e:
+                                    _reply = '模型调用失败: ' + str(_e)
+                                with db_cursor(commit=True) as _cur:
+                                    _cur.execute('INSERT INTO messages (conversation_id, sender, content) VALUES (?, ?, ?)', (conversation_id, 'assistant', _reply))
+                                    _cur.execute('UPDATE conversations SET updated_at=? WHERE id=?', (datetime.now().isoformat(), conversation_id))
+                                print('[message] 项目库快速回答命中，相似度 ' + str(round(_chunks[0].get('score', 0), 3)))
+                                return {'conversation_id': conversation_id, 'user_message': content, 'assistant_reply': _reply, 'agent_id': agent_id, 'sender_agent_id': sender_agent_id, 'mode': mode, 'project_kb_hit': True}
+                except Exception as _e:
+                    print('[message] 项目库快速回答失败: ' + str(_e))
 
             is_task = await intent_service.is_task_intent(content)
             print(f"[MSG_DEBUG] is_task={is_task}")
@@ -338,8 +367,21 @@ async def send_message(
             assistant_reply = "错误：找不到绑定的智能体模型"
         else:
             model_config = dict(model_row)
+            # 项目库检索（v0.17.0）
+            enriched_query = content
             try:
-                assistant_reply = await call_model_with_config(model_config, content)
+                from . import project_service
+                chunks = project_service.retrieve_project_chunks(content, top_k=3)
+                if chunks:
+                    project_text = project_service.format_chunks_for_prompt(chunks)
+                    enriched_query = project_text + "\n\n【用户问题】\n" + content
+                    print(f"[message] 检索到 {len(chunks)} 条项目资料")
+                else:
+                    print(f"[message] 项目库无匹配")
+            except Exception as e:
+                print(f"[message] 项目库检索失败: {e}")
+            try:
+                assistant_reply = await call_model_with_config(model_config, enriched_query)
             except Exception as e:
                 assistant_reply = f"模型调用失败：{str(e)}"
     else:

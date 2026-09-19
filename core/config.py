@@ -17,6 +17,7 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "deepseek-embedding")
 
 # ========== 视觉/多模态模型配置 ==========
 VISION_MODEL_NAME = os.environ.get("VISION_MODEL_NAME", "deepseek-v4-flash-vision-exp")
+# [file_patch 权限测试] 这行由三者插入
 VISION_MODEL_BY_PROVIDER = {
     "deepseek": {"model": "deepseek-v4-flash-vision-exp", "supports_image": True},
     "openai": {"model": "gpt-4o-mini", "supports_image": True},
@@ -114,3 +115,8 @@ EMBEDDING_MODE = os.environ.get("EMBEDDING_MODE", "hybrid")
 # 混合模式的边界阈值
 HYBRID_LOW_THRESHOLD = float(os.environ.get("HYBRID_LOW_THRESHOLD", "0.35"))
 HYBRID_HIGH_THRESHOLD = float(os.environ.get("HYBRID_HIGH_THRESHOLD", "0.88"))
+
+# ========== 指挥官/审核员 LLM 参数 ==========
+COMMANDER_MAX_TOKENS = int(os.environ.get("COMMANDER_MAX_TOKENS", "8000"))
+REPLAN_MAX_TOKENS = int(os.environ.get("REPLAN_MAX_TOKENS", "8000"))
+SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "1000"))

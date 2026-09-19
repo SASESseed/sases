@@ -33,6 +33,13 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 5. 禁止 uvicorn 等服务器启停命令
 6. 禁止使用 if 条件语句，只用简单命令
 7. 如果任务模糊，输出：[{"step":1,"description":"任务模糊","command":"echo 请提供更具体的任务说明"}]
+8. 每步 description 不超过 30 字，command 不超过 200 字，总输出不超过 800 字。
+9. 修改类任务（file_patch）执行成功后，不要再生成 findstr 或 type 等验证命令。工具返回 success 即为完成。多余的验证步骤会干扰判断。
+10. 只有用户明确要求"检查"时，才生成查询命令。
+11. 一个任务最多生成 1 个 file_patch 步骤。多处修改请让用户分批发送指令，不要一次性拆成多个 patch。
+12. 生成查询命令时，禁止使用以下字符：& < > ^ % ` $ 
+    如果搜索关键词包含这些字符，改用不含特殊字符的短关键词代替。
+    例如：不要写 findstr /c:"() => openRedPacketDialog()"，要写 findstr /c:"openRedPacketDialog"。
 
 【跨步骤引用语法（重要）】
 如果后续步骤需要用到前面步骤的输出，用占位符 {{stepN}} 引用。
@@ -57,6 +64,47 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
   格式：{"step":1,"type":"harness","module_id":"web_fetch","params":{"url":"https://..."},"description":"抓取网页"}
   注意：harness 类型的步骤不需要 command 字段，而是用 type/module_id/params 三个字段。
 
+- file_patch：修改项目文件（允许目录：static/ / core/ / scripts/ / docs/）。支持两种模式：
+
+  【模式 A：锚点模式（强烈推荐，默认用这个）】
+  格式：{"step":1,"type":"harness","module_id":"file_patch","params":{
+    "file_path":"static/modules/chat_ui.js",
+    "anchor_pattern":"export function createMessageElement",
+    "position":"after",
+    "new_content":"    if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }"
+  },"description":"在函数开头插入红包判断"}
+
+  参数说明：
+  - anchor_pattern：一段**唯一出现**的短关键词（10~60 字符），
+    通常是函数名、变量名、或一行独特代码的一部分。
+    **不要**用整行代码，只要片段就够，因为 anchor 只需要能唯一定位一行。
+  - position：
+    "after" — 在锚点行的下一行插入 new_content
+    "before" — 在锚点行的上一行插入 new_content
+    "replace_line" — 用 new_content 替换锚点行
+  - new_content：要插入或替换的内容，可包含缩进（用 \n 分隔多行时，缩进要自己加）
+
+  【模式 B：精确片段模式（仅在你能看到完整原文时用）】
+  格式：{"step":1,...,"params":{
+    "file_path":"...",
+    "old_snippet":"完全精确的旧片段",
+    "new_snippet":"新片段",
+    "expected_count":1
+  }}
+
+  【file_patch 铁律】
+  a) **绝对不要凭猜测生成 old_snippet**。你无法知道文件的真实内容，除非前序步骤用
+     type / findstr 读出来了。
+  b) **优先用模式 A（锚点模式）**，它只需要你知道一个短关键词，不需要知道完整原文。
+  c) 如果任务要求"在函数 X 里加一行"，用：
+       step 1: findstr /n "function X" <文件>   （确认函数存在）
+       step 2: file_patch 用 anchor_pattern="function X"，position="after"
+  d) 锚点必须唯一。如果 findstr 显示匹配多行，换更长的锚点。
+  e) 一次 patch 只改一处。多处修改请拆成多个 step。
+  f) 允许修改：static/ / core/ / scripts/ / docs/ 下的文件。
+     禁止修改：users.db / .env / *.key / *.bin / *.pem / *.crt。
+     修改 core/ 下的文件后，用户需要重启服务才能生效，请在 description 中提醒。
+
 【会话上下文】
 你会看到"最近的会话历史"和"相关历史经验"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。
 
@@ -75,11 +123,15 @@ REPLAN_SYSTEM_PROMPT = """你是 SASES 指挥官。之前的命令执行失败�
 3. 每步一个命令，Windows CMD 单行命令
 4. 最多 5 步
 5. 禁止 uvicorn 等服务器启停命令
+6. 禁止使用 copy / move / del / powershell / for / if / 重定向（> < &）等命令
+7. 只允许使用：dir / ls / tree / type / cat / head / tail / findstr / find / grep / where / echo / pwd / cd / whoami / hostname / wc
 
 【重拆策略】
+- 如果失败原因是"old_snippet 未找到"：先用 findstr /n /c:"片段" 精确确认原文，再 patch
 - 如果失败原因是"文件找不到"：尝试用 dir /s /b 搜索相似文件名
 - 如果失败原因是"路径错误"：先用 dir 确认目录，再用 {{stepN}} 引用
 - 如果失败原因是"命令语法错误"：换一种命令写法
+- 如果 task 需要多处修改：拆成多个 step，每个 step 一处 patch
 - 如果任务本身不可完成：输出 [{"step":1,"description":"无法完成","command":"echo 任务无法完成，请用户确认"}]
 
 现在输出 JSON 数组："""
@@ -108,8 +160,15 @@ UNRECOVERABLE_KEYWORDS = ["找不到文件", "系统找不到", "文件不存在
 
 
 def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, str]:
+    # 查询类命令"没找到"属于正常结果，不算失败
+    cmd = (step.get("command") or "").strip()
+    cmd_first = cmd.split()[0].lower() if cmd.split() else ""
+    if cmd_first in ("findstr", "find", "grep", "where") and status == "failed":
+        return "pass", "查询无结果（正常）"
+
     if status in ("failed", "timeout", "error"):
-        return "retry", f"命令状态: {status}"
+        detail = (output or "").strip()[:200]
+        return "retry", f"命令状态: {status} | {detail}"
 
     if status == "blocked":
         return "retry", "命令被安全策略拒绝"
@@ -123,8 +182,6 @@ def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, st
         if kw.lower() in output_lower:
             return "retry", f"输出含错误: {kw}"
 
-    cmd = (step.get("command") or "").strip()
-    cmd_first = cmd.split()[0].lower() if cmd.split() else ""
     if cmd_first in COMMANDS_THAT_SHOULD_OUTPUT and not output_str.strip():
         return "retry", "命令应有输出但为空"
 
@@ -140,7 +197,6 @@ _review_table_ready = False
 # ========== 数据库同步 ==========
 
 def _save_pending(task: Dict[str, Any]):
-    """把任务写入数据库（存在则更新）"""
     try:
         with db_cursor(commit=True) as cur:
             cur.execute(
@@ -203,6 +259,37 @@ def _derive_status(task: Dict[str, Any]) -> str:
     return "pending"
 
 
+def _has_active_task_in_conversation(conversation_id: int) -> bool:
+    if not conversation_id:
+        return False
+
+    for task in _pending.values():
+        if task.get("conversation_id") != conversation_id:
+            continue
+        if task.get("cancelled") or task.get("no_plan") or task.get("is_draft"):
+            continue
+        done = task.get("done", set())
+        steps = task.get("steps", [])
+        if len(done) >= len(steps):
+            continue
+        return True
+
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*) as cnt FROM swarm_pending_tasks
+                WHERE conversation_id=? AND status IN ('pending', 'running')
+                """,
+                (conversation_id,)
+            )
+            row = cur.fetchone()
+            return bool(row and row["cnt"] > 0)
+    except Exception as e:
+        print(f"[swarm] 检查活跃任务失败: {e}")
+        return False
+
+
 def _delete_pending_from_db(task_id: str):
     try:
         with db_cursor(commit=True) as cur:
@@ -212,7 +299,6 @@ def _delete_pending_from_db(task_id: str):
 
 
 def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
-    """从数据库加载单个任务"""
     try:
         with db_cursor() as cur:
             cur.execute("SELECT * FROM swarm_pending_tasks WHERE task_id=?", (task_id,))
@@ -242,7 +328,6 @@ def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
 
 
 def restore_pending_tasks():
-    """后端启动时从数据库恢复所有未完成的任务"""
     try:
         with db_cursor() as cur:
             cur.execute(
@@ -304,6 +389,7 @@ def _ensure_review_table():
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_task ON swarm_reviews(task_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_time ON swarm_reviews(created_at)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_conversation ON swarm_reviews(conversation_id)")
     _review_table_ready = True
 
 
@@ -432,7 +518,9 @@ def _insert_message(conversation_id: int, content: str, sender_agent_id: Optiona
         return cur.lastrowid
 
 
-async def _call_llm(prompt: str, system_prompt: str = "", max_tokens: int = 500) -> str:
+async def _call_llm(prompt: str, system_prompt: str = "", max_tokens: int = None) -> str:
+    if max_tokens is None:
+        max_tokens = config.COMMANDER_MAX_TOKENS
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -445,31 +533,98 @@ async def _call_llm(prompt: str, system_prompt: str = "", max_tokens: int = 500)
         temperature=0.3,
         max_tokens=max_tokens
     )
-    content = resp.choices[0].message.content
-    return (content or "").strip()
+
+    choice = resp.choices[0]
+    content = choice.message.content
+    finish_reason = choice.finish_reason
+
+    print(f"[swarm-debug] finish_reason={finish_reason}, content_len={len(content) if content else 0}")
+
+    # 优先返回 content
+    if content and content.strip():
+        return content.strip()
+
+    # 兜底：从 reasoning_content 提取 JSON
+    rc = getattr(choice.message, 'reasoning_content', None)
+    if rc:
+        print(f"[swarm-debug] content 为空，尝试从 reasoning_content 提取 JSON")
+        import re as _re
+        m = _re.search(r'\[\s*\{.*\}\s*\]', rc, _re.DOTALL)
+        if m:
+            return m.group(0)
+
+    return ""
 
 
 def _parse_plan(raw: str) -> Optional[List[Dict[str, Any]]]:
     if not raw:
         return None
     raw = raw.strip()
+
     if raw.startswith("```"):
         lines = raw.split("\n")
         lines = lines[1:] if lines[0].startswith("```") else lines
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
-        raw = "\n".join(lines)
+        raw = "\n".join(lines).strip()
+
     start = raw.find("[")
     end = raw.rfind("]")
-    if start == -1 or end == -1:
-        return None
-    try:
-        steps = json.loads(raw[start:end+1])
-        if not isinstance(steps, list) or not steps:
-            return None
-        return steps[:5]
-    except json.JSONDecodeError:
-        return None
+    if start != -1 and end != -1 and end > start:
+        try:
+            steps = json.loads(raw[start:end+1])
+            if isinstance(steps, list) and steps:
+                return steps[:5]
+        except json.JSONDecodeError:
+            pass
+
+    if start != -1:
+        candidate = raw[start:]
+        depth = 0
+        last_valid = None
+        for i, ch in enumerate(candidate):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    last_valid = i
+        if last_valid is not None:
+            try:
+                fixed = candidate[:last_valid+1] + "]"
+                steps = json.loads(fixed)
+                if isinstance(steps, list) and steps:
+                    print(f"[swarm] _parse_plan 三级修复成功，步骤数: {len(steps)}")
+                    return steps[:5]
+            except json.JSONDecodeError:
+                pass
+
+    if start != -1:
+        objects = []
+        depth = 0
+        obj_start = None
+        for i, ch in enumerate(raw[start:], start=start):
+            if ch == "{":
+                if depth == 0:
+                    obj_start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and obj_start is not None:
+                    try:
+                        obj = json.loads(raw[obj_start:i+1])
+                        if isinstance(obj, dict) and ("command" in obj or "type" in obj):
+                            objects.append(obj)
+                    except json.JSONDecodeError:
+                        pass
+                    obj_start = None
+        if objects:
+            for i, s in enumerate(objects):
+                s["step"] = i + 1
+            print(f"[swarm] _parse_plan 四级修复成功，步骤数: {len(objects)}")
+            return objects[:5]
+
+    return None
 
 
 # ========== 主流程 ==========
@@ -483,6 +638,12 @@ async def plan_task(
     timeout: int = 30,
     require_confirmation: bool = False
 ) -> Dict[str, Any]:
+    if conversation_id and _has_active_task_in_conversation(conversation_id):
+        err_msg = "[SUMMARY]:当前会话有正在执行的任务，请等待完成或取消后再提交新任务。"
+        _insert_message(conversation_id, err_msg, sender_agent_id=None)
+        print(f"[swarm] 会话 {conversation_id} 已有活跃任务，拒绝新任务")
+        return {"status": "busy", "message": "会话已有运行中的任务"}
+
     if not commander_id or not executor_id:
         auto_cmd, auto_exec = pick_swarm_agents(user_id)
         commander_id = commander_id or auto_cmd
@@ -531,7 +692,25 @@ async def plan_task(
 
     _insert_message(conversation_id, user_input, sender_agent_id=None)
 
+    # 项目库检索（v0.17.0）
+    project_text = ""
+    try:
+        from . import project_service
+        chunks = project_service.retrieve_project_chunks(user_input, top_k=3)
+        if chunks:
+            project_text = project_service.format_chunks_for_prompt(chunks)
+            print(f"[swarm] 检索到 {len(chunks)} 条项目资料")
+        else:
+            print(f"[swarm] 项目库无匹配")
+    except Exception as e:
+        print(f"[swarm] 项目库检索失败: {e}")
+
+
     prompt_parts = []
+    if project_text:
+        prompt_parts.append(project_text)
+
+
     if success_text:
         prompt_parts.append(f"【可参考的成功经验】\n{success_text}")
     if failure_text:
@@ -546,12 +725,23 @@ async def plan_task(
     )
     full_prompt = "\n\n".join(prompt_parts)
 
-    try:
-        raw = await _call_llm(full_prompt, COMMANDER_SYSTEM_PROMPT)
-    except Exception as e:
-        err_msg = f"[SUMMARY]:任务拆解失败：{str(e)}"
+    raw = ""
+    last_err = None
+    for attempt in range(2):
+        try:
+            raw = await _call_llm(full_prompt, COMMANDER_SYSTEM_PROMPT)
+            if raw and raw.strip():
+                print(f"[swarm-debug] 第 {attempt+1} 次成功，raw 长度={len(raw)}")
+                break
+            print(f"[swarm] LLM 返回空，重试第 {attempt+1} 次")
+        except Exception as e:
+            last_err = e
+            print(f"[swarm] LLM 调用异常: {e}")
+
+    if not raw or not raw.strip():
+        err_msg = f"[SUMMARY]:任务拆解失败（LLM 返回空，请查看服务端日志）"
         _insert_message(conversation_id, err_msg, sender_agent_id=commander_id)
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "LLM empty response"}
 
     steps = _parse_plan(raw)
     if not steps:
@@ -765,13 +955,15 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
 请针对上述失败步骤重新拆解命令。要求：
 1. 必须输出 JSON 数组，不要任何解释文字
 2. 格式：[{{"step":1,"description":"...","command":"..."}}]
-3. 如果是"文件找不到"，请先尝试搜索类似文件名
-4. 用 {{{{stepN}}}} 引用前序步骤的输出
+3. 只允许命令：dir / ls / tree / type / cat / head / tail / findstr / find / grep / where / echo / pwd / cd / whoami / hostname / wc
+4. 禁止 copy / move / del / powershell / for / if / 重定向
+5. 如果是"old_snippet 未找到"：先用 findstr 精确确认原文再 patch
+6. 用 {{{{stepN}}}} 引用前序步骤的输出
 
 只输出 JSON 数组，现在开始："""
 
     try:
-        raw = await _call_llm(prompt, REPLAN_SYSTEM_PROMPT, max_tokens=1000)
+        raw = await _call_llm(prompt, REPLAN_SYSTEM_PROMPT, max_tokens=config.REPLAN_MAX_TOKENS)
         print(f"[swarm] 重拆 LLM 返回长度: {len(raw)}, 前 300 字: {raw[:300]!r}")
     except Exception as e:
         print(f"[swarm] 重拆 LLM 异常: {e}")
@@ -802,7 +994,6 @@ async def handle_step_done(
     if not task_id:
         return None
 
-    # 内存没有就从数据库加载
     if task_id not in _pending:
         task = _load_pending(task_id)
         if task:
@@ -833,7 +1024,7 @@ async def handle_step_done(
     task["results"].append({
         "step": step_id,
         "description": payload.get("description", ""),
-        "command": original_step.get("command", ""),
+        "command": original_step.get("command", "") or original_step.get("module_id", ""),
         "status": status,
         "review": review_result,
         "reason": review_reason,
@@ -845,7 +1036,7 @@ async def handle_step_done(
 
     if review_result == "retry":
         try:
-            fail_cmd = original_step.get("command", "")
+            fail_cmd = original_step.get("command", "") or original_step.get("module_id", "")
             fail_content = (
                 f"命令「{fail_cmd[:150]}」执行失败。\n"
                 f"失败原因：{review_reason}"
@@ -867,7 +1058,7 @@ async def handle_step_done(
             task_id=task_id,
             conversation_id=conversation_id,
             step_id=step_id,
-            command=original_step.get("command", ""),
+            command=original_step.get("command", "") or original_step.get("module_id", ""),
             exec_status=status,
             review_result=review_result,
             review_reason=review_reason,
@@ -882,7 +1073,7 @@ async def handle_step_done(
 
         if blocked:
             print(f"[swarm] 发现 {len(blocked)} 个被拒绝的命令，跳过重拆")
-            summary = await _summarize(task["user_text"], task["results"])
+            summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
             _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
             del _pending[task_id]
             _delete_pending_from_db(task_id)
@@ -911,7 +1102,7 @@ async def handle_step_done(
                 }
             else:
                 print(f"[swarm] 重拆失败或跳过，直接汇总")
-                summary = await _summarize(task["user_text"], task["results"])
+                summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
                 _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
                 del _pending[task_id]
                 _delete_pending_from_db(task_id)
@@ -941,7 +1132,7 @@ async def handle_step_done(
                 except Exception as e:
                     print(f"[swarm] 写成功记忆失败: {e}")
 
-            summary = await _summarize(task["user_text"], task["results"])
+            summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
             _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
             del _pending[task_id]
             _delete_pending_from_db(task_id)
@@ -956,13 +1147,23 @@ async def handle_step_done(
     }
 
 
-async def _summarize(user_text: str, results: List[Dict[str, Any]]) -> str:
+async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int = None, task_id: str = None) -> str:
+    # P0：记录经验 pattern（静默失败，不阻塞主流程）
+    try:
+        if user_id and task_id and results:
+            from . import pattern_service
+            n = pattern_service.record_pattern(user_id, task_id, "dev", results)
+            if n:
+                print(f"[swarm] 已记录 {n} 条 pattern")
+    except Exception as e:
+        print(f"[swarm] pattern 记录失败（已忽略）: {e}")
+
     result_text = "\n".join(
         f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
         for r in results
     )
     prompt = f"用户任务：{user_text}\n\n执行结果：\n{result_text}\n\n请用一句话总结这次任务的结果。"
     try:
-        return await _call_llm(prompt, SUMMARY_SYSTEM_PROMPT)
+        return await _call_llm(prompt, SUMMARY_SYSTEM_PROMPT, max_tokens=config.SUMMARY_MAX_TOKENS)
     except Exception:
         return "任务执行完成。"

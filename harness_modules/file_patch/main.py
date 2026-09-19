@@ -1,0 +1,228 @@
+# harness_modules/file_patch/main.py
+"""
+文件修改工具。支持三种模式：
+
+模式1（精确片段替换）：
+  参数: file_path, old_snippet, new_snippet, expected_count
+
+模式2（锚点定位，推荐）：
+  参数: file_path, anchor_pattern, position, new_content
+
+模式3（创建/覆写文件，v2.1 新增）：
+  参数: file_path, new_content, create_if_missing=true
+  行为: 文件不存在或为空时，直接写入 new_content
+
+【v2.1.0 权限】
+  - 允许目录：static/ / core/ / scripts/ / docs/
+  - 禁止文件：users.db / .env / *.key / *.bin / *.pem / *.crt
+  - 自我保护：file_patch 自身、executor_service.py
+  - 自动备份到 .backups/
+"""
+import os
+from datetime import datetime
+
+ALLOWED_DIRS = ("static/", "core/", "scripts/", "docs/")
+FORBIDDEN_EXT = {".db", ".key", ".bin", ".env", ".pem", ".crt", ".sqlite", ".sqlite3"}
+FORBIDDEN_PARTS = {".env", "users.db", "secret_key", "api_key_encryption", ".backups"}
+SELF_PROTECTED_FILES = {
+    "harness_modules/file_patch/main.py",
+    "harness_modules/file_patch/manifest.json",
+    "core/services/executor_service.py",
+}
+BACKUP_DIR = ".backups"
+
+
+def _validate_path(file_path: str) -> str:
+    if not file_path or not isinstance(file_path, str):
+        raise ValueError("缺少 file_path 参数")
+    p = file_path.replace("\\", "/").strip()
+    if p.startswith("/") or (len(p) > 1 and p[1] == ":"):
+        raise ValueError(f"禁止绝对路径: {file_path}")
+    if ".." in p.split("/"):
+        raise ValueError(f"禁止路径穿越: {file_path}")
+    if not any(p.startswith(d) for d in ALLOWED_DIRS):
+        allowed = " / ".join(ALLOWED_DIRS)
+        raise ValueError(f"只允许修改以下目录：{allowed}，收到: {file_path}")
+    lower = p.lower()
+    for part in FORBIDDEN_PARTS:
+        if part in lower:
+            raise ValueError(f"禁止修改敏感文件: {file_path}")
+    ext = os.path.splitext(p)[1].lower()
+    if ext in FORBIDDEN_EXT:
+        raise ValueError(f"禁止修改 {ext} 类型文件")
+    if p in SELF_PROTECTED_FILES:
+        raise ValueError(f"禁止修改受保护文件: {file_path}")
+    return p
+
+
+def _backup_before_write(abs_path, safe_path):
+    try:
+        if not os.path.exists(abs_path):
+            return None
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        safe_name = safe_path.replace("/", "__").replace("\\", "__")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        backup_path = os.path.join(BACKUP_DIR, f"{safe_name}.{timestamp}.bak")
+        with open(abs_path, "r", encoding="utf-8") as src:
+            content = src.read()
+        with open(backup_path, "w", encoding="utf-8") as dst:
+            dst.write(content)
+        return backup_path
+    except Exception as e:
+        print(f"[file_patch] 备份失败: {e}")
+        return None
+
+
+def _mode_snippet(abs_path, safe_path, params):
+    old_snippet = params.get("old_snippet", "")
+    new_snippet = params.get("new_snippet", "")
+    expected_count = params.get("expected_count", 1)
+
+    if not old_snippet:
+        raise ValueError("缺少 old_snippet 参数")
+    if new_snippet is None:
+        raise ValueError("缺少 new_snippet 参数")
+    if not isinstance(expected_count, int) or expected_count < 1:
+        raise ValueError("expected_count 必须是 >=1 的整数")
+
+    with open(abs_path, "r", encoding="utf-8") as f:
+        original = f.read()
+
+    count = original.count(old_snippet)
+    if count == 0:
+        raise ValueError(f"原片段在 {safe_path} 中未找到。建议改用锚点模式。")
+    if count != expected_count:
+        raise ValueError(f"原片段在 {safe_path} 中出现 {count} 次，期望 {expected_count} 次。")
+
+    backup_path = _backup_before_write(abs_path, safe_path)
+    new_content = original.replace(old_snippet, new_snippet)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    return {
+        "success": True, "mode": "snippet", "file_path": safe_path,
+        "matches_replaced": count,
+        "old_length": len(original), "new_length": len(new_content),
+        "diff_bytes": len(new_content) - len(original),
+        "backup": backup_path,
+        "restart_required": safe_path.startswith("core/"),
+    }
+
+
+def _mode_anchor(abs_path, safe_path, params):
+    anchor = params.get("anchor_pattern", "")
+    position = params.get("position", "after").lower()
+    new_content = params.get("new_content", "")
+
+    if not anchor:
+        raise ValueError("缺少 anchor_pattern 参数")
+    if position not in ("before", "after", "replace_line"):
+        raise ValueError(f"position 必须是 before/after/replace_line，收到: {position}")
+    if new_content is None:
+        raise ValueError("缺少 new_content 参数")
+
+    with open(abs_path, "r", encoding="utf-8") as f:
+        original = f.read()
+
+    lines = original.split("\n")
+    matched_indices = [i for i, line in enumerate(lines) if anchor in line]
+
+    if len(matched_indices) == 0:
+        raise ValueError(f"锚点 '{anchor}' 在 {safe_path} 中未找到任何匹配行")
+    if len(matched_indices) > 1:
+        raise ValueError(
+            f"锚点 '{anchor}' 匹配到 {len(matched_indices)} 行，期望 1 行。"
+            f"匹配行号：{[i+1 for i in matched_indices]}。请用更精确的锚点。"
+        )
+
+    idx = matched_indices[0]
+    matched_line = lines[idx]
+    backup_path = _backup_before_write(abs_path, safe_path)
+
+    if position == "before":
+        lines.insert(idx, new_content)
+        action = f"在第 {idx+1} 行前插入"
+    elif position == "after":
+        lines.insert(idx + 1, new_content)
+        action = f"在第 {idx+1} 行后插入"
+    else:
+        lines[idx] = new_content
+        action = f"替换第 {idx+1} 行"
+
+    new_text = "\n".join(lines)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        f.write(new_text)
+
+    return {
+        "success": True, "mode": "anchor", "file_path": safe_path,
+        "anchor": anchor, "matched_line_number": idx + 1,
+        "matched_line_preview": matched_line.strip()[:120],
+        "position": position, "action": action,
+        "old_length": len(original), "new_length": len(new_text),
+        "diff_bytes": len(new_text) - len(original),
+        "backup": backup_path,
+        "restart_required": safe_path.startswith("core/"),
+    }
+
+
+def _mode_create(abs_path, safe_path, params):
+    """模式3：创建或覆写文件（v2.1 新增）"""
+    new_content = params.get("new_content", "")
+    if not new_content:
+        raise ValueError("创建/覆写文件时必须提供非空 new_content")
+
+    existed = os.path.exists(abs_path)
+    old_length = 0
+    backup_path = None
+    if existed:
+        with open(abs_path, "r", encoding="utf-8") as f:
+            old_length = len(f.read())
+        backup_path = _backup_before_write(abs_path, safe_path)
+
+    parent = os.path.dirname(abs_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+    with open(abs_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    return {
+        "success": True,
+        "mode": "create" if not existed else "overwrite",
+        "file_path": safe_path,
+        "old_length": old_length,
+        "new_length": len(new_content),
+        "backup": backup_path,
+        "restart_required": safe_path.startswith("core/"),
+    }
+
+
+def run(params):
+    file_path = params.get("file_path", "")
+    safe_path = _validate_path(file_path)
+    abs_path = os.path.abspath(safe_path)
+
+    exists = os.path.exists(abs_path)
+    is_empty = exists and os.path.getsize(abs_path) == 0
+    create_if_missing = bool(params.get("create_if_missing", False))
+
+    # 文件不存在或为空 → 走创建模式
+    if not exists or is_empty:
+        if not create_if_missing and not is_empty:
+            raise FileNotFoundError(
+                f"文件不存在: {safe_path}。如需创建，请传 create_if_missing=true。"
+            )
+        return _mode_create(abs_path, safe_path, params)
+
+    # 文件存在且非空 → 按参数路由
+    if params.get("anchor_pattern"):
+        return _mode_anchor(abs_path, safe_path, params)
+    elif params.get("old_snippet"):
+        return _mode_snippet(abs_path, safe_path, params)
+    else:
+        raise ValueError(
+            "文件非空时必须提供：\n"
+            "  - anchor_pattern（锚点模式，推荐）\n"
+            "  - old_snippet（精确片段模式）\n"
+            "如需整体覆写，请先删除文件或改用空文件。"
+        )

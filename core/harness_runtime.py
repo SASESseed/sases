@@ -12,7 +12,10 @@ DEFAULT_ALLOWED_PERMISSIONS = {
     "string_utils",
     "unit_conversion",
     "base64_codec",
-    "text_stats"
+    "text_stats",
+    "file_patch",
+    "frontend_edit",
+    "restricted_file_write"
 }
 
 # 危险权限，默认拒绝，需要用户显式授权

@@ -12,6 +12,9 @@ from .services import debug_service
 from .services import rescue_service
 from .services import swarm_service
 from .services import executor_service
+from .services import cleanup_service
+from .services import pattern_service
+from .services import pattern_service
 from . import backup_service
 from .api_routes import (
     auth_routes,
@@ -67,6 +70,18 @@ async def periodic_summary_task():
 
         await asyncio.sleep(6 * 3600)
 
+async def periodic_pattern_finalize():
+    """每小时检查一次，把 24 小时前的 tentative pattern 转为 active"""
+    while True:
+        try:
+            activated = pattern_service.finalize_patterns(hours=24)
+            if activated:
+                print(f"[pattern] finalize: {activated} 条转为 active")
+        except Exception as e:
+            print(f"[pattern] finalize 异常: {e}")
+        await asyncio.sleep(3600)
+
+
 
 async def periodic_rescue_maintenance():
     """每 5 分钟回收超时任务"""
@@ -97,6 +112,8 @@ async def lifespan(app: FastAPI):
     rescue_task = asyncio.create_task(periodic_rescue_maintenance())
     backup_task = asyncio.create_task(backup_service.periodic_backup_task())
     executor_task = asyncio.create_task(executor_service.start_background_executor())
+    cleanup_task = asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24))
+    pattern_task = asyncio.create_task(periodic_pattern_finalize())
 
     yield
 
@@ -105,10 +122,12 @@ async def lifespan(app: FastAPI):
     rescue_task.cancel()
     backup_task.cancel()
     executor_task.cancel()
+    cleanup_task.cancel()
+    pattern_task.cancel()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="SASES", version="0.15.3", lifespan=lifespan)
+    app = FastAPI(title="SASES", version="0.15.4", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

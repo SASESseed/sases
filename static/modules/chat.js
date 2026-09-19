@@ -21,6 +21,7 @@ export const chatState = {
   hasMore: true
 };
 
+window.chatState = chatState;
 const PAGE_SIZE = 50;
 
 function handleSend() {

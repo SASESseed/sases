@@ -1,4 +1,57 @@
 // static/modules/chat_menu.js
+function openRedPacketDialog() {
+  const chatState = window.chatState || {};
+  const conversationId = chatState.conversationId || null;
+
+  const html = `
+    <div class="red-packet-send-page">
+      <div class="red-packet-header">
+        <div class="red-packet-title">发红包</div>
+      </div>
+      <div class="red-packet-body">
+        <div class="red-packet-row">
+          <label>金额</label>
+          <input type="number" id="rp-amount" placeholder="0.00" min="0.01" step="0.01">
+        </div>
+        <div class="red-packet-row">
+          <label>接收者</label>
+          <input type="text" id="rp-receiver" placeholder="SASES ID 或用户ID">
+        </div>
+        <div class="red-packet-row">
+          <label>留言</label>
+          <input type="text" id="rp-message" placeholder="恭喜发财，大吉大利" maxlength="30">
+        </div>
+      </div>
+      <button id="rp-submit" class="red-packet-submit-btn">塞钱进红包</button>
+    </div>
+  `;
+  window.openSubpage('发红包', html, { showMore: false });
+
+  setTimeout(() => {
+    const submitBtn = document.getElementById('rp-submit');
+    if (!submitBtn) return;
+    submitBtn.addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('rp-amount').value);
+      const receiver = document.getElementById('rp-receiver').value.trim();
+      const message = document.getElementById('rp-message').value || '恭喜发财，大吉大利';
+
+      if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
+      if (!receiver) { alert('请输入接收者的 SASES ID'); return; }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '发送中...';
+      try {
+        await api.sendRedPacket(receiver, amount, message, conversationId);
+        alert('红包已发出');
+        window.closeSubpage && window.closeSubpage();
+      } catch (e) {
+        alert('发送失败：' + (e.message || '未知错误'));
+        submitBtn.disabled = false;
+        submitBtn.textContent = '塞钱进红包';
+      }
+    });
+  }, 100);
+}
 import { api } from './api.js';
 import { openIdentitySwitch } from './chat_identity.js';
 
@@ -174,7 +227,7 @@ export function openChatPlusPanel() {
     const items = [
       { icon: '📷', label: '相册', action: () => alert('相册功能待实现') },
       { icon: '💰', label: '转账', action: () => alert('转账功能待实现') },
-      { icon: '🧧', label: '红包', action: () => alert('红包功能待实现') },
+      { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
       { icon: '📁', label: '文件', action: () => alert('文件功能待实现') },
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];

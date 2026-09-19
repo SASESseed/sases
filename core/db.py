@@ -273,10 +273,14 @@ def init_db():
                 message TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 completed_at TEXT,
+                expires_at TEXT,
+                claimed_at TEXT,
                 FOREIGN KEY (sender_id) REFERENCES users(id),
                 FOREIGN KEY (receiver_id) REFERENCES users(id)
             )
         """)
+        _ensure_column(cur, "transactions", "expires_at", "TEXT")
+        _ensure_column(cur, "transactions", "claimed_at", "TEXT")
 
         # ========== 种子任务表 ==========
         cur.execute("""
@@ -320,7 +324,6 @@ def init_db():
         _ensure_column(cur, "safety_memory", "tags", "TEXT")
         _ensure_column(cur, "safety_memory", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
         _ensure_column(cur, "safety_memory", "expires_at", "TEXT")
-        # 新增字段（记忆库重构 v0.15.0）
         _ensure_column(cur, "safety_memory", "task_id", "TEXT")
         _ensure_column(cur, "safety_memory", "embedding", "BLOB")
         _ensure_column(cur, "safety_memory", "content_hash", "TEXT")
@@ -610,17 +613,129 @@ def init_db():
             )
         """)
 
+        # ========== 蜂群审核日志表（v0.15.0 从 swarm_service 收编） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS swarm_reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT NOT NULL,
+                conversation_id INTEGER,
+                step_id INTEGER,
+                command TEXT,
+                exec_status TEXT,
+                review_result TEXT,
+                review_reason TEXT,
+                output_preview TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # ========== 意图误判反馈表（v0.14.1 从 swarm_service 收编） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS intent_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                task_id TEXT,
+                original_input TEXT NOT NULL,
+                feedback_type TEXT NOT NULL DEFAULT 'false_positive',
+                note TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # ========== 经验库：交互模式表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS interaction_patterns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain TEXT NOT NULL DEFAULT 'general',
+                pattern_key TEXT NOT NULL,
+                pattern_type TEXT NOT NULL,
+                context_signature TEXT NOT NULL,
+                role TEXT,
+                evidence TEXT,
+                confidence REAL DEFAULT 0.5,
+                hit_count INTEGER DEFAULT 0,
+                success_count INTEGER DEFAULT 0,
+                fail_count INTEGER DEFAULT 0,
+                distinct_user_count INTEGER DEFAULT 0,
+                last_hit_at TEXT,
+                last_success_at TEXT,
+                status TEXT DEFAULT 'active',
+                source_task_id TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_patterns_key_sig ON interaction_patterns(domain, pattern_key, context_signature)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_patterns_domain_type ON interaction_patterns(domain, pattern_type, status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_patterns_updated ON interaction_patterns(updated_at)")
+
+        # ========== 经验库：领域注册表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS domains (
+                domain TEXT PRIMARY KEY,
+                pattern_count INTEGER DEFAULT 0,
+                active INTEGER DEFAULT 0,
+                activated_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("INSERT OR IGNORE INTO domains (domain, active) VALUES ('dev', 0)")
+        cur.execute("INSERT OR IGNORE INTO domains (domain, active) VALUES ('image', 0)")
+        cur.execute("INSERT OR IGNORE INTO domains (domain, active) VALUES ('ecommerce', 0)")
+        cur.execute("INSERT OR IGNORE INTO domains (domain, active) VALUES ('game', 0)")
+        cur.execute("INSERT OR IGNORE INTO domains (domain, active) VALUES ('general', 1)")
+        # ========== 项目库：分片表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS project_docs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_file TEXT NOT NULL,
+                section_title TEXT,
+                section_path TEXT,
+                section_level INTEGER DEFAULT 2,
+                chunk_index INTEGER DEFAULT 0,
+                content TEXT NOT NULL,
+                embedding BLOB,
+                content_hash TEXT,
+                freshness_score REAL DEFAULT 1.0,
+                status TEXT DEFAULT 'active',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_source ON project_docs(source_file)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_hash ON project_docs(content_hash)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_status ON project_docs(status)")
+
+        # ========== 项目库：源文件元数据表（v0.17.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS project_docs_meta (
+                source_file TEXT PRIMARY KEY,
+                source_version TEXT,
+                chunk_count INTEGER DEFAULT 0,
+                file_hash TEXT,
+                imported_at TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         # ========== 索引 ==========
+        # 云宠战役
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_batch ON yunchong_tasks(batch_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_expires ON yunchong_tasks(expires_at)")
-        # 记忆库索引（v0.15.0）
+        # 记忆库
         cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_task ON safety_memory(task_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_hash ON safety_memory(content_hash)")
-        # 蜂群待处理任务索引（v0.16.0）
+        # 记忆库新增：按用户+类型检索（v0.16.0）
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_memory_user_type ON safety_memory(user_id, memory_type)")
+        # 蜂群待处理任务
         cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_task ON swarm_pending_tasks(task_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_status ON swarm_pending_tasks(status)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_pending_conv ON swarm_pending_tasks(conversation_id)")
+        # 蜂群审核日志
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_task ON swarm_reviews(task_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_time ON swarm_reviews(created_at)")
+        # 蜂群审核日志新增：按会话查询（v0.16.0）
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_swarm_reviews_conversation ON swarm_reviews(conversation_id)")
 
 if __name__ == '__main__':
     init_db()

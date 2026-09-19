@@ -71,6 +71,7 @@ export function appendWorkMessage(role, content, senderName = null) {
 
 // ========== 普通消息元素创建 ==========
 export function createMessageElement(role, content, senderName, messageId, timeIso, isPending = false, skipTimeTag = false, chatState = null) {
+    if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
@@ -156,8 +157,23 @@ export function appendMessage(role, content, senderName = null, messageId = null
 
   if (role === 'assistant' && typeof window.attachLongPress === 'function') {
     window.attachLongPress(wrapper, chatState);
+  if (wrapper && wrapper.querySelector && wrapper.querySelector('.red-packet-bubble')) {
+    const bubble = wrapper.querySelector('.red-packet-bubble');
+    bubble.addEventListener('click', async () => {
+      const tx = bubble.dataset.redPacketTx;
+      if (!tx) return;
+      if (!confirm('确定领取这个红包？')) return;
+      try {
+        await api.claimRedPacket(parseInt(tx));
+        alert('领取成功');
+      } catch (e) {
+        alert('领取失败：' + (e.message || '未知错误'));
+      }
+    });
+  }
   }
 }
+
 
 export function insertTimeTag(timeIso, chatState) {
   const container = document.getElementById('chat-messages');
@@ -193,6 +209,16 @@ export function formatTime(isoString) {
 }
 
 // ========== 消息状态更新 ==========
+export function renderRedPacketBubble(content) {
+  let data = {};
+  try { data = JSON.parse(content.substring('[RED_PACKET]:'.length)); } catch (e) {}
+  const div = document.createElement('div');
+  div.className = 'red-packet-bubble';
+  div.dataset.redPacketTx = data.tx_id || '';
+  div.innerHTML = '<div style="font-size:13px;opacity:0.9;">🧧 红包</div><div style="font-size:20px;font-weight:700;margin-top:4px;">¥' + (data.amount || 0) + '</div>' + (data.message ? '<div style="font-size:12px;opacity:0.85;margin-top:4px;">' + data.message + '</div>' : '');
+  return div;
+}
+
 export function updateMessageStatus(messageId, status) {
   const wrapper = document.querySelector(`[data-message-id="${messageId}"]`);
   if (!wrapper) return;

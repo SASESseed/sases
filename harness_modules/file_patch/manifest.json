@@ -1,0 +1,16 @@
+{
+  "id": "file_patch",
+  "name": "文件精确替换",
+  "description": "对项目文件进行精确片段替换或锚点插入。允许目录：static/ / core/ / scripts/ / docs/。禁止修改 users.db、.env、密钥文件和 file_patch 自身。每次写入自动备份到 .backups/。修改 core/ 下的文件后需要重启服务生效。",
+  "version": "2.0.0",
+  "capabilities": [
+    "file_patch",
+    "frontend_edit",
+    "backend_edit"
+  ],
+  "permissions": [
+    "restricted_file_write"
+  ],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}

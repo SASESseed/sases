@@ -320,8 +320,15 @@ export const api = {
   setGroupMode: (group_id, mode) => request(`/group/${group_id}/mode`, { method: 'POST', body: JSON.stringify({ mode }) }),
 
   // 转账红包
-  transferCredits: (receiver_id, amount, message) => request('/transfer/transfer', { method: 'POST', body: JSON.stringify({ receiver_id, amount, message }) }),
-  sendRedPacket: (receiver_id, amount, message) => request('/transfer/red-packet', { method: 'POST', body: JSON.stringify({ receiver_id, amount, message }) }),
+  transferCredits: (receiver_id, amount, message, conversation_id) => request('/transfer/transfer', {
+    method: 'POST',
+    body: JSON.stringify({ receiver_id, amount, message, conversation_id })
+  }),
+  sendRedPacket: (receiver_id, amount, message, conversation_id) => request('/transfer/red-packet', {
+    method: 'POST',
+    body: JSON.stringify({ receiver_id, amount, message, conversation_id })
+  }),
   getPendingRedPackets: () => request('/transfer/pending'),
   claimRedPacket: (tx_id) => request('/transfer/claim', { method: 'POST', body: JSON.stringify({ tx_id }) }),
+  getRedPacketDetail: (tx_id) => request(`/transfer/detail/${tx_id}`),
 };
