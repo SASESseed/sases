@@ -323,7 +323,8 @@ async def send_message(
                     conversation_id=conversation_id,
                     user_input=content,
                     require_confirmation=require_confirmation,
-                    supervisor_id=sender_agent_id
+                    supervisor_id=sender_agent_id,
+                    supervisor_run_id=locals().get('_supervisor_run_id')
                 )
                 print(f"[MSG_DEBUG] plan_result={plan_result}")
 
