@@ -178,6 +178,7 @@ async def send_message(
     require_confirmation = REQUIRE_TASK_CONFIRMATION
     # 检测 #1~#4 编号前缀
     _numbered_prefix_matched = False
+    _force_swarm = False
     for _p, _m in COMMAND_PREFIX_MAP.items():
         if content.startswith(_p):
             _numbered_prefix_matched = True
@@ -187,6 +188,7 @@ async def send_message(
             elif _m == "task":
                 content = "任务：" + content
             elif _m == "draft":
+                _force_swarm = True
                 require_confirmation = True
             elif _m == "auto":
                 return {
@@ -251,7 +253,10 @@ async def send_message(
                 except Exception as _e:
                     print('[message] 项目库快速回答失败: ' + str(_e))
 
-            is_task = await intent_service.is_task_intent(content)
+            if _force_swarm:
+                is_task = True
+            else:
+                is_task = await intent_service.is_task_intent(content)
             print(f"[MSG_DEBUG] is_task={is_task}")
 
             if is_task:
