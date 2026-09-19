@@ -43,7 +43,7 @@ def build_enriched_prompt(user_id, conversation_id, content, project_ctx):
     if fail:
         parts.append('【失败教训】' + NL + fail)
 
-    base = project_ctx + ' 【用户问】 ' + content
+    base = (project_ctx + ' 【用户问】 ' + content) if project_ctx else content
     if parts:
         return (NL + NL).join(parts) + (NL + NL) + base
     return base
