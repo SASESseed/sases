@@ -205,6 +205,11 @@ def run(params):
     exists = os.path.exists(abs_path)
     is_empty = exists and os.path.getsize(abs_path) == 0
     create_if_missing = bool(params.get("create_if_missing", False))
+    overwrite = bool(params.get("overwrite", False))
+
+    # v2.2.0: overwrite 参数——非空文件也允许覆写
+    if overwrite and exists:
+        return _mode_create(abs_path, safe_path, params)
 
     # 文件不存在或为空 → 走创建模式
     if not exists or is_empty:
@@ -224,5 +229,5 @@ def run(params):
             "文件非空时必须提供：\n"
             "  - anchor_pattern（锚点模式，推荐）\n"
             "  - old_snippet（精确片段模式）\n"
-            "如需整体覆写，请先删除文件或改用空文件。"
+            "  或 overwrite=true（整体覆写）"
         )
