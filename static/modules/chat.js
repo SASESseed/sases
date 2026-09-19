@@ -46,7 +46,7 @@ function handleSend() {
       return;
     }
 
-    const taskMatch = text.match(/^任务[：:]\s*(.+)$/);
+    const taskMatch = text.match(/^(?:任务|#2)[：:]\s*(.+)$/);
     if (taskMatch) {
       const taskText = taskMatch[1].trim();
       sendCommanderTask(taskText, chatState, api);
