@@ -176,6 +176,28 @@ async def send_message(
 
     # ========== 检测草稿前缀 ==========
     require_confirmation = REQUIRE_TASK_CONFIRMATION
+    # 检测 #1~#4 编号前缀
+    for _p, _m in COMMAND_PREFIX_MAP.items():
+        if content.startswith(_p):
+            content = content[len(_p):].lstrip()
+            if _m == "exec":
+                content = "执行：" + content
+            elif _m == "task":
+                content = "任务：" + content
+            elif _m == "draft":
+                require_confirmation = True
+            elif _m == "auto":
+                return {
+                    "conversation_id": conversation_id,
+                    "user_message": content,
+                    "assistant_reply": "自主模式开发中，敬请期待。",
+                    "agent_id": agent_id,
+                    "sender_agent_id": sender_agent_id,
+                    "mode": mode,
+                }
+            break
+
+
     for prefix in DRAFT_PREFIXES:
         if content.startswith(prefix):
             require_confirmation = True
