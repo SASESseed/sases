@@ -1187,6 +1187,31 @@ async def handle_step_done(
             _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
             del _pending[task_id]
             _delete_pending_from_db(task_id)
+
+            _run_id = task.get("supervisor_run_id")
+            if _run_id:
+                try:
+                    from . import supervisor_service
+                    _continue, _next_input = await supervisor_service.check_and_continue(_run_id, summary)
+                    if _continue and _next_input:
+                        print(f"[supervisor] run {_run_id} 继续下一轮")
+                        await plan_task(
+                            user_id=task["user_id"],
+                            conversation_id=conversation_id,
+                            user_input=_next_input,
+                            supervisor_id=task.get("supervisor_id"),
+                            supervisor_run_id=_run_id,
+                        )
+                    else:
+                        supervisor_service.finish_run(_run_id, "completed")
+                        print(f"[supervisor] run {_run_id} 已完成")
+                except Exception as e:
+                    print(f"[supervisor] 续轮失败: {e}")
+                    try:
+                        supervisor_service.finish_run(_run_id, "error")
+                    except Exception:
+                        pass
+
             return {"status": "completed", "task_id": task_id, "summary": summary}
 
     return {
