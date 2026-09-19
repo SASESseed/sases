@@ -1200,6 +1200,22 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
         print(f"[swarm] 自动快照失败: {_e}")
 
 
+    # 写入执行笔记（v0.17.0）
+    try:
+        if user_id and task_id and results:
+            from . import project_service
+            _digest = ' | '.join([str(r.get('step')) + '.' + str(r.get('status', '?')) for r in results[:5]])
+            _outcome = 'success' if all(r.get('review') != 'retry' for r in results) else 'partial'
+            _preview = ' | '.join([str(r.get('description', ''))[:30] for r in results[:3]])
+            project_service.import_execution_note(
+                task_id=task_id, user_id=user_id,
+                user_input=user_text, summary=_preview,
+                steps_digest=_digest, outcome=_outcome
+            )
+    except Exception as e:
+        print(f"[swarm] 执行笔记写入失败: {e}")
+
+
     result_text = "\n".join(
         f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
         for r in results
