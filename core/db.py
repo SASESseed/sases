@@ -758,6 +758,26 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_attach_user ON attachments(user_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_attach_fileid ON attachments(file_id)")
 
+        # ========== 自主模式运行记录表（v0.18.0） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS supervisor_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                conversation_id INTEGER NOT NULL,
+                supervisor_id TEXT,
+                goal TEXT NOT NULL,
+                status TEXT DEFAULT 'running',
+                current_round INTEGER DEFAULT 0,
+                max_rounds INTEGER DEFAULT 5,
+                credits_used INTEGER DEFAULT 0,
+                history TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                finished_at TEXT
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_suprun_user ON supervisor_runs(user_id)")
+
+
         # ========== 索引 ==========
         # 云宠战役
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")
