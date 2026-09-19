@@ -54,6 +54,8 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 - 列出目录：dir <路径>
 - 查找文件：dir /s /b <文件名>
 - 查看文件内容：type <文件路径>
+
+- 读长文件：优先用 file_read harness 工具，例如 {"step":1,"type":"harness","module_id":"file_read","params":{"file_path":"core/x.py","max_lines":50}}。禁止使用 more / less / head / tail。
 - 在文件中搜索：findstr /n "关键词" <文件路径>
 - 只显示文件名：dir /b
 - 当前路径：cd
