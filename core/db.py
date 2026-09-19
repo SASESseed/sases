@@ -613,6 +613,10 @@ def init_db():
             )
         """)
 
+        # 加 supervisor_id 字段（v0.17.0）
+        _ensure_column(cur, "swarm_pending_tasks", "supervisor_id", "TEXT")
+
+
         # ========== 蜂群审核日志表（v0.15.0 从 swarm_service 收编） ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS swarm_reviews (
