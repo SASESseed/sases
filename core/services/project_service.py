@@ -187,7 +187,7 @@ def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY):
         freshness = row.get("freshness_score") or 1.0
         final_score = sim * 0.7 + freshness * 0.3
         scored.append({
-            "source_file": row["source_file"],
+            "source_file": row.get("source_file") or "execution_notes",
             "section_path": row.get("section_path") or row.get("section_title") or "",
             "content": row["content"],
             "similarity": round(sim, 4),
