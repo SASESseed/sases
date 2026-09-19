@@ -1097,7 +1097,7 @@ async def handle_step_done(
         if blocked:
             print(f"[swarm] 发现 {len(blocked)} 个被拒绝的命令，跳过重拆")
             summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
-            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
+            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
             del _pending[task_id]
             _delete_pending_from_db(task_id)
             return {"status": "completed_with_blocks", "task_id": task_id}
@@ -1126,7 +1126,7 @@ async def handle_step_done(
             else:
                 print(f"[swarm] 重拆失败或跳过，直接汇总")
                 summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
-                _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
+                _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
                 del _pending[task_id]
                 _delete_pending_from_db(task_id)
                 return {"status": "completed_with_failures", "task_id": task_id}
@@ -1156,7 +1156,7 @@ async def handle_step_done(
                     print(f"[swarm] 写成功记忆失败: {e}")
 
             summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
-            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=task["commander_id"])
+            _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
             del _pending[task_id]
             _delete_pending_from_db(task_id)
             return {"status": "completed", "task_id": task_id, "summary": summary}
