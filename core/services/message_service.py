@@ -179,6 +179,7 @@ async def send_message(
     # 检测 #1~#4 编号前缀
     _numbered_prefix_matched = False
     _force_swarm = False
+    _force_swarm = False
     for _p, _m in COMMAND_PREFIX_MAP.items():
         if content.startswith(_p):
             _numbered_prefix_matched = True
