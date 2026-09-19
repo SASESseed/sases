@@ -69,6 +69,7 @@ export async function openIdentitySwitch(chatState, api) {
     container.querySelectorAll('.identity-option').forEach(opt => {
       opt.addEventListener('click', () => {
         chatState.senderAgentId = opt.dataset.agentId || null;
+        localStorage.setItem('sases_sender_agent_id', chatState.senderAgentId || '');
         window.closeSubpage();
         const baseTitle = document.getElementById('chat-window-title').textContent.split(' (')[0];
         document.getElementById('chat-window-title').textContent = chatState.senderAgentId ? baseTitle + ' (智能体)' : baseTitle;

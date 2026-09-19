@@ -323,6 +323,7 @@ def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
             "cancelled": bool(row["cancelled"]),
             "no_plan": bool(row["no_plan"]),
             "created_at": row["created_at"],
+            "supervisor_id": row["supervisor_id"] if "supervisor_id" in row.keys() else None,
         }
     except Exception as e:
         print(f"[swarm] DB 加载失败: {e}")
