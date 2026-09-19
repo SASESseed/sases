@@ -614,6 +614,7 @@ def init_db():
         """)
 
         # 加 supervisor_id 字段（v0.17.0）
+        _ensure_column(cur, "swarm_pending_tasks", "supervisor_run_id", "INTEGER")
         _ensure_column(cur, "swarm_pending_tasks", "supervisor_id", "TEXT")
 
 
