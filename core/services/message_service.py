@@ -435,11 +435,18 @@ async def send_message(
             enriched_query = content
             try:
                 from . import project_service
-                chunks = project_service.retrieve_project_chunks(content, top_k=3)
+                chunks = project_service.retrieve_project_chunks(content, top_k=3, threshold=0.35)
                 if chunks:
-                    project_text = project_service.format_chunks_for_prompt(chunks)
-                    enriched_query = project_text + "\n\n【用户问题】\n" + content
-                    print(f"[message] 检索到 {len(chunks)} 条项目资料")
+                    _top = chunks[0].get("score", 0)
+                    if _top > 0.55:
+                        project_text = project_service.format_chunks_for_prompt(chunks)
+                        enriched_query = project_text + "\n\n【用户问题】\n" + content
+                        print(f"[message] 项目库高分命中 {_top:.3f}")
+                    else:
+                        from . import context_service
+                        _ctx_lo = project_service.format_chunks_for_prompt(chunks)
+                        enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, _ctx_lo)
+                        print(f"[message] 项目库低分兜底 {_top:.3f}")
                 else:
                     print(f"[message] 项目库无匹配")
             except Exception as e:
