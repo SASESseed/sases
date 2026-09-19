@@ -448,7 +448,9 @@ async def send_message(
                         enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, _ctx_lo)
                         print(f"[message] 项目库低分兜底 {_top:.3f}")
                 else:
-                    print(f"[message] 项目库无匹配")
+                    from . import context_service
+                    enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, "")
+                    print(f"[message] 项目库无匹配，仅注入历史")
             except Exception as e:
                 print(f"[message] 项目库检索失败: {e}")
             try:
