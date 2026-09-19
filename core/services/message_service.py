@@ -254,7 +254,8 @@ async def send_message(
                     user_id=user_id,
                     conversation_id=conversation_id,
                     user_input=content,
-                    require_confirmation=require_confirmation
+                    require_confirmation=require_confirmation,
+                    supervisor_id=sender_agent_id
                 )
                 print(f"[MSG_DEBUG] plan_result={plan_result}")
 
