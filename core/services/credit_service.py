@@ -33,3 +33,8 @@ def add_credit(user_id: int, amount: float, action: str = "手动调整", detail
             VALUES (?, ?, ?, ?, ?)
         """, (user_id, action, event_type, amount, detail))
     return True
+
+
+def deduct_credits(user_id: int, amount: float, reason: str = "", detail: str = ""):
+    """扣减积分（包装 add_credit 的负数）"""
+    return add_credit(user_id, -abs(amount), action=reason or "扣减", detail=detail, event_type="deduct")
