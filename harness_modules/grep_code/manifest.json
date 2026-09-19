@@ -1,0 +1,10 @@
+{
+  "id": "grep_code",
+  "name": "代码搜索",
+  "description": "在项目中搜索关键词",
+  "version": "1.0.0",
+  "capabilities": ["grep_code"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
