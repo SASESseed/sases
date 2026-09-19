@@ -1158,6 +1158,27 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
     except Exception as e:
         print(f"[swarm] pattern 记录失败（已忽略）: {e}")
 
+    # 自动快照（方案 C：仅当任务包含 file_patch 成功步骤时）
+    try:
+        _has_patch = any(
+            r.get("command") == "file_patch" and r.get("status") == "success"
+            for r in results
+        )
+        if _has_patch and task_id:
+            import subprocess as _sp
+            import os as _os
+            _repo = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+            _msg = f"auto: {task_id}"
+            _sp.run("git add -A", shell=True, cwd=_repo, capture_output=True, encoding="utf-8", errors="replace")
+            _r = _sp.run(f'git commit -m "{_msg}"', shell=True, cwd=_repo, capture_output=True, encoding="utf-8", errors="replace")
+            if _r.returncode == 0:
+                print(f"[swarm] 已自动快照: {_msg}")
+            else:
+                print(f"[swarm] 自动快照跳过")
+    except Exception as _e:
+        print(f"[swarm] 自动快照失败: {_e}")
+
+
     result_text = "\n".join(
         f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
         for r in results
