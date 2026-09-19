@@ -149,7 +149,7 @@ def import_document(source_file, source_version, raw_text, auto_replace=True):
     return count
 
 
-def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY):
+def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None):
     """检索项目库分片，返回 [{section_path, content, score}, ...]"""
     rows = []
     with db_cursor() as cur:
