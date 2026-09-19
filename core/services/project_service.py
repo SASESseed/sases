@@ -151,9 +151,21 @@ def import_document(source_file, source_version, raw_text, auto_replace=True):
 
 def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY):
     """检索项目库分片，返回 [{section_path, content, score}, ...]"""
+    rows = []
     with db_cursor() as cur:
         cur.execute("SELECT id, source_file, section_path, content, embedding, freshness_score, updated_at FROM project_docs WHERE status='active'")
-        rows = [dict(r) for r in cur.fetchall()]
+        for r in cur.fetchall():
+            d = dict(r)
+            d['_origin'] = 'project'
+            rows.append(d)
+        cur.execute("SELECT id, task_id, user_input, summary, embedding, created_at FROM execution_notes WHERE status='active'")
+        for r in cur.fetchall():
+            d = dict(r)
+            d['_origin'] = 'execution'
+            d['content'] = (d.get('user_input') or '') + ' | ' + (d.get('summary') or '')
+            d['section_path'] = '执行记录 ' + (d.get('task_id') or '')
+            d['freshness_score'] = 0.8
+            rows.append(d)
 
     if not rows:
         return []
@@ -199,6 +211,36 @@ def format_chunks_for_prompt(chunks, max_chars_per_chunk=600):
             content = content[:max_chars_per_chunk] + "..."
         lines.append(f"\n▸ {title}\n{content}")
     return "\n".join(lines)
+
+
+def import_execution_note(task_id, user_id, user_input, summary, steps_digest, outcome='success'):
+    '把执行记录写入 execution_notes 表'
+    if not user_input:
+        return 0
+    now = datetime.now().isoformat()
+    content_for_hash = f'{user_input}|{summary}'
+    content_hash = _compute_hash(content_for_hash)
+
+    with db_cursor() as cur:
+        cur.execute('SELECT id FROM execution_notes WHERE content_hash=?', (content_hash,))
+        if cur.fetchone():
+            return 0
+
+    emb_blob = None
+    try:
+        emb = _get_embedder().get_embedding(user_input + ' ' + (summary or ''))
+        emb_blob = _embed_to_blob(emb)
+    except Exception as e:
+        print(f'[exnote] embedding 失败: {e}')
+
+    with db_cursor(commit=True) as cur:
+        cur.execute(
+            'INSERT INTO execution_notes (task_id, user_id, user_input, summary, outcome, steps_digest, embedding, content_hash, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (task_id, user_id, user_input, summary, outcome, steps_digest, emb_blob, content_hash, 'active', now)
+        )
+        print(f'[exnote] 已写入执行笔记 {task_id}')
+        return cur.lastrowid
+
 
 
 def get_project_stats():
