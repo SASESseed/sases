@@ -182,7 +182,8 @@ def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None):
         if emb is None:
             continue
         sim = _cosine_sim(query_emb, emb)
-        if sim < RETRIEVE_THRESHOLD:
+        _eff = threshold if threshold is not None else RETRIEVE_THRESHOLD
+        if sim < _eff:
             continue
         freshness = row.get("freshness_score") or 1.0
         final_score = sim * 0.7 + freshness * 0.3
