@@ -204,8 +204,8 @@ def _save_pending(task: Dict[str, Any]):
                 INSERT INTO swarm_pending_tasks
                 (task_id, conversation_id, user_id, commander_id, executor_id,
                  user_text, steps, results, done_steps, retry_count,
-                 is_draft, cancelled, no_plan, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 is_draft, cancelled, no_plan, status, created_at, updated_at, supervisor_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(task_id) DO UPDATE SET
                     conversation_id=excluded.conversation_id,
                     user_id=excluded.user_id,
