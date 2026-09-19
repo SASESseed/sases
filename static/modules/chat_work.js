@@ -168,7 +168,7 @@ export function showFreeModeGuide(container) {
             · #2：让 AI 拆解完成，例 #2：帮我做一份文件放在桌面上
             · #3：先看方案再执行，例 #3：整理一下我的下载文件夹
             · #4：自主循环完成，例 #4：把红包功能做好
-    <div>· 输入「任务：xxx」让指挥官拆解并执行</div>
+
     <div>· 点击 🤖 切换智能体身份</div>
     <div style="margin-top:8px; text-align:right;">
       <button id="dismiss-free-mode-guide" style="background:none; border:none; color:#007aff; cursor:pointer;">不再显示</button>
