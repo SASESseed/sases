@@ -220,7 +220,8 @@ def _save_pending(task: Dict[str, Any]):
                     cancelled=excluded.cancelled,
                     no_plan=excluded.no_plan,
                     status=excluded.status,
-                    updated_at=excluded.updated_at
+                    updated_at=excluded.updated_at,
+                    supervisor_id=excluded.supervisor_id
                 """,
                 (
                     task["task_id"],
@@ -239,6 +240,7 @@ def _save_pending(task: Dict[str, Any]):
                     _derive_status(task),
                     task.get("created_at", datetime.now().isoformat()),
                     datetime.now().isoformat(),
+                    task.get("supervisor_id"),
                 )
             )
     except Exception as e:
