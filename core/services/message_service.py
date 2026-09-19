@@ -442,28 +442,37 @@ async def send_message(
             assistant_reply = "错误：找不到绑定的智能体模型"
         else:
             model_config = dict(model_row)
-            # 项目库检索（v0.17.0）
+            # 项目库检索（v0.17.0）— 仅 SASES 助手
+            _is_sases_chat = 'sases' in (model_config.get('name') or '').lower()
             enriched_query = content
-            try:
-                from . import project_service
-                chunks = project_service.retrieve_project_chunks(content, top_k=3, threshold=0.35)
-                if chunks:
-                    _top = chunks[0].get("score", 0)
-                    if _top > 0.55:
-                        project_text = project_service.format_chunks_for_prompt(chunks)
-                        enriched_query = project_text + "\n\n【用户问题】\n" + content
-                        print(f"[message] 项目库高分命中 {_top:.3f}")
+            if _is_sases_chat:
+                try:
+                    from . import project_service
+                    chunks = project_service.retrieve_project_chunks(content, top_k=3, threshold=0.35)
+                    if chunks:
+                        _top = chunks[0].get("score", 0)
+                        if _top > 0.55:
+                            project_text = project_service.format_chunks_for_prompt(chunks)
+                            enriched_query = project_text + "\n\n【用户问题】\n" + content
+                            print(f"[message] 项目库高分命中 {_top:.3f}")
+                        else:
+                            from . import context_service
+                            _ctx_lo = project_service.format_chunks_for_prompt(chunks)
+                            enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, _ctx_lo)
+                            print(f"[message] 项目库低分兜底 {_top:.3f}")
                     else:
                         from . import context_service
-                        _ctx_lo = project_service.format_chunks_for_prompt(chunks)
-                        enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, _ctx_lo)
-                        print(f"[message] 项目库低分兜底 {_top:.3f}")
-                else:
+                        enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, "")
+                        print(f"[message] 项目库无匹配，仅注入历史")
+                except Exception as e:
+                    print(f"[message] 项目库检索失败: {e}")
+            else:
+                try:
                     from . import context_service
                     enriched_query = context_service.build_enriched_prompt(user_id, conversation_id, content, "")
-                    print(f"[message] 项目库无匹配，仅注入历史")
-            except Exception as e:
-                print(f"[message] 项目库检索失败: {e}")
+                    print(f"[message] 非 SASES 助手，仅注入历史")
+                except Exception as e:
+                    print(f"[message] 上下文注入失败: {e}")
             try:
                 assistant_reply = await call_model_with_config(model_config, enriched_query)
             except Exception as e:
