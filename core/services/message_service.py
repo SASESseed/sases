@@ -162,6 +162,8 @@ async def send_message(
     mode: str = "normal"
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
+    _supervisor_id = sender_agent_id or agent_id  # 调度者 ID
+
 
     # ========== 检测草稿前缀 ==========
     require_confirmation = REQUIRE_TASK_CONFIRMATION
