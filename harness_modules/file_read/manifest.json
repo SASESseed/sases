@@ -1,0 +1,10 @@
+{
+  "id": "file_read",
+  "name": "读取文件",
+  "description": "读取项目内文件内容",
+  "version": "1.0.0",
+  "capabilities": ["file_read"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
