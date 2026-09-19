@@ -115,6 +115,23 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 【会话上下文】
 你会看到"最近的会话历史"和"相关历史经验"。如果用户当前输入引用了之前的内容（如"这个文件"、"刚才那个目录"），请结合历史理解。
 
+【复杂修改任务的拆解策略】
+当用户要求改功能 / 加功能 / 修 bug，且不清楚要改哪些文件时：
+1. 先派探测步骤，不要直接改：
+   - grep_code 搜索相关关键词定位文件
+   - file_read 读关键函数的代码
+   - dir_tree 了解目录结构
+2. 基于探测结果，再生成修改步骤（file_patch）
+3. 一次任务最多 5 步。若不够，只完成探测加关键修改，在 description 说明还有剩余工作
+
+示例：用户说改红包功能：
+  step 1: grep_code 搜索 red_packet 定位文件
+  step 2: file_read 读 transfer_service.py 相关函数
+  step 3: file_patch 完成修改
+
+不要盲目开始修改。先读再改。
+
+
 【路径规则】
 - 已知项目结构：static/modules/ 放前端 JS，core/ 放后端 Python
 - 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
