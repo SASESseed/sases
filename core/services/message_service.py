@@ -192,14 +192,32 @@ async def send_message(
                 _force_swarm = True
                 require_confirmation = True
             elif _m == "auto":
-                return {
-                    "conversation_id": conversation_id,
-                    "user_message": content,
-                    "assistant_reply": "自主模式开发中，敬请期待。",
-                    "agent_id": agent_id,
-                    "sender_agent_id": sender_agent_id,
-                    "mode": mode,
-                }
+                try:
+                    from . import supervisor_service
+                    existing = supervisor_service.get_active_run(user_id)
+                    if existing:
+                        return {
+                            "conversation_id": conversation_id,
+                            "user_message": content,
+                            "assistant_reply": "已有运行中的自主任务 (run_id=" + str(existing["id"]) + ")，请先取消或等待完成。",
+                            "agent_id": agent_id,
+                            "sender_agent_id": sender_agent_id,
+                            "mode": mode,
+                        }
+                    _run_id = supervisor_service.create_run(user_id, conversation_id or 0, sender_agent_id or agent_id, content)
+                    print("[supervisor] 已创建 run_id=" + str(_run_id) + " goal=" + content[:50])
+                    _force_swarm = True
+                    _supervisor_run_id = _run_id
+                except Exception as _e:
+                    print("[supervisor] 启动失败: " + str(_e))
+                    return {
+                        "conversation_id": conversation_id,
+                        "user_message": content,
+                        "assistant_reply": "自主模式启动失败：" + str(_e),
+                        "agent_id": agent_id,
+                        "sender_agent_id": sender_agent_id,
+                        "mode": mode,
+                    }
             break
 
 
