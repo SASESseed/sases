@@ -230,8 +230,8 @@ def _save_pending(task: Dict[str, Any]):
                 INSERT INTO swarm_pending_tasks
                 (task_id, conversation_id, user_id, commander_id, executor_id,
                  user_text, steps, results, done_steps, retry_count,
-                 is_draft, cancelled, no_plan, status, created_at, updated_at, supervisor_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 is_draft, cancelled, no_plan, status, created_at, updated_at, supervisor_id, supervisor_run_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(task_id) DO UPDATE SET
                     conversation_id=excluded.conversation_id,
                     user_id=excluded.user_id,
@@ -247,7 +247,8 @@ def _save_pending(task: Dict[str, Any]):
                     no_plan=excluded.no_plan,
                     status=excluded.status,
                     updated_at=excluded.updated_at,
-                    supervisor_id=excluded.supervisor_id
+                    supervisor_id=excluded.supervisor_id,
+                    supervisor_run_id=excluded.supervisor_run_id
                 """,
                 (
                     task["task_id"],
@@ -267,6 +268,7 @@ def _save_pending(task: Dict[str, Any]):
                     task.get("created_at", datetime.now().isoformat()),
                     datetime.now().isoformat(),
                     task.get("supervisor_id"),
+                    task.get("supervisor_run_id"),
                 )
             )
     except Exception as e:
@@ -350,6 +352,7 @@ def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
             "no_plan": bool(row["no_plan"]),
             "created_at": row["created_at"],
             "supervisor_id": row["supervisor_id"] if "supervisor_id" in row.keys() else None,
+            "supervisor_run_id": row["supervisor_run_id"] if "supervisor_run_id" in row.keys() else None,
         }
     except Exception as e:
         print(f"[swarm] DB 加载失败: {e}")
