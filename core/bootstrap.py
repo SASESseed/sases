@@ -141,6 +141,7 @@ async def lifespan(app: FastAPI):
     executor_task = asyncio.create_task(executor_service.start_background_executor())
     cleanup_task = asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24))
     pattern_task = asyncio.create_task(periodic_pattern_finalize())
+    git_push_task = asyncio.create_task(periodic_git_push())
 
     yield
 
