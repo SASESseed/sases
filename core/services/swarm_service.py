@@ -807,6 +807,7 @@ async def plan_task(
         "no_plan": False,
         "retry_count": 0,
         "is_draft": is_draft,
+        "supervisor_id": supervisor_id or commander_id,
     }
     _pending[task_id] = task
     _save_pending(task)
