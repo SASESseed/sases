@@ -229,7 +229,17 @@ async def send_message(
                 _is_operation = True
 
             _is_greeting = intent_service._is_obvious_chat(content)
-            if not _is_operation and not _numbered_prefix_matched and not _is_greeting:
+            _is_sases_agent = False
+            try:
+                if agent_id:
+                    with db_cursor() as _cur:
+                        _cur.execute('SELECT name FROM model_configs WHERE id=?', (agent_id,))
+                        _r = _cur.fetchone()
+                    if _r and 'sases' in ((_r['name'] or '').lower()):
+                        _is_sases_agent = True
+            except Exception:
+                pass
+            if not _is_operation and not _numbered_prefix_matched and not _is_greeting and _is_sases_agent:
                 try:
                     _chunks = project_service.retrieve_project_chunks(content, top_k=3)
                     if _chunks and _chunks[0].get('score', 0) > 0.55:
