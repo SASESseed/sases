@@ -35,7 +35,7 @@ function handleSend() {
   if (!text) return;
 
   if (chatState.mode === 'free') {
-    const execMatch = text.match(/^执行[：:]\s*(.+)$/);
+    const execMatch = text.match(/^(?:执行|#1)[：:]\s*(.+)$/);
     if (execMatch) {
       const command = execMatch[1].trim();
       if (!localStorage.getItem('sases_disable_work_warning')) {
