@@ -177,8 +177,10 @@ async def send_message(
     # ========== 检测草稿前缀 ==========
     require_confirmation = REQUIRE_TASK_CONFIRMATION
     # 检测 #1~#4 编号前缀
+    _numbered_prefix_matched = False
     for _p, _m in COMMAND_PREFIX_MAP.items():
         if content.startswith(_p):
+            _numbered_prefix_matched = True
             content = content[len(_p):].lstrip()
             if _m == "exec":
                 content = "执行：" + content
@@ -223,7 +225,7 @@ async def send_message(
             if _is_harness_call:
                 _is_operation = True
 
-            if not _is_operation:
+            if not _is_operation and not _numbered_prefix_matched:
                 try:
                     _chunks = project_service.retrieve_project_chunks(content, top_k=3)
                     if _chunks and _chunks[0].get('score', 0) > 0.55:
