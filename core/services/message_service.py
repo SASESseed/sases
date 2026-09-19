@@ -232,6 +232,23 @@ async def send_message(
                                 title = row["name"]
                     conversation_id = create_conversation(user_id, agent_id, title)
 
+                # 调度者回执（v0.17.0）
+                if sender_agent_id:
+                    try:
+                        with db_cursor(commit=True) as _cur:
+                            _receipt = "收到，我来处理：" + content[:50]
+                            _cur.execute(
+                                "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
+                                (conversation_id, _receipt, sender_agent_id)
+                            )
+                            _cur.execute(
+                                "UPDATE conversations SET updated_at=? WHERE id=?",
+                                (datetime.now().isoformat(), conversation_id)
+                            )
+                    except Exception as _e:
+                        print(f"[supervisor] 回执失败: {_e}")
+
+
                 plan_result = await swarm_service.plan_task(
                     user_id=user_id,
                     conversation_id=conversation_id,
