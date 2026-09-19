@@ -90,6 +90,12 @@ export function appendWorkMessage(role, content, senderName = null) {
 
 // ========== 普通消息元素创建 ==========
 export function createMessageElement(role, content, senderName, messageId, timeIso, isPending = false, skipTimeTag = false, chatState = null) {
+  if (isProtocolMessage(content)) {
+    const empty = document.createElement('div');
+    empty.style.display = 'none';
+    return empty;
+  }
+  content = stripSummaryPrefix(content);
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
