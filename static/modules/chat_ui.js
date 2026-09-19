@@ -163,6 +163,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
 
 // ========== 消息插入与时间标签 ==========
 export function appendMessage(role, content, senderName = null, messageId = null, timeIso = null, isPending = false, chatState = null) {
+  if (isProtocolMessage(content)) return;
   const messages = document.getElementById('chat-messages');
   if (!messages) return;
 
