@@ -185,7 +185,7 @@ async def send_message(
     ):
         try:
             from . import intent_service, swarm_service, project_service
-            _OP_VERBS = ('列出', '查看', '打开', '运行', '抓取', '下载', '找到', '查找', '搜索', '读取', '删除', '帮我', '请帮')
+            _OP_VERBS = ('列出', '查看', '打开', '运行', '抓取', '下载', '找到', '查找', '搜索', '读取', '删除', '帮我', '请帮', '分析', '读一下', '看看', '看下')
             _first8 = content.strip()[:8]
             _is_operation = any(_first8.startswith(v) for v in _OP_VERBS)
             _HARNESS_KEYWORDS = ('harness', 'module_id', 'file_patch', 'web_fetch', 'git_ops', 'HARNESS:')
