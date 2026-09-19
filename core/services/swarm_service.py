@@ -1170,6 +1170,12 @@ async def handle_step_done(
     }
 
 
+def _summary_sender(task):
+    """优先用 supervisor_id，回退 commander_id"""
+    return task.get("supervisor_id") or task.get("commander_id")
+
+
+
 async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int = None, task_id: str = None) -> str:
     # P0：记录经验 pattern（静默失败，不阻塞主流程）
     try:
