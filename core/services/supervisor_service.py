@@ -95,6 +95,8 @@ def build_next_input(run_id):
 
 
 async def check_and_continue(run_id, last_summary):
+    import openai
+    from .. import config
     run = get_run(run_id)
     if not run or run['status'] != 'running':
         return False, None
