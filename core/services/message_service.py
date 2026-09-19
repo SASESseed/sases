@@ -185,6 +185,10 @@ async def send_message(
             _OP_VERBS = ('列出', '查看', '打开', '运行', '抓取', '下载', '找到', '查找', '搜索', '读取', '删除', '帮我', '请帮')
             _first8 = content.strip()[:8]
             _is_operation = any(_first8.startswith(v) for v in _OP_VERBS)
+            _HARNESS_KEYWORDS = ('harness', 'module_id', 'file_patch', 'web_fetch', 'git_ops', 'HARNESS:')
+            _is_harness_call = any(kw in content for kw in _HARNESS_KEYWORDS)
+            if _is_harness_call:
+                _is_operation = True
 
             if not _is_operation:
                 try:

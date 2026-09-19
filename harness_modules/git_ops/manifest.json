@@ -1,0 +1,10 @@
+{
+  "id": "git_ops",
+  "name": "Git 操作",
+  "description": "项目 Git 版本控制。支持 status/diff/log/add/commit/push/pull/snapshot/rollback/remote_add/remote_list。用于版本管理、异地备份和回滚。",
+  "version": "1.0.0",
+  "capabilities": ["git", "version_control"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
