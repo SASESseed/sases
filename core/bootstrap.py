@@ -70,6 +70,33 @@ async def periodic_summary_task():
 
         await asyncio.sleep(6 * 3600)
 
+async def periodic_git_push():
+    """每小时把本地提交推送到 GitHub"""
+    import subprocess
+    import os as _os
+    await asyncio.sleep(300)
+    repo = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    while True:
+        try:
+            r = subprocess.run(
+                "git push origin main",
+                shell=True, cwd=repo, capture_output=True,
+                encoding="utf-8", errors="replace", timeout=120
+            )
+            out = (r.stdout or "") + (r.stderr or "")
+            if r.returncode == 0:
+                if "Everything up-to-date" in out:
+                    print("[git-push] 无新提交")
+                else:
+                    print(f"[git-push] 推送成功: {out.strip()[:200]}")
+            else:
+                print(f"[git-push] 推送失败: {out.strip()[:200]}")
+        except Exception as e:
+            print(f"[git-push] 异常: {e}")
+        await asyncio.sleep(3600)
+
+
+
 async def periodic_pattern_finalize():
     """每小时检查一次，把 24 小时前的 tentative pattern 转为 active"""
     while True:
