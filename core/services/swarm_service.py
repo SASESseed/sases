@@ -706,6 +706,23 @@ async def plan_task(
         print(f"[swarm] 项目库检索失败: {e}")
 
 
+    pattern_text = ''
+    try:
+        import random as _rnd
+        if _rnd.random() < 0.5:
+            from . import pattern_service
+            _pats = pattern_service.retrieve_patterns(user_input, domain='dev', top_k=3)
+            if _pats:
+                pattern_text = pattern_service.format_patterns_for_prompt(_pats)
+                print(f'[swarm] 注入 {len(_pats)} 条 pattern (A组)')
+            else:
+                print('[swarm] 无相关 pattern (A组)')
+        else:
+            print('[swarm] 跳过 pattern 注入 (B组)')
+    except Exception as e:
+        print(f'[swarm] pattern 检索失败: {e}')
+
+
     prompt_parts = []
     if project_text:
         prompt_parts.append(project_text)
