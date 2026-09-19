@@ -1,0 +1,10 @@
+{
+  "id": "dir_tree",
+  "name": "目录树",
+  "description": "列出目录树结构",
+  "version": "1.0.0",
+  "capabilities": ["dir_tree"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
