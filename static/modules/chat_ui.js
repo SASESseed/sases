@@ -97,7 +97,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
   }
   content = stripSummaryPrefix(content);
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
-  if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role); }
+  if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role, senderName); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
@@ -236,21 +236,47 @@ export function formatTime(isoString) {
 }
 
 // ========== 消息状态更新 ==========
-export function renderImageBubble(content, role = 'user') {
+export function renderImageBubble(content, role = 'user', senderName = null) {
   const url = content.substring('[IMAGE]:'.length);
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
-  wrapper.style.justifyContent = 'flex-start';
-  wrapper.style.justifyContent = (role === 'user') ? 'flex-end' : 'flex-start';
+  wrapper.style.flexDirection = 'row';
+  wrapper.style.alignItems = 'flex-start';
   wrapper.style.margin = '8px 12px';
+  wrapper.style.justifyContent = (role === 'user') ? 'flex-end' : 'flex-start';
+  const imgBox = document.createElement('div');
+  imgBox.style.maxWidth = '180px';
+  imgBox.style.borderRadius = '8px';
+  imgBox.style.overflow = 'hidden';
+  imgBox.style.cursor = 'pointer';
   const img = document.createElement('img');
   img.src = url;
-  img.style.maxWidth = '200px';
-  img.style.maxHeight = '200px';
-  img.style.borderRadius = '8px';
-  img.style.cursor = 'pointer';
+  img.style.display = 'block';
+  img.style.width = '100%';
+  img.style.maxHeight = '240px';
   img.onclick = () => window.open(url, '_blank');
-  wrapper.appendChild(img);
+  imgBox.appendChild(img);
+  const avatar = document.createElement('div');
+  avatar.style.width = '36px';
+  avatar.style.height = '36px';
+  avatar.style.borderRadius = '50%';
+  avatar.style.background = role === 'user' ? '#007aff' : '#e0e0e0';
+  avatar.style.color = role === 'user' ? '#fff' : '#333';
+  avatar.style.display = 'flex';
+  avatar.style.alignItems = 'center';
+  avatar.style.justifyContent = 'center';
+  avatar.style.flexShrink = '0';
+  avatar.style.fontSize = '16px';
+  avatar.style.marginLeft = role === 'user' ? '8px' : '0';
+  avatar.style.marginRight = role === 'user' ? '0' : '8px';
+  avatar.textContent = (senderName || (role === 'user' ? '我' : 'AI')).charAt(0).toUpperCase();
+  if (role === 'user') {
+    wrapper.appendChild(imgBox);
+    wrapper.appendChild(avatar);
+  } else {
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(imgBox);
+  }
   return wrapper;
 }
 
