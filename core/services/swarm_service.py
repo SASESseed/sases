@@ -193,6 +193,9 @@ def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, st
     cmd = (step.get("command") or "").strip()
     cmd_first = cmd.split()[0].lower() if cmd.split() else ""
     if cmd_first in ("findstr", "find", "grep", "where") and status == "failed":
+        _out = (output or "").lower()
+        if "cannot open" in _out or "无法打开" in _out or "系统找不到" in _out or "cannot find" in _out:
+            return "retry", "目标文件不存在，路径可能有误"
         return "pass", "查询无结果（正常）"
 
     if status in ("failed", "timeout", "error"):
