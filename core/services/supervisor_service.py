@@ -13,21 +13,25 @@ def build_context(user_id, conversation_id, query):
     try:
         with db_cursor() as cur:
             cur.execute(
-                "SELECT role, content FROM messages WHERE conversation_id=%s ORDER BY id DESC LIMIT 3",
+                "SELECT sender, content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 3",
                 (conversation_id,),
             )
             rows = cur.fetchall()
-        for role, content in reversed(rows):
-            parts.append(f"{role}：{content}")
-    except Exception:
-        pass
+        for row in reversed(rows):
+            sender = row["sender"] if "sender" in row.keys() else "?"
+            content = row["content"] or ""
+            parts.append(sender + "：" + content[:100])
+    except Exception as e:
+        print("[supervisor] build_context 历史读取失败: " + str(e))
     try:
         from . import memory_service
         mems = memory_service.recall(user_id, query, 2)
         for m in (mems or []):
-            parts.append(str(m))
-    except Exception:
-        pass
+            mc = (m.get("content") or "")[:100] if isinstance(m, dict) else ""
+            if mc:
+                parts.append("记忆：" + mc)
+    except Exception as e:
+        print("[supervisor] build_context 记忆读取失败: " + str(e))
     return "\n".join(parts)
 
 
