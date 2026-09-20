@@ -95,7 +95,9 @@ async function sendMessage() {
       chatState.conversationId = data.conversation_id;
     }
     updateMessageStatus(tempId, 'sent');
-    appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
+    if (data.assistant_reply) {
+      appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
+    }
 
     // ========== 草稿模式：渲染可编辑任务编辑器 ==========
     if (data.swarm && data.swarm_status === 'draft' && data.task_id) {
