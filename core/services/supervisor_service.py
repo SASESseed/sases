@@ -123,7 +123,17 @@ async def decide_next_step(run_id):
         i = raw.find('{')
         j = raw.rfind('}')
         if i >= 0 and j > i:
-            return json.loads(raw[i:j+1])
+            _result = json.loads(raw[i:j+1])
+            _goal = run.get('goal', '')
+            _action_words = ['实现', '打通', '改', '加', '建', '修复', '增加', '添加', '删除', '创建', '完成']
+            _need_action = any(w in _goal for w in _action_words)
+            _history_str = json.dumps(history, ensure_ascii=False)
+            _has_patch = 'file_patch' in _history_str or 'harness_reload' in _history_str
+            if _need_action and not _has_patch and _result.get('action') == 'done':
+                print('[supervisor] 强制覆盖 done → execute（历史无 file_patch）')
+                _result['action'] = 'execute'
+                _result['task'] = '根据前面探测结果实际修改代码，完成目标：' + _goal[:100]
+            return _result
         return {'action': 'done', 'task': 'parse failed'}
     except Exception as e:
         print('[supervisor] decide_next_step 失败: ' + str(e))
