@@ -131,7 +131,7 @@ async def decide_next_step(run_id):
 
 
 
-async def check_and_continue(run_id, last_summary):
+async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=None):
     import openai
     from .. import config
     run = get_run(run_id)
