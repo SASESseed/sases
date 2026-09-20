@@ -7,6 +7,30 @@ MAX_ROUNDS = 10
 CREDITS_PER_ROUND = 2
 
 
+
+def build_context(user_id, conversation_id, query):
+    parts = []
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "SELECT role, content FROM messages WHERE conversation_id=%s ORDER BY id DESC LIMIT 3",
+                (conversation_id,),
+            )
+            rows = cur.fetchall()
+        for role, content in reversed(rows):
+            parts.append(f"{role}：{content}")
+    except Exception:
+        pass
+    try:
+        from . import memory_service
+        mems = memory_service.recall(user_id, query, 2)
+        for m in (mems or []):
+            parts.append(str(m))
+    except Exception:
+        pass
+    return "\n".join(parts)
+
+
 def build_context(user_id, conversation_id, query):
     """读取用户最近会话历史与相关记忆，拼成可注入 prompt 的上下文文本。"""
     from . import memory_service
