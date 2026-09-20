@@ -94,6 +94,43 @@ def build_next_input(run_id):
     return chr(10).join(lines)
 
 
+async def decide_next_step(run_id):
+    import openai
+    import asyncio
+    from .. import config
+    run = get_run(run_id)
+    if not run:
+        return None
+    try:
+        history = json.loads(run['history'] or '[]')
+    except Exception:
+        history = []
+    history_text = ''
+    for h in history[-5:]:
+        history_text += '第 ' + str(h.get('round', '?')) + ' 轮：' + (h.get('plan') or '')[:80] + chr(10)
+        history_text += '  结果：' + (h.get('exec') or '')[:300] + chr(10)
+    prompt = '你是 SASES 自主调度者。目标：' + run['goal'] + chr(10) + chr(10) + '已完成：' + chr(10) + (history_text or '(无)') + chr(10) + '可用工具：file_read / dir_tree / grep_code / file_patch / harness_reload / git_ops / web_fetch' + chr(10) + chr(10) + '请判断下一步，只输出 JSON：{"action": "probe" 或 "build_harness" 或 "execute" 或 "done", "task": "一句话描述"}' + chr(10) + 'probe=先读代码；build_harness=缺工具先建；execute=可以改代码；done=目标达成'
+    client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
+    try:
+        resp = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=config.MODEL_NAME,
+            messages=[{'role': 'user', 'content': prompt}],
+            temperature=0.3,
+            max_tokens=200
+        )
+        raw = resp.choices[0].message.content.strip()
+        i = raw.find('{')
+        j = raw.rfind('}')
+        if i >= 0 and j > i:
+            return json.loads(raw[i:j+1])
+        return {'action': 'done', 'task': 'parse failed'}
+    except Exception as e:
+        print('[supervisor] decide_next_step 失败: ' + str(e))
+        return {'action': 'done', 'task': 'LLM failed'}
+
+
+
 async def check_and_continue(run_id, last_summary):
     import openai
     from .. import config
