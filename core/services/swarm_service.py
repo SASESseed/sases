@@ -135,7 +135,7 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 
 【路径规则】
-- 已知项目结构：static/modules/ 放前端 JS，core/ 放后端 Python
+- 已知项目结构：static/modules/ 放前端 JS；core/ 放核心模块；core/services/ 放业务逻辑（swarm_service.py / message_service.py / memory_service.py / pattern_service.py 等都在这）；core/api_routes/ 放 API 路由；harness_modules/ 放 harness 工具；scripts/ 放脚本；docs/ 放文档
 - 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
 """
 
