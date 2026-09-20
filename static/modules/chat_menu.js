@@ -226,13 +226,6 @@ export function openChatPlusPanel() {
   if (content) {
     const items = [
       { icon: '📷', label: '相册', action: () => { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadImage) window.__sasesUploadImage(f); }; input.click(); } },
-  // 相册入口：选择图片并上传到 /upload/image
-  var _albumInput = document.createElement('input');
-  _albumInput.type = 'file';
-  _albumInput.accept = 'image/*';
-  _albumInput.onchange = function() {
-    var f = _albumInput.files && _albumInput.files[0];
-    if (!f) return;
     var fd = new FormData();
     fd.append('file', f);
     fetch('/upload/image', { method: 'POST', body: fd })
