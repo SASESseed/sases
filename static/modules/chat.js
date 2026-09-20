@@ -451,6 +451,32 @@ function updateSendButtonVisibility() {
 window.updateSendButtonVisibility = updateSendButtonVisibility;
 window.sendMessage = sendMessage;
 
+
+window.__sasesUploadImage = async (file) => {
+  if (!file) return;
+  if (!chatState.conversationId) {
+    alert('请先进入会话');
+    return;
+  }
+  try {
+    const res = await api.uploadImage(file);
+    if (!res || !res.url) {
+      alert('上传失败');
+      return;
+    }
+    await api.sendMessage({
+      conversation_id: chatState.conversationId,
+      agent_id: chatState.agentId,
+      content: '[IMAGE]:' + res.url,
+      sender_agent_id: chatState.senderAgentId,
+      mode: chatState.mode
+    });
+    await loadMessages(chatState.conversationId);
+  } catch (e) {
+    alert('上传失败：' + (e.message || '未知错误'));
+  }
+};
+
 function toggleVoiceMode() {
   const input = document.getElementById('chat-input');
   const toggleBtn = document.getElementById('toggle-voice-btn');
