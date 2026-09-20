@@ -137,7 +137,7 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     run = get_run(run_id)
     if not run or run['status'] != 'running':
         return False, None
-    record_round(run_id, run.get('goal', ''), last_summary)
+    record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary)
     run = get_run(run_id)
     if not run or (run['current_round'] or 0) >= (run['max_rounds'] or 5):
         return False, None
