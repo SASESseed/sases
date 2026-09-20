@@ -11,18 +11,25 @@ CREDITS_PER_ROUND = 2
 def build_context(user_id, conversation_id, query):
     parts = []
     try:
+        _skip_prefixes = ('[TASK]:', '[STEP_DONE]:', '[SUMMARY]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[RED_PACKET]:', '[IMAGE]:')
         with db_cursor() as cur:
             cur.execute(
-                "SELECT sender, content FROM messages WHERE conversation_id=? AND content NOT LIKE '[%' ORDER BY id DESC LIMIT 5",
+                "SELECT sender, content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 50",
                 (conversation_id,),
             )
             rows = cur.fetchall()
+        _count = 0
         for row in reversed(rows):
             sender = row["sender"] if "sender" in row.keys() else "?"
             content = row["content"] or ""
-            if content.startswith('['):
+            if any(content.startswith(p) for p in _skip_prefixes):
+                continue
+            if not content.strip():
                 continue
             parts.append(sender + "：" + content[:100])
+            _count += 1
+            if _count >= 3:
+                break
     except Exception as e:
         print("[supervisor] build_context 历史读取失败: " + str(e))
     try:
