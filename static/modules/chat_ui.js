@@ -98,6 +98,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
   content = stripSummaryPrefix(content);
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content); }
+  if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
@@ -236,6 +237,24 @@ export function formatTime(isoString) {
 }
 
 // ========== 消息状态更新 ==========
+export function renderImageBubble(content) {
+  const url = content.substring('[IMAGE]:'.length);
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.justifyContent = 'flex-start';
+  wrapper.style.margin = '8px 12px';
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.maxWidth = '200px';
+  img.style.maxHeight = '200px';
+  img.style.borderRadius = '8px';
+  img.style.cursor = 'pointer';
+  img.onclick = () => window.open(url, '_blank');
+  wrapper.appendChild(img);
+  return wrapper;
+}
+
+
 export function renderRedPacketBubble(content) {
   let data = {};
   try { data = JSON.parse(content.substring('[RED_PACKET]:'.length)); } catch (e) {}
