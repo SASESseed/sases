@@ -173,6 +173,31 @@ async def send_message(
     _supervisor_id = sender_agent_id or agent_id
     print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
+    # 附件消息（[IMAGE]: / [FILE]:）直接入库，不调模型
+    if isinstance(content, str) and (content.startswith('[IMAGE]:') or content.startswith('[FILE]:')):
+        if not conversation_id:
+            title = '附件'
+            if agent_id:
+                with db_cursor() as _c:
+                    _c.execute('SELECT name FROM model_configs WHERE id=?', (agent_id,))
+                    _r = _c.fetchone()
+                if _r:
+                    title = _r['name']
+            conversation_id = create_conversation(user_id, agent_id, title)
+        with db_cursor(commit=True) as _c:
+            _c.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'user', ?, ?)", (conversation_id, content, sender_agent_id))
+            _c.execute('UPDATE conversations SET updated_at=? WHERE id=?', (datetime.now().isoformat(), conversation_id))
+        return {
+            'conversation_id': conversation_id,
+            'user_message': content,
+            'assistant_reply': '',
+            'agent_id': agent_id,
+            'sender_agent_id': sender_agent_id,
+            'mode': mode,
+            'attachment_only': True
+        }
+
+
 
     # ========== 检测草稿前缀 ==========
     require_confirmation = REQUIRE_TASK_CONFIRMATION
