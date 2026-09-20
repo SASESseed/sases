@@ -1234,22 +1234,28 @@ async def handle_step_done(
             if _run_id:
                 try:
                     from . import supervisor_service
-                    _continue, _next_input = await supervisor_service.check_and_continue(_run_id, summary)
-                    if _continue and _next_input:
-                        print(f"[supervisor] run {_run_id} 继续下一轮")
-                        _next_result = await plan_task(
-                            user_id=task["user_id"],
-                            conversation_id=conversation_id,
-                            user_input=_next_input,
-                            supervisor_id=task.get("supervisor_id"),
-                            supervisor_run_id=_run_id,
-                        )
-                        if isinstance(_next_result, dict) and _next_result.get("status") == "done":
+                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary)
+                    if _continue:
+                        _decision = await supervisor_service.decide_next_step(_run_id)
+                        if _decision and _decision.get("action") == "done":
                             supervisor_service.finish_run(_run_id, "completed")
-                            print(f"[supervisor] run {_run_id} 已完成（[DONE]）")
+                            print(f"[supervisor] run {_run_id} 已完成（调度者判定）")
+                        elif _decision and _decision.get("task"):
+                            print(f"[supervisor] run {_run_id} 继续下一轮：{_decision.get('action')} - {_decision.get('task', '')[:50]}")
+                            _next_result = await plan_task(
+                                user_id=task["user_id"],
+                                conversation_id=conversation_id,
+                                user_input=_decision["task"],
+                                supervisor_id=task.get("supervisor_id"),
+                                supervisor_run_id=_run_id,
+                            )
+                            if isinstance(_next_result, dict) and _next_result.get("status") == "done":
+                                supervisor_service.finish_run(_run_id, "completed")
+                        else:
+                            supervisor_service.finish_run(_run_id, "completed")
                     else:
                         supervisor_service.finish_run(_run_id, "completed")
-                        print(f"[supervisor] run {_run_id} 已完成")
+                        print(f"[supervisor] run {_run_id} 已完成（轮次用尽）")
                 except Exception as e:
                     print(f"[supervisor] 续轮失败: {e}")
                     try:
