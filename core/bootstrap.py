@@ -128,6 +128,20 @@ async def periodic_rescue_maintenance():
 async def lifespan(app: FastAPI):
     init_db()
 
+    # 启动时清理中断的 run 和任务（v0.18.0）
+    try:
+        from .db import db_cursor as _dbc
+        with _dbc(commit=True) as _c:
+            _c.execute("UPDATE supervisor_runs SET status='interrupted', finished_at=datetime('now') WHERE status='running'")
+            _r1 = _c.rowcount
+            _c.execute("UPDATE swarm_pending_tasks SET status='interrupted' WHERE status IN ('pending', 'running')")
+            _r2 = _c.rowcount
+        if _r1 or _r2:
+            print(f"[bootstrap] 清理中断状态: runs={_r1}, tasks={_r2}")
+    except Exception as _e:
+        print(f"[bootstrap] 清理中断状态失败: {_e}")
+
+
     try:
         backup_result = backup_service.create_backup()
         if backup_result["success"]:
