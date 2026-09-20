@@ -1146,7 +1146,9 @@ async def handle_step_done(
             if _run_id:
                 try:
                     from . import supervisor_service
-                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary)
+                    _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
+                    _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text)
                     if _continue:
                         _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
@@ -1237,7 +1239,9 @@ async def handle_step_done(
             if _run_id:
                 try:
                     from . import supervisor_service
-                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary)
+                    _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
+                    _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text)
                     if _continue:
                         _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
