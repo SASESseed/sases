@@ -13,13 +13,15 @@ def build_context(user_id, conversation_id, query):
     try:
         with db_cursor() as cur:
             cur.execute(
-                "SELECT sender, content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 3",
+                "SELECT sender, content FROM messages WHERE conversation_id=? AND content NOT LIKE '[%' ORDER BY id DESC LIMIT 5",
                 (conversation_id,),
             )
             rows = cur.fetchall()
         for row in reversed(rows):
             sender = row["sender"] if "sender" in row.keys() else "?"
             content = row["content"] or ""
+            if content.startswith('['):
+                continue
             parts.append(sender + "：" + content[:100])
     except Exception as e:
         print("[supervisor] build_context 历史读取失败: " + str(e))
