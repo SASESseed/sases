@@ -226,16 +226,6 @@ export function openChatPlusPanel() {
   if (content) {
     const items = [
       { icon: '📷', label: '相册', action: () => { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadImage) window.__sasesUploadImage(f); }; input.click(); } },
-    var fd = new FormData();
-    fd.append('file', f);
-    fetch('/upload/image', { method: 'POST', body: fd })
-      .then(function(r){ return r.json(); })
-      .then(function(res){
-        var url = res.url || res.data && res.data.url;
-        if (url && window.sendImageMessage) window.sendImageMessage(url);
-      });
-  };
-  _albumInput.click();
       { icon: '💰', label: '转账', action: () => alert('转账功能待实现') },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
       { icon: '📁', label: '文件', action: () => alert('文件功能待实现') },
