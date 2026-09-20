@@ -207,6 +207,9 @@ def create_app() -> FastAPI:
         return FileResponse("static/index.html", media_type="text/html")
 
     app.mount("/static", StaticFiles(directory="static"), name="static")
+    import os as _os
+    _os.makedirs('uploads', exist_ok=True)
+    app.mount('/uploads', StaticFiles(directory='uploads'), name='uploads')
 
     @app.get("/")
     async def index():
