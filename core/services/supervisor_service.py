@@ -48,53 +48,7 @@ def build_context(user_id, conversation_id, query):
 
 
 
-def build_context(user_id, conversation_id, query):
-    """构建可注入 prompt 的上下文文本。
-
-    读取最近 3 条会话历史与 2 条 recall 记忆，拼接为可注入 prompt 的文本。
-    """
-    parts = []
-
-    # 1. 读取最近 3 条会话历史
-    history_lines = []
-    try:
-        with db_cursor() as cur:
-            cur.execute(
-                "SELECT role, content FROM conversation_messages "
-                "WHERE conversation_id = %s ORDER BY id DESC LIMIT 3",
-                (conversation_id,),
-            )
-            rows = cur.fetchall()
-            for row in reversed(rows):
-                d = _dict(row)
-                history_lines.append(
-                    "{0}: {1}".format(d.get("role", "user"), d.get("content", ""))
-                )
-    except Exception:
-        history_lines = []
-
-    if history_lines:
-        parts.append("[最近会话历史]\n" + "\n".join(history_lines))
-
-    # 2. 读取 2 条 recall 记忆
-    recall_lines = []
-    try:
-        memories = credit_service.recall(user_id, query, top_k=2)
-        for m in memories or []:
-            if isinstance(m, dict):
-                recall_lines.append(str(m.get("content") or m.get("text") or m))
-            else:
-                recall_lines.append(str(m))
-    except Exception:
-        recall_lines = []
-
-    if recall_lines:
-        parts.append("[相关记忆]\n" + "\n".join(recall_lines))
-
-    if not parts:
-        return ""
-
-    return "\n\n".join(parts)
+# (旧版 build_context 已删除)
 
 
 
