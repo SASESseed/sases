@@ -236,7 +236,7 @@ export function formatTime(isoString) {
 }
 
 // ========== 消息状态更新 ==========
-export function renderImageBubble(content) {
+export function renderImageBubble(content, role = 'user') {
   const url = content.substring('[IMAGE]:'.length);
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
