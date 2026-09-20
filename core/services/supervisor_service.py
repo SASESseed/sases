@@ -44,37 +44,7 @@ def build_context(user_id, conversation_id, query):
     return "\n".join(parts)
 
 
-def build_context(user_id, conversation_id, query):
-    """读取用户最近会话历史与相关记忆，拼成可注入 prompt 的上下文文本。"""
-    from . import memory_service
-    parts = []
-    history_rows = []
-    try:
-        with db_cursor() as cur:
-            cur.execute(
-                "SELECT role, content FROM messages WHERE conversation_id = %s ORDER BY created_at DESC LIMIT 3",
-                (conversation_id,),
-            )
-            history_rows = cur.fetchall() or []
-    except Exception:
-        history_rows = []
-    if history_rows:
-        lines = []
-        for row in reversed(history_rows):
-            role, content = (row[0], row[1]) if len(row) >= 2 else ("", str(row))
-            lines.append(f"{role}: {content}")
-        parts.append("最近会话：\n" + "\n".join(lines))
-    try:
-        mems = memory_service.recall(user_id, query, top_k=2)
-    except Exception:
-        mems = None
-    if mems:
-        if isinstance(mems, dict):
-            mems = mems.get("items") or mems.get("memories") or []
-        mem_lines = [str(m) for m in mems]
-        if mem_lines:
-            parts.append("相关记忆：\n" + "\n".join(mem_lines))
-    return "\n\n".join(parts)
+# (旧版 build_context 已删除，见上方新版本)
 
 
 
