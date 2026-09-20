@@ -236,6 +236,37 @@ export function formatTime(isoString) {
 }
 
 // ========== 消息状态更新 ==========
+export function showImagePreview(url) {
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.background = 'rgba(0,0,0,0.85)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '9999';
+  overlay.style.cursor = 'zoom-out';
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.maxWidth = '90vw';
+  img.style.maxHeight = '90vh';
+  img.style.borderRadius = '8px';
+  img.style.boxShadow = '0 0 30px rgba(0,0,0,0.6)';
+  overlay.appendChild(img);
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    document.removeEventListener('keydown', escHandler);
+  };
+  const escHandler = (e) => { if (e.key === 'Escape') close(); };
+  overlay.onclick = close;
+  document.addEventListener('keydown', escHandler);
+  document.body.appendChild(overlay);
+}
+
+
 export function renderImageBubble(content, role = 'user', senderName = null) {
   const url = content.substring('[IMAGE]:'.length);
   const wrapper = document.createElement('div');
@@ -254,7 +285,7 @@ export function renderImageBubble(content, role = 'user', senderName = null) {
   img.style.display = 'block';
   img.style.width = '100%';
   img.style.maxHeight = '240px';
-  img.onclick = () => window.open(url, '_blank');
+  img.onclick = () => showImagePreview(url);
   imgBox.appendChild(img);
   const avatar = document.createElement('div');
   avatar.style.width = '36px';
