@@ -225,8 +225,7 @@ export function openChatPlusPanel() {
   const content = document.getElementById('chat-plus-content');
   if (content) {
     const items = [
-    if (item.id === 'album' || item.label === '相册') { input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f) window.__sasesUploadImage && window.__sasesUploadImage(f); }; input.click(); return; }
-    if (typeof window.__sasesPickImage === 'function') { window.__sasesPickImage(); }
+      { icon: '📷', label: '相册', action: () => { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadImage) window.__sasesUploadImage(f); }; input.click(); } },
       { icon: '💰', label: '转账', action: () => alert('转账功能待实现') },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
       { icon: '📁', label: '文件', action: () => alert('文件功能待实现') },
