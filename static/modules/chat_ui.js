@@ -241,6 +241,7 @@ export function renderImageBubble(content, role = 'user') {
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.justifyContent = 'flex-start';
+  wrapper.style.justifyContent = (role === 'user') ? 'flex-end' : 'flex-start';
   wrapper.style.margin = '8px 12px';
   const img = document.createElement('img');
   img.src = url;
