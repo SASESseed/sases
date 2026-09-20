@@ -147,10 +147,13 @@ REPLAN_SYSTEM_PROMPT = """你是 SASES 指挥官。之前的命令执行失败�
 1. 只输出 JSON 数组，不要任何解释、不要 markdown 代码块
 2. 格式必须是：[{"step":1,"description":"...","command":"..."}]
 3. 每步一个命令，Windows CMD 单行命令
-4. 最多 5 步
-5. 禁止 uvicorn 等服务器启停命令
-6. 禁止使用 copy / move / del / powershell / for / if / 重定向（> < &）等命令
-7. 只允许使用：dir / ls / tree / type / cat / head / tail / findstr / find / grep / where / echo / pwd / cd / whoami / hostname / wc
+4. harness 工具必须用 {"step":N,"type":"harness","module_id":"file_patch","params":{...}} 格式，不要写成 command 字段。禁止把 file_patch 写成 command
+5. file_patch 参数：file_path / anchor_pattern / position / new_content 或 file_path / old_snippet / new_snippet / expected_count
+6. 读文件用 {"type":"harness","module_id":"file_read","params":{"file_path":"..."}}，禁止用 type / cat / more 命令读大文件
+7. 最多 5 步
+8. 禁止 uvicorn 等服务器启停命令
+9. 禁止使用 copy / move / del / powershell / for / if / 重定向（> < &）等命令
+10. 只允许使用：dir / ls / tree / type / cat / head / tail / findstr / find / grep / where / echo / pwd / cd / whoami / hostname / wc
 
 【重拆策略】
 - 如果失败原因是"old_snippet 未找到"：先用 findstr /n /c:"片段" 精确确认原文，再 patch
