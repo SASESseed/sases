@@ -44,12 +44,72 @@ def cleanup_finished_swarm_tasks(days: int = 7) -> int:
         return cur.rowcount
 
 
+def cleanup_orphan_uploads(days: int = 30, dry_run: bool = True) -> dict:
+    """清理 uploads/ 下 30 天前无引用的图片/文件"""
+    import os
+    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'uploads')
+    if not os.path.isdir(uploads_dir):
+        return {'scanned': 0, 'orphans': 0, 'deleted': 0, 'freed_bytes': 0}
+    cutoff = (datetime.now() - timedelta(days=days)).timestamp()
+    with db_cursor() as cur:
+        cur.execute('SELECT stored_path FROM attachments')
+        all_files = set(r['stored_path'] for r in cur.fetchall())
+        cur.execute("SELECT content FROM messages WHERE content LIKE '%/uploads/%'")
+        referenced = set()
+        for r in cur.fetchall():
+            content = r['content'] or ''
+            for fn in all_files:
+                if fn in content:
+                    referenced.add(fn)
+    scanned = 0
+    orphans = 0
+    deleted = 0
+    freed = 0
+    for fn in os.listdir(uploads_dir):
+        fp = os.path.join(uploads_dir, fn)
+        if not os.path.isfile(fp):
+            continue
+        scanned += 1
+        try:
+            mtime = os.path.getmtime(fp)
+            size = os.path.getsize(fp)
+        except Exception:
+            continue
+        if fn in referenced:
+            continue
+        if mtime >= cutoff:
+            continue
+        orphans += 1
+        if not dry_run:
+            try:
+                os.remove(fp)
+                deleted += 1
+                freed += size
+            except Exception as e:
+                print('[cleanup] 删除失败 ' + fn + ': ' + str(e))
+    return {'scanned': scanned, 'orphans': orphans, 'deleted': deleted, 'freed_bytes': freed}
+
+
+def cleanup_low_value_memory(min_importance: float = 0.3, min_days: int = 60) -> int:
+    """删除低价值且较老的记忆"""
+    cutoff = (datetime.now() - timedelta(days=min_days)).isoformat()
+    with db_cursor(commit=True) as cur:
+        cur.execute(
+            "DELETE FROM safety_memory WHERE importance < ? AND created_at < ? AND memory_type != 'task_result'",
+            (min_importance, cutoff)
+        )
+        return cur.rowcount
+
+
+
 def cleanup_all() -> dict:
     """执行全部清理任务，返回各项删除数量"""
     result = {
         "expired_memory": 0,
         "old_reviews": 0,
         "finished_swarm_tasks": 0,
+        "orphan_uploads": 0,
+        "low_value_memory": 0,
     }
     try:
         result["expired_memory"] = cleanup_expired_memory()
@@ -65,6 +125,19 @@ def cleanup_all() -> dict:
         result["finished_swarm_tasks"] = cleanup_finished_swarm_tasks(days=7)
     except Exception as e:
         print(f"[cleanup] 蜂群任务清理失败: {e}")
+
+    try:
+        _up = cleanup_orphan_uploads(days=30, dry_run=True)
+        result['orphan_uploads'] = _up['orphans']
+        print('[cleanup] uploads 扫描: ' + str(_up))
+    except Exception as e:
+        print('[cleanup] uploads 清理失败: ' + str(e))
+
+    try:
+        result['low_value_memory'] = cleanup_low_value_memory()
+    except Exception as e:
+        print('[cleanup] 低价值记忆清理失败: ' + str(e))
+
 
     print(f"[cleanup] 清理完成: {result}")
     return result
