@@ -793,6 +793,23 @@ async def plan_task(
         prompt_parts.append(f"【需要避免的失败教训】\n{failure_text}")
     if history_text:
         prompt_parts.append(f"【最近的会话历史】\n{history_text}")
+    try:
+        from .. import harness_runtime as _hr
+        _tools = _hr.harness_runtime.list_tools()
+        if _tools:
+            _tl = ['【当前可用 Harness 工具】']
+            for _t in _tools:
+                _mid = getattr(_t, 'module_id', '') or ''
+                _name = getattr(_t, 'name', '') or ''
+                _desc = (getattr(_t, 'description', '') or '')[:100]
+                if _mid:
+                    _tl.append('- ' + _mid + '：' + _name + ' —— ' + _desc)
+            if len(_tl) > 1:
+                prompt_parts.append(chr(10).join(_tl))
+    except Exception as _te:
+        print('[swarm] 注入工具清单失败: ' + str(_te))
+
+
     prompt_parts.append(f"【用户当前任务】\n{user_input}")
     prompt_parts.append(
         "请拆解为命令序列。\n"
