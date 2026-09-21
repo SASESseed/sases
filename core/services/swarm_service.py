@@ -63,6 +63,9 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 【可用 Harness 工具】
 
+- structure_check：扫描 Python 文件，输出函数列表并检测同名定义/函数截断/孤立字符串。当需要审查一个文件的结构或怀疑有重复定义时，优先调用。参数：file_path（必填）。
+
+
 - file_read：读取项目内文件内容。参数：file_path（必填），max_lines（可选，默认 200），offset（可选，默认 0）。遇到需要看代码的任务时优先调用。
 
 - dir_tree：列出目录树。参数：path（可选，默认 .），max_depth（可选，默认 2，最大 4）。找文件时用来快速了解目录结构。
