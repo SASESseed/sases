@@ -1154,9 +1154,18 @@ async def handle_step_done(
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
                     _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
-                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text)
+                    _review = None
+                    if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
+                        _review = await supervisor_service.task_summarizer(task)
+                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text, review=_review)
                     if _continue:
-                        _decision = await supervisor_service.decide_next_step(_run_id)
+                        if _review and getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
+                            if _review.get('goal_achieved'):
+                                _decision = {'action': 'done'}
+                            else:
+                                _decision = {'action': 'execute', 'task': _review.get('next_hint') or '继续'}
+                        else:
+                            _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
                             supervisor_service.finish_run(_run_id, "completed")
                             print(f"[supervisor] run {_run_id} 已完成（调度者判定）")
@@ -1247,9 +1256,18 @@ async def handle_step_done(
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
                     _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
-                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text)
+                    _review = None
+                    if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
+                        _review = await supervisor_service.task_summarizer(task)
+                    _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text, review=_review)
                     if _continue:
-                        _decision = await supervisor_service.decide_next_step(_run_id)
+                        if _review and getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
+                            if _review.get('goal_achieved'):
+                                _decision = {'action': 'done'}
+                            else:
+                                _decision = {'action': 'execute', 'task': _review.get('next_hint') or '继续'}
+                        else:
+                            _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
                             supervisor_service.finish_run(_run_id, "completed")
                             print(f"[supervisor] run {_run_id} 已完成（调度者判定）")
