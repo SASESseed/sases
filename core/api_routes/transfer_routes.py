@@ -11,6 +11,11 @@ from ..db import db_cursor
 from ..services import transfer_service
 
 router = APIRouter(prefix="/transfer", tags=["transfer"])
+
+@router.get("/red_packet/sent")
+async def list_sent_red_packets(user_id: int, limit: int = 20):
+    from core.services import transfer_service
+    return transfer_service.list_sent_red_packets(user_id, limit)
 security = HTTPBearer()
 
 
