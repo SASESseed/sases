@@ -17,6 +17,7 @@ from .services import pattern_service
 from .services import pattern_service
 from . import backup_service
 from .api_routes import (
+    supervisor_routes,
     upload_routes,
     auth_routes,
     seed_routes,
@@ -215,6 +216,7 @@ def create_app() -> FastAPI:
     app.include_router(yunchong_routes.router)
     app.include_router(swarm_routes.router)
     app.include_router(upload_routes.router)
+    app.include_router(supervisor_routes.router)
 
     @app.get("/static/index.html", response_class=HTMLResponse)
     async def serve_index():
