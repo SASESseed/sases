@@ -350,6 +350,11 @@ export const api = {
   },
 
 
+  cancelRun: (runId) => request('/supervisor/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ run_id: runId })
+  }),
+
   confirmRun: (runId) => request('/supervisor/confirm', {
     method: 'POST',
     body: JSON.stringify({ run_id: runId })
