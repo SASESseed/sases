@@ -286,6 +286,25 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     run = get_run(run_id)
     if not run or run['status'] != 'running':
         return False, None
+
+    # 死循环检测：连续 3 轮 plan 高度相似 → 强制停止
+    try:
+        import difflib as _dl
+        _hist = json.loads(run['history'] or '[]')
+        if len(_hist) >= 3:
+            _p1 = (_hist[-1].get('plan') or '')[:200]
+            _p2 = (_hist[-2].get('plan') or '')[:200]
+            _p3 = (_hist[-3].get('plan') or '')[:200]
+            if _p1 and _p2 and _p3:
+                _s12 = _dl.SequenceMatcher(None, _p1, _p2).ratio()
+                _s23 = _dl.SequenceMatcher(None, _p2, _p3).ratio()
+                if _s12 >= 0.9 and _s23 >= 0.9:
+                    print('[supervisor] 检测到死循环（连续3轮相似度 ' + str(round(_s12, 2)) + '/' + str(round(_s23, 2)) + '），强制停止')
+                    finish_run(run_id, 'loop_detected')
+                    return False, None
+    except Exception as _le:
+        print('[supervisor] 死循环检测异常: ' + str(_le))
+
     record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary, review=review)
     run = get_run(run_id)
     if not run or (run['current_round'] or 0) >= (run['max_rounds'] or 5):
