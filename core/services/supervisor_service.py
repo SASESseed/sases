@@ -309,6 +309,16 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     run = get_run(run_id)
     if not run or (run['current_round'] or 0) >= (run['max_rounds'] or 5):
         return False, None
+    if (run['credits_used'] or 0) >= 16:
+        print('[supervisor] 成本达到 16 积分，提前停止')
+        finish_run(run_id, 'budget_exceeded')
+        return False, None
+        return False, None
+    if (run['credits_used'] or 0) >= 16:
+        print('[supervisor] 成本达到 16 积分，提前停止')
+        finish_run(run_id, 'budget_exceeded')
+        return False, None
+
     if not deduct_round(run_id):
         finish_run(run_id, status='insufficient_credits')
         return False, None
