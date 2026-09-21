@@ -139,6 +139,9 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 - 禁止把 *_service.py 直接写到 core/ 下，业务代码统统在 core/services/ 下。例：core/services/swarm_service.py（对），core/swarm_service.py（错）。
 - 禁止把 *_routes.py 直接写到 core/ 下，路由代码统统在 core/api_routes/ 下。例：core/api_routes/message_routes.py（对）。
+
+- 【重要】若用户输入以 [MODIFY] 开头，说明之前已经探测过但没动手。此时禁止再生成纯探测步骤（grep_code / file_read / dir_tree 最多 1 步），剩余步骤必须包含至少 1 个 file_patch。如果信息不足，用最多 1 步 file_read 确认，然后立刻 file_patch，不要重复探测。
+- 【重要】若任务明显需要多次修改，优先一次完成最关键的一处，不要把 5 步全用来探测。
 - 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
 """
 
