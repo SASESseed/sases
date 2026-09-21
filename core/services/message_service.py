@@ -347,6 +347,20 @@ async def send_message(
                             if _dec.get('propose') and _dec.get('goal'):
                                 _rid = supervisor_service.create_proposed_run(user_id, conversation_id, sender_agent_id, _dec['goal'])
                                 print('[supervisor] 提议执行 run_id=' + str(_rid) + ' goal=' + _dec['goal'][:50])
+                                with db_cursor(commit=True) as _c3:
+                                    _c3.execute(
+                                        "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
+                                        (conversation_id, '【提议执行】' + _dec['goal'][:80], sender_agent_id)
+                                    )
+                                return {
+                                    'conversation_id': conversation_id,
+                                    'user_message': content,
+                                    'assistant_reply': '【提议执行】' + _dec['goal'][:80],
+                                    'agent_id': agent_id,
+                                    'sender_agent_id': sender_agent_id,
+                                    'mode': mode,
+                                    'proposed_run_id': _rid
+                                }
                     except Exception as _e2:
                         print('[supervisor] 提议检查失败: ' + str(_e2))
 
