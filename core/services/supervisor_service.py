@@ -157,7 +157,7 @@ async def task_summarizer(task):
         out = (r.get('output') or '')[:120]
         steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
         '请只输出 JSON：{"goal_achieved": true/false, "goal_reason": "一句话理由", "completed": ["已完成"], "missing": ["未完成"], "next_hint": "下一步做什么（必须具体说明改哪个文件，例如：用 file_patch 在 core/api_routes/group_routes.py 加 POST /group/{id}/leave 路由）"}'
-    prompt = prompt
+    prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步用什么工具改哪个文件"}'
     client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
     try:
         resp = await asyncio.to_thread(
