@@ -9,7 +9,7 @@ USE_STRUCTURED_REVIEW = True
 
 
 
-def build_context(user_id, conversation_id, query):
+def build_context(user_id, conversation_id, query, mode='execute', supervisor_id=None):
     parts = []
     try:
         _hard_skip = ('[TASK]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[RED_PACKET]:', '[IMAGE]:')
