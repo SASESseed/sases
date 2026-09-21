@@ -163,6 +163,25 @@ def get_group_credits(group_id: int):
 
 
 def remove_member_from_group(group_id: int, remover_id: int, member_identifier: str):
+
+
+def leave_group(group_id, user_id):
+    conn = get_db()
+    conn.execute('DELETE FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
+    conn.commit()
+    conn.close()
+    return {'ok': True}
+
+
+def dismiss_group(group_id):
+    conn = get_db()
+    conn.execute('DELETE FROM group_messages WHERE group_id=?', (group_id,))
+    conn.execute('DELETE FROM group_members WHERE group_id=?', (group_id,))
+    conn.execute('DELETE FROM groups WHERE id=?', (group_id,))
+    conn.commit()
+    conn.close()
+    return {'ok': True}
+
     """移除群成员（仅群主可操作）"""
     with db_cursor() as cur:
         cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
