@@ -99,6 +99,10 @@ async function sendMessage() {
       appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
     }
 
+    if (data.proposed_run_id) {
+      showProposedRunCard(data.proposed_run_id);
+    }
+
     // ========== 草稿模式：渲染可编辑任务编辑器 ==========
     if (data.swarm && data.swarm_status === 'draft' && data.task_id) {
       const steps = data.steps || [];
@@ -118,6 +122,71 @@ async function sendMessage() {
 }
 
 // ========== 草稿任务编辑器 ==========
+function showProposedRunCard(runId) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const wrap = document.createElement('div');
+  wrap.style.margin = '8px 12px';
+  wrap.style.padding = '12px';
+  wrap.style.background = '#fff9e6';
+  wrap.style.border = '1px solid #ffcc00';
+  wrap.style.borderRadius = '8px';
+  wrap.id = 'proposed-run-' + runId;
+  const title = document.createElement('div');
+  title.textContent = '⚡ 调度员提议执行此任务';
+  title.style.fontWeight = '600';
+  title.style.marginBottom = '8px';
+  wrap.appendChild(title);
+  const btnGroup = document.createElement('div');
+  btnGroup.style.display = 'flex';
+  btnGroup.style.gap = '8px';
+  btnGroup.style.justifyContent = 'flex-end';
+  const rejectBtn = document.createElement('button');
+  rejectBtn.textContent = '✕ 取消';
+  rejectBtn.style.padding = '6px 16px';
+  rejectBtn.style.fontSize = '13px';
+  rejectBtn.style.border = '1px solid #ccc';
+  rejectBtn.style.background = '#fff';
+  rejectBtn.style.borderRadius = '4px';
+  rejectBtn.style.cursor = 'pointer';
+  rejectBtn.onclick = async () => {
+    try {
+      await api.rejectRun(runId);
+      wrap.remove();
+    } catch (e) {
+      alert('取消失败：' + (e.message || '未知错误'));
+    }
+  };
+  const confirmBtn = document.createElement('button');
+  confirmBtn.textContent = '▶ 执行';
+  confirmBtn.style.padding = '6px 16px';
+  confirmBtn.style.fontSize = '13px';
+  confirmBtn.style.border = 'none';
+  confirmBtn.style.color = '#fff';
+  confirmBtn.style.background = '#007aff';
+  confirmBtn.style.borderRadius = '4px';
+  confirmBtn.style.cursor = 'pointer';
+  confirmBtn.onclick = async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '已提交';
+    try {
+      await api.confirmRun(runId);
+      wrap.remove();
+    } catch (e) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '▶ 执行';
+      alert('确认失败：' + (e.message || '未知错误'));
+    }
+  };
+  btnGroup.appendChild(rejectBtn);
+  btnGroup.appendChild(confirmBtn);
+  wrap.appendChild(btnGroup);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+
+
 function showTaskDraftEditor(taskId, steps) {
   const container = document.getElementById('chat-messages');
   if (!container) return;
@@ -655,6 +724,8 @@ async function loadMessages(conversationId) {
     if (messages.length < PAGE_SIZE) {
       chatState.hasMore = false;
     }
+    // (历史 proposed 卡片暂不自动渲染，避免重复)
+
     messages.forEach(msg => {
       appendMessage(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at, false, chatState);
     });
