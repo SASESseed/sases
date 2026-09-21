@@ -82,6 +82,38 @@ def get_run(run_id):
         return _dict(cur.fetchone())
 
 
+def create_proposed_run(user_id, conversation_id, supervisor_id, goal):
+    """创建 proposed 状态的 run，等用户确认"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("INSERT INTO supervisor_runs (user_id, conversation_id, supervisor_id, goal, status, current_round, max_rounds, history) VALUES (?, ?, ?, ?, 'proposed', 0, ?, '[]')", (user_id, conversation_id, supervisor_id, goal, MAX_ROUNDS))
+        return cur.lastrowid
+
+
+def confirm_run(run_id, user_id):
+    """用户确认，改状态为 running"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE supervisor_runs SET status='running' WHERE id=? AND user_id=? AND status='proposed'", (run_id, user_id))
+        return cur.rowcount > 0
+
+
+def reject_run(run_id, user_id):
+    """用户拒绝，改状态为 rejected"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE supervisor_runs SET status='rejected', finished_at=? WHERE id=? AND user_id=? AND status='proposed'", (datetime.now().isoformat(), run_id, user_id))
+        return cur.rowcount > 0
+
+
+def get_proposed_run(user_id, conversation_id=None):
+    """取最近一条 proposed run"""
+    with db_cursor() as cur:
+        if conversation_id:
+            cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND conversation_id=? AND status='proposed' ORDER BY id DESC LIMIT 1", (user_id, conversation_id))
+        else:
+            cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND status='proposed' ORDER BY id DESC LIMIT 1", (user_id,))
+        return _dict(cur.fetchone())
+
+
+
 def get_active_run(user_id):
     with db_cursor() as cur:
         cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND status='running' ORDER BY id DESC LIMIT 1", (user_id,))
