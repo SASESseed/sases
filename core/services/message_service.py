@@ -326,11 +326,29 @@ async def send_message(
                                 title = row["name"]
                     conversation_id = create_conversation(user_id, agent_id, title)
 
-                # 调度者回执（v0.17.0）
+                # 调度者回执（v0.18.0 带上下文）
                 if sender_agent_id:
                     try:
+                        _receipt = "收到，我来处理：" + content[:50]
+                        try:
+                            from . import supervisor_service
+                            _ctx = supervisor_service.build_context(user_id, conversation_id, content)
+                            _prompt = '你是调度助手。基于以下上下文，用一句话（≤ 30 字）回应用户，像真人说话，不要复述用户原话。\n\n' + _ctx + '\n\n用户新消息：' + content[:200] + '\n\n只输出这一句话，不要引号不要解释。'
+                            import openai as _oai
+                            from .. import config as _cfg
+                            _client = _oai.OpenAI(api_key=_cfg.DEEPSEEK_API_KEY, base_url=_cfg.DEEPSEEK_BASE_URL, timeout=15)
+                            _resp = _client.chat.completions.create(
+                                model=_cfg.MODEL_NAME,
+                                messages=[{'role': 'user', 'content': _prompt}],
+                                temperature=0.7,
+                                max_tokens=80
+                            )
+                            _ai_receipt = (_resp.choices[0].message.content or '').strip().strip('"').strip()
+                            if _ai_receipt and len(_ai_receipt) <= 60:
+                                _receipt = _ai_receipt
+                        except Exception as _ce:
+                            print(f"[supervisor] 回执生成失败，用默认: {_ce}")
                         with db_cursor(commit=True) as _cur:
-                            _receipt = "收到，我来处理：" + content[:50]
                             _cur.execute(
                                 "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
                                 (conversation_id, _receipt, sender_agent_id)
