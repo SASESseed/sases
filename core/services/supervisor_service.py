@@ -5,6 +5,7 @@ from . import credit_service
 
 MAX_ROUNDS = 10
 CREDITS_PER_ROUND = 2
+USE_STRUCTURED_REVIEW = True
 
 
 
