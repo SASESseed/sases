@@ -1166,6 +1166,24 @@ async def handle_step_done(
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
                     _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                    _has_core_change = False
+                    try:
+                        for _r in task['results']:
+                            _cmd = str(_r.get('command') or '')
+                            _desc = str(_r.get('description') or '')
+                            _params = str(_r.get('params') or '')
+                            if _cmd == 'file_patch' and ('core/' in _desc or 'core/' in _params or 'core/' in str(_r.get('output') or '')):
+                                _has_core_change = True
+                                break
+                    except Exception:
+                        pass
+                    if _has_core_change:
+                        try:
+                            supervisor_service.finish_run(_run_id, 'restart_pending')
+                            print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                        except Exception as _e:
+                            print(f"[supervisor] 标记 restart_pending 失败: {_e}")
+                        return {"status": "restart_pending", "task_id": task_id}
                     _review = None
                     if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
                         _review = await supervisor_service.task_summarizer(task)
@@ -1268,6 +1286,24 @@ async def handle_step_done(
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
                     _exec_text = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                    _has_core_change = False
+                    try:
+                        for _r in task['results']:
+                            _cmd = str(_r.get('command') or '')
+                            _desc = str(_r.get('description') or '')
+                            _params = str(_r.get('params') or '')
+                            if _cmd == 'file_patch' and ('core/' in _desc or 'core/' in _params or 'core/' in str(_r.get('output') or '')):
+                                _has_core_change = True
+                                break
+                    except Exception:
+                        pass
+                    if _has_core_change:
+                        try:
+                            supervisor_service.finish_run(_run_id, 'restart_pending')
+                            print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                        except Exception as _e:
+                            print(f"[supervisor] 标记 restart_pending 失败: {_e}")
+                        return {"status": "restart_pending", "task_id": task_id}
                     _review = None
                     if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
                         _review = await supervisor_service.task_summarizer(task)
