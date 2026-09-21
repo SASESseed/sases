@@ -4,12 +4,57 @@ import tempfile
 import os
 import sys
 
-MAX_CODE_LEN = 3000
+MAX_CODE_LEN = 5000
 TIMEOUT = 5
 
-FORBIDDEN_MODULES = {'subprocess', 'shutil', 'socket', 'requests', 'urllib', 'ftplib', 'smtplib', 'pickle', 'ctypes'}
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+FORBIDDEN_MODULES = {'subprocess', 'socket', 'requests', 'urllib', 'ftplib', 'smtplib', 'pickle', 'ctypes', 'os', 'sys', 'shutil', 'pathlib', 'tempfile', 'threading', 'multiprocessing', 'signal', 'builtins'}
 FORBIDDEN_NAMES = {'exec', 'eval', 'compile', '__import__', 'open', 'input', 'globals', 'locals', 'vars'}
-FORBIDDEN_OS_ATTRS = {'system', 'remove', 'rmdir', 'rename', 'unlink', 'popen', 'spawn', 'execv', 'execve', 'kill', 'chmod', 'chown'}
+
+PREAMBLE_LINES = [
+    '# === SAFE HELPERS ===',
+    'import os as _real_os',
+    '_REPO_ROOT = r"REPO_ROOT_PLACEHOLDER"',
+    "_ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/')",
+    "_FORBIDDEN_PARTS = ('.env', 'users.db', '.key', '.bin', '.pem', '.crt', 'secret_key', 'api_key_encryption')",
+    '_MAX_READ = 200 * 1024',
+    '_MAX_WRITE = 500 * 1024',
+    'def _check_path(p):',
+    '    if not isinstance(p, str):',
+    "        raise ValueError('path must be str')",
+    "    p = p.replace(chr(92), '/').strip()",
+    "    if p.startswith('/') or (len(p) > 1 and p[1] == ':'):",
+    "        raise ValueError('absolute path forbidden: ' + p)",
+    "    if '..' in p.split('/'):",
+    "        raise ValueError('path traversal forbidden: ' + p)",
+    '    lower = p.lower()',
+    '    for part in _FORBIDDEN_PARTS:',
+    '        if part in lower:',
+    "            raise ValueError('forbidden path: ' + p)",
+    '    if not any(p.startswith(d) for d in _ALLOWED_DIRS):',
+    "        raise ValueError('path outside allowed dirs: ' + p)",
+    '    return p',
+    'def read_file(path):',
+    '    safe = _check_path(path)',
+    '    abs_p = _real_os.path.join(_REPO_ROOT, safe)',
+    "    with open(abs_p, 'r', encoding='utf-8') as f:",
+    '        return f.read(_MAX_READ)',
+    'def write_file(path, content):',
+    '    safe = _check_path(path)',
+    '    if len(content) > _MAX_WRITE:',
+    "        raise ValueError('content too large')",
+    '    abs_p = _real_os.path.join(_REPO_ROOT, safe)',
+    "    with open(abs_p, 'w', encoding='utf-8') as f:",
+    '        f.write(content)',
+    'def list_dir(path):',
+    "    safe = _check_path(path) if path else '.'",
+    '    return _real_os.listdir(_real_os.path.join(_REPO_ROOT, safe))',
+    '# === USER CODE BELOW ===',
+    '',
+]
+
+PREAMBLE = chr(10).join(PREAMBLE_LINES)
 
 
 def _check_ast(code):
@@ -28,11 +73,6 @@ def _check_ast(code):
         if isinstance(node, ast.Name):
             if node.id in FORBIDDEN_NAMES:
                 return 'forbidden name: ' + node.id
-        if isinstance(node, ast.Call):
-            f = node.func
-            if isinstance(f, ast.Attribute):
-                if isinstance(f.value, ast.Name) and f.value.id == 'os' and f.attr in FORBIDDEN_OS_ATTRS:
-                    return 'forbidden os.' + f.attr
     return None
 
 
@@ -41,16 +81,18 @@ def run(params):
     if not code:
         return {'success': False, 'error': 'missing code'}
     if len(code) > MAX_CODE_LEN:
-        return {'success': False, 'error': 'code too long (max ' + str(MAX_CODE_LEN) + ')'}
+        return {'success': False, 'error': 'code too long'}
     err = _check_ast(code)
     if err:
         return {'success': False, 'error': err}
     tmp = None
     try:
+        preamble = PREAMBLE.replace('REPO_ROOT_PLACEHOLDER', REPO_ROOT.replace(chr(92), '/'))
+        full = preamble + code
         with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False, encoding='utf-8') as f:
-            f.write(code)
+            f.write(full)
             tmp = f.name
-        r = subprocess.run([sys.executable, tmp], capture_output=True, text=True, timeout=TIMEOUT)
+        r = subprocess.run([sys.executable, tmp], capture_output=True, text=True, timeout=TIMEOUT, encoding='utf-8', errors='replace')
         return {
             'success': r.returncode == 0,
             'stdout': (r.stdout or '')[:3000],
@@ -58,7 +100,7 @@ def run(params):
             'returncode': r.returncode
         }
     except subprocess.TimeoutExpired:
-        return {'success': False, 'error': 'timeout (' + str(TIMEOUT) + 's)'}
+        return {'success': False, 'error': 'timeout'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
     finally:
