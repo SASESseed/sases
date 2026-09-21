@@ -310,6 +310,9 @@ export const api = {
   // 群聊
   createGroup: (name) => request('/group/create', { method: 'POST', body: JSON.stringify({ name }) }),
 
+  quitGroup: (groupId) => request('/group/quit', { method: 'POST', body: JSON.stringify({ groupId }) }),
+  dismissGroup: (groupId) => request('/group/dismiss', { method: 'POST', body: JSON.stringify({ groupId }) }),
+
   exitGroup: (groupId) => request('/group/exit', { method: 'POST', body: JSON.stringify({ groupId }) }),
   dismissGroup: (groupId) => request('/group/dismiss', { method: 'POST', body: JSON.stringify({ groupId }) }),
   inviteToGroup: (group_id, username_or_id) => request('/group/invite', { method: 'POST', body: JSON.stringify({ group_id, username_or_id }) }),
