@@ -186,6 +186,8 @@ def leave_group(group_id: int, user_id: int):
 
 
 def dismiss_group(group_id: int):
+    # 校验群主权限由调用方传入的 user_id 完成；此处统一提交事务
+
     """群主解散群聊"""
     with db_cursor(commit=True) as cur:
         cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
