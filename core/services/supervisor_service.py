@@ -86,6 +86,27 @@ def finish_run(run_id, status='completed'):
         cur.execute('UPDATE supervisor_runs SET status=?, finished_at=? WHERE id=?', (status, datetime.now().isoformat(), run_id))
 
 
+def build_context(user_id, conversation_id, query):
+    """聚合最近3条会话历史与2条相关记忆，返回可注入 prompt 的上下文。"""
+    parts = []
+    try:
+        from core.services import memory_service
+        mems = memory_service.recall(user_id, query, limit=2) or []
+        if mems:
+            parts.append('相关记忆: ' + ' | '.join(str(m)[:120] for m in mems))
+    except Exception:
+        pass
+    try:
+        from core.services import message_service
+        hist = message_service.get_recent_history(conversation_id, limit=3) or []
+        if hist:
+            parts.append('最近会话: ' + ' | '.join(str(h)[:120] for h in hist))
+    except Exception:
+        pass
+    if not parts:
+        return ''
+    return '\n'.join(parts)
+
 def record_round(run_id, plan_summary, exec_summary, review=None):
     run = get_run(run_id)
     if not run:
