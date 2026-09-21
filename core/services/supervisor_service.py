@@ -95,7 +95,7 @@ def record_round(run_id, plan_summary, exec_summary, review=None):
     except Exception:
         history = []
     new_round = (run['current_round'] or 0) + 1
-    history.append({'round': new_round, 'plan': (plan_summary or '')[:300], 'exec': (exec_summary or '')[:500], 'at': datetime.now().isoformat()})
+    history.append({'round': new_round, 'plan': (plan_summary or '')[:300], 'exec': (exec_summary or '')[:500], 'review': review, 'at': datetime.now().isoformat()})
     with db_cursor(commit=True) as cur:
         cur.execute('UPDATE supervisor_runs SET history=?, current_round=? WHERE id=?', (json.dumps(history, ensure_ascii=False), new_round, run_id))
 
@@ -229,7 +229,7 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     run = get_run(run_id)
     if not run or run['status'] != 'running':
         return False, None
-    record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary)
+    record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary, review=review)
     run = get_run(run_id)
     if not run or (run['current_round'] or 0) >= (run['max_rounds'] or 5):
         return False, None
