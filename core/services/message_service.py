@@ -87,8 +87,9 @@ def toggle_pin_conversation(user_id: int, conversation_id: int, pinned: bool):
     return True
 
 def delete_conversation(user_id: int, conversation_id: int):
-    cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
     with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM swarm_pending_tasks WHERE conversation_id=?", (conversation_id,))
+        cur.execute("DELETE FROM swarm_reviews WHERE conversation_id=?", (conversation_id,))
         cur.execute("DELETE FROM messages WHERE conversation_id=?", (conversation_id,))
         cur.execute("DELETE FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
     return True
