@@ -72,6 +72,9 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 - grep_code：在项目中搜索关键词。参数：pattern（必填），path（可选，默认 .），file_ext（可选，如 .py / .js），max_results（可选，默认 30）。定位代码位置时优先用这个。
 
+- structure_check：扫描 Python 文件，输出所有函数/类的名称和行号，检测同名定义、函数截断、孤立字符串等异常。当怀疑文件结构有问题、或有重复定义时优先调用。参数：file_path（必填）。
+
+
 - web_fetch：抓取网页文本。当用户要求"抓取网页"、"获取网页内容"、"查看某个链接"时使用。
   格式：{"step":1,"type":"harness","module_id":"web_fetch","params":{"url":"https://..."},"description":"抓取网页"}
   注意：harness 类型的步骤不需要 command 字段，而是用 type/module_id/params 三个字段。
