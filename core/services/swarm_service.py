@@ -63,21 +63,9 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 【可用 Harness 工具】
 
-- structure_check：扫描 Python 文件，输出函数列表并检测同名定义/函数截断/孤立字符串。当需要审查一个文件的结构或怀疑有重复定义时，优先调用。参数：file_path（必填）。
+调用格式：{"step":N,"type":"harness","module_id":"工具ID","params":{...}}
 
-
-- file_read：读取项目内文件内容。参数：file_path（必填），max_lines（可选，默认 200），offset（可选，默认 0）。遇到需要看代码的任务时优先调用。
-
-- dir_tree：列出目录树。参数：path（可选，默认 .），max_depth（可选，默认 2，最大 4）。找文件时用来快速了解目录结构。
-
-- grep_code：在项目中搜索关键词。参数：pattern（必填），path（可选，默认 .），file_ext（可选，如 .py / .js），max_results（可选，默认 30）。定位代码位置时优先用这个。
-
-- structure_check：扫描 Python 文件，输出所有函数/类的名称和行号，检测同名定义、函数截断、孤立字符串等异常。当怀疑文件结构有问题、或有重复定义时优先调用。参数：file_path（必填）。
-
-
-- web_fetch：抓取网页文本。当用户要求"抓取网页"、"获取网页内容"、"查看某个链接"时使用。
-  格式：{"step":1,"type":"harness","module_id":"web_fetch","params":{"url":"https://..."},"description":"抓取网页"}
-  注意：harness 类型的步骤不需要 command 字段，而是用 type/module_id/params 三个字段。
+具体可用工具清单见下方【当前可用 Harness 工具】（运行时动态注入）。
 
 - file_patch：修改项目文件（允许目录：static/ / core/ / scripts/ / docs/）。支持两种模式：
 
