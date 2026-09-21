@@ -328,6 +328,29 @@ async def send_message(
                                 title = row["name"]
                     conversation_id = create_conversation(user_id, agent_id, title)
 
+                # 调度员提议执行（对话模式）
+                if sender_agent_id and not content.startswith('#'):
+                    try:
+                        from . import supervisor_service
+                        _ctx2 = supervisor_service.build_context(user_id, conversation_id, content)
+                        _p2 = '你是 SASES 调度员。用户可能在对话中提出想让系统做的事。\n\n上下文：' + _ctx2 + '\n\n用户消息：' + content[:300] + '\n\n如果用户消息是明确的执行请求（要改代码/加功能/跑任务），输出 JSON：{"propose": true, "goal": "具体任务描述"}\n否则输出：{"propose": false}\n只输出 JSON，不要其他文字。'
+                        import openai as _oai2
+                        from .. import config as _cfg2
+                        _c2 = _oai2.OpenAI(api_key=_cfg2.DEEPSEEK_API_KEY, base_url=_cfg2.DEEPSEEK_BASE_URL, timeout=15)
+                        _r2 = _c2.chat.completions.create(model=_cfg2.MODEL_NAME, messages=[{'role': 'user', 'content': _p2}], temperature=0.2, max_tokens=150)
+                        _raw2 = (_r2.choices[0].message.content or '').strip()
+                        _i2 = _raw2.find('{')
+                        _j2 = _raw2.rfind('}')
+                        if _i2 >= 0 and _j2 > _i2:
+                            import json as _j2mod
+                            _dec = _j2mod.loads(_raw2[_i2:_j2+1])
+                            if _dec.get('propose') and _dec.get('goal'):
+                                _rid = supervisor_service.create_proposed_run(user_id, conversation_id, sender_agent_id, _dec['goal'])
+                                print('[supervisor] 提议执行 run_id=' + str(_rid) + ' goal=' + _dec['goal'][:50])
+                    except Exception as _e2:
+                        print('[supervisor] 提议检查失败: ' + str(_e2))
+
+
                 # 调度者回执（v0.18.0 带上下文）
                 if sender_agent_id:
                     try:
