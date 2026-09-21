@@ -350,5 +350,15 @@ export const api = {
   },
 
 
+  confirmRun: (runId) => request('/supervisor/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ run_id: runId })
+  }),
+  rejectRun: (runId) => request('/supervisor/reject', {
+    method: 'POST',
+    body: JSON.stringify({ run_id: runId })
+  }),
+
+
   getRedPacketDetail: (tx_id) => request(`/transfer/detail/${tx_id}`),
 };
