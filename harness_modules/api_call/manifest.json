@@ -1,0 +1,10 @@
+{
+  "id": "api_call",
+  "name": "HTTP API 调用",
+  "description": "调用公网 HTTP(S) API。支持 GET/POST/PUT/DELETE，自定义 header 和 body。禁止内网 IP，超时 15 秒，响应截断 3000 字。",
+  "version": "1.0.0",
+  "capabilities": ["api_call", "http"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
