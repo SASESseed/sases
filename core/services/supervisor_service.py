@@ -140,6 +140,42 @@ def build_next_input(run_id):
     return chr(10).join(lines)
 
 
+async def task_summarizer(task):
+    import openai
+    import asyncio
+    from .. import config
+    user_text = task.get('user_text', '')
+    results = task.get('results', [])
+    steps = []
+    for r in results:
+        step = r.get('step', '?')
+        desc = (r.get('description') or '')[:50]
+        status = r.get('status', '?')
+        cmd = r.get('command') or r.get('module_id') or ''
+        out = (r.get('output') or '')[:120]
+        steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
+    prompt = '你是任务完成度评估器。\n\n用户目标：' + user_text + '\n\n执行步骤：\n' + chr(10).join(steps) + '\n\n请只输出 JSON：\n{"goal_achieved": true/false, "goal_reason": "一句话理由", "completed": ["已完成"], "missing": ["未完成"], "next_hint": "下一步做什么"}\n\n判断标准：目标含改/加/实现/修复 → 必须有成功 file_patch；目标含读/看 → 有 file_read 结果即可；目标含列出/找 → 有 dir/grep 输出即可；目标含分析/总结 → 有 file_read + 文字输出。'
+    client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
+    try:
+        resp = await asyncio.to_thread(
+            client.chat.completions.create,
+            model=config.MODEL_NAME,
+            messages=[{'role': 'user', 'content': prompt}],
+            temperature=0.2,
+            max_tokens=400
+        )
+        raw = resp.choices[0].message.content.strip()
+        i = raw.find('{')
+        j = raw.rfind('}')
+        if i >= 0 and j > i:
+            return json.loads(raw[i:j+1])
+        return {'goal_achieved': False, 'goal_reason': 'parse failed', 'next_hint': '重新探测'}
+    except Exception as e:
+        print('[supervisor] task_summarizer 失败: ' + str(e))
+        return {'goal_achieved': False, 'goal_reason': 'LLM failed', 'next_hint': '重新探测'}
+
+
+
 async def decide_next_step(run_id):
     import openai
     import asyncio
