@@ -329,7 +329,20 @@ async def send_message(
                 # 调度者回执（v0.18.0 带上下文）
                 if sender_agent_id:
                     try:
-                        _receipt = "收到，我来处理：" + content[:50]
+                            _receipt = "收到，我来处理：" + content[:50]
+                            try:
+                                from . import supervisor_service
+                                _ctx = supervisor_service.build_context(user_id, conversation_id, content)
+                                _prompt = '你是调度助手。基于以下上下文，用一句话（不超过30字）回应用户，像真人说话，不要复述用户原话。上下文：' + _ctx + ' 用户新消息：' + content[:200] + ' 只输出这一句话。'
+                                import openai as _oai
+                                from .. import config as _cfg
+                                _client = _oai.OpenAI(api_key=_cfg.DEEPSEEK_API_KEY, base_url=_cfg.DEEPSEEK_BASE_URL, timeout=15)
+                                _resp = _client.chat.completions.create(model=_cfg.MODEL_NAME, messages=[{'role': 'user', 'content': _prompt}], temperature=0.7, max_tokens=80)
+                                _ai_receipt = (_resp.choices[0].message.content or '').strip().strip('"').strip()
+                                if _ai_receipt and len(_ai_receipt) <= 60:
+                                    _receipt = _ai_receipt
+                            except Exception as _ce:
+                                print(f"[supervisor] 回执生成失败，用默认: {_ce}")
                         try:
                             from . import supervisor_service
                             _ctx = supervisor_service.build_context(user_id, conversation_id, content)
