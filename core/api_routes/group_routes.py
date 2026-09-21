@@ -9,6 +9,14 @@ from ..auth_service import SECRET_KEY
 from ..services import group_service
 
 router = APIRouter(prefix="/group", tags=["group"])
+@router.post("/group/{group_id}/leave")
+async def api_leave_group(group_id: int):
+    return group_service.leave_group(group_id)
+
+@router.post("/group/{group_id}/dismiss")
+async def api_dismiss_group(group_id: int):
+    return group_service.dismiss_group(group_id)
+
 security = HTTPBearer()
 
 
