@@ -86,7 +86,7 @@ def finish_run(run_id, status='completed'):
         cur.execute('UPDATE supervisor_runs SET status=?, finished_at=? WHERE id=?', (status, datetime.now().isoformat(), run_id))
 
 
-def record_round(run_id, plan_summary, exec_summary):
+def record_round(run_id, plan_summary, exec_summary, review=None):
     run = get_run(run_id)
     if not run:
         return
