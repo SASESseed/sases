@@ -1163,7 +1163,7 @@ async def handle_step_done(
                             if _review.get('goal_achieved'):
                                 _decision = {'action': 'done'}
                             else:
-                                _decision = {'action': 'execute', 'task': _review.get('next_hint') or '继续'}
+                                _decision = {'action': 'execute', 'task': '[MODIFY] ' + (_review.get('next_hint') or '继续完成目标')}
                         else:
                             _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
@@ -1265,7 +1265,7 @@ async def handle_step_done(
                             if _review.get('goal_achieved'):
                                 _decision = {'action': 'done'}
                             else:
-                                _decision = {'action': 'execute', 'task': _review.get('next_hint') or '继续'}
+                                _decision = {'action': 'execute', 'task': '[MODIFY] ' + (_review.get('next_hint') or '继续完成目标')}
                         else:
                             _decision = await supervisor_service.decide_next_step(_run_id)
                         if _decision and _decision.get("action") == "done":
