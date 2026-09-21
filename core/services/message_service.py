@@ -327,7 +327,12 @@ async def send_message(
                     conversation_id = create_conversation(user_id, agent_id, title)
 
                 # 调度员提议执行（对话模式）
-                if sender_agent_id and not content.startswith('#'):
+                _skip_propose = False
+                for _kw in ('harness', 'module_id', 'file_patch', 'web_fetch', 'git_ops', 'HARNESS:', 'run_python', 'file_read', 'grep_code', 'dir_tree'):
+                    if _kw in content:
+                        _skip_propose = True
+                        break
+                if sender_agent_id and not content.startswith('#') and not _skip_propose:
                     try:
                         from . import supervisor_service
                         _ctx2 = supervisor_service.build_context(user_id, conversation_id, content)
