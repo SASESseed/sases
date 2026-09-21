@@ -112,6 +112,36 @@ async def periodic_pattern_finalize():
 
 
 
+async def periodic_syntax_check():
+    """每 10 分钟检查 core/ 下 .py 语法，发现错误就告警"""
+    import ast as _ast
+    import os as _os
+    await asyncio.sleep(60)
+    while True:
+        try:
+            _bad = []
+            for _root, _dirs, _files in _os.walk('core'):
+                _dirs[:] = [d for d in _dirs if d not in ('__pycache__',)]
+                for _f in _files:
+                    if not _f.endswith('.py'):
+                        continue
+                    _fp = _os.path.join(_root, _f)
+                    try:
+                        with open(_fp, 'r', encoding='utf-8') as _fh:
+                            _ast.parse(_fh.read())
+                    except SyntaxError as _se:
+                        _bad.append(_fp + ' (line ' + str(_se.lineno) + ')')
+                    except Exception:
+                        pass
+            if _bad:
+                print('[syntax-check] 发现语法错误: ' + ' | '.join(_bad))
+                print('[syntax-check] 建议: 运行 git log 查看最近提交，必要时 git reset --hard HEAD~N 回滚')
+        except Exception as _e:
+            print('[syntax-check] 异常: ' + str(_e))
+        await asyncio.sleep(600)
+
+
+
 async def periodic_rescue_maintenance():
     """每 5 分钟回收超时任务"""
     while True:
@@ -158,6 +188,7 @@ async def lifespan(app: FastAPI):
     cleanup_task = asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24))
     pattern_task = asyncio.create_task(periodic_pattern_finalize())
     git_push_task = asyncio.create_task(periodic_git_push())
+    syntax_check_task = asyncio.create_task(periodic_syntax_check())
 
     yield
 
@@ -169,6 +200,7 @@ async def lifespan(app: FastAPI):
     cleanup_task.cancel()
     pattern_task.cancel()
     git_push_task.cancel()
+    syntax_check_task.cancel()
 
 
 def create_app() -> FastAPI:
