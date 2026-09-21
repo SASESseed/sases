@@ -225,6 +225,25 @@ async def decide_next_step(run_id):
 
 
 
+def build_context(user_id, conversation_id, query):
+    """读最近3条会话历史与2条相关记忆，返回可注入prompt的文本。"""
+    from core.services import memory_service, message_service
+    parts = []
+    try:
+        mems = memory_service.recall(user_id, query, top_k=2)
+        if mems:
+            parts.append("相关记忆：" + "；".join(str(m) for m in mems))
+    except Exception:
+        pass
+    try:
+        hist = message_service.get_recent_messages(conversation_id, limit=3)
+        if hist:
+            parts.append("最近对话：" + "；".join(str(h) for h in hist))
+    except Exception:
+        pass
+    return "\n".join(parts)
+
+
 async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=None, review=None):
     import openai
     from .. import config
