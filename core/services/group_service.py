@@ -3,6 +3,28 @@ from ..db import db_cursor
 
 
 def create_group(name: str, owner_id: int):
+
+def leave_group(group_id, user_id):
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        cur.execute("SELECT COUNT(*) FROM group_members WHERE group_id=?", (group_id,))
+        if cur.fetchone()[0] == 0:
+            cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
+            cur.execute("DELETE FROM groups WHERE id=?", (group_id,))
+    return True
+
+
+def dismiss_group(group_id, user_id):
+    with db_cursor() as cur:
+        cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
+        row = cur.fetchone()
+        if not row or str(row[0]) != str(user_id):
+            raise PermissionError("只有群主可以解散群聊")
+        cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
+        cur.execute("DELETE FROM group_members WHERE group_id=?", (group_id,))
+        cur.execute("DELETE FROM groups WHERE id=?", (group_id,))
+    return True
+
     """创建群聊，返回群 ID"""
     with db_cursor(commit=True) as cur:
         cur.execute("INSERT INTO groups (name, owner_id, mode) VALUES (?, ?, 'normal')", (name, owner_id))
@@ -18,7 +40,6 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
         if not cur.fetchone():
             return False, "邀请者不是群成员"
 
-        # 先尝试匹配用户
         cur.execute("SELECT id FROM users WHERE username=? OR sases_id=?", (invitee, invitee))
         user = cur.fetchone()
         if user:
@@ -30,7 +51,6 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
                 cur2.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (group_id, target_user_id))
             return True, "邀请用户成功"
 
-        # 尝试匹配智能体（仅限邀请者自己的智能体）
         cur.execute("""
             SELECT id FROM model_configs
             WHERE (id=? OR name=?) AND user_id=?
@@ -119,21 +139,17 @@ def get_group_messages(group_id: int, user_id: int):
 
 def send_group_message(group_id: int, sender_id: int, content: str, sender_agent_id: str = None):
     """发送群聊消息，可为用户或智能体。蜂群模式下普通消息暂不处理。"""
-    # 获取当前群模式
     mode = get_group_mode(group_id)
     if mode == 'swarm':
-        # 蜂群模式暂未实现任务处理，返回提示
         return False, "蜂群模式暂未开放任务功能，请切换为普通聊天模式"
 
     with db_cursor(commit=True) as cur:
         if sender_agent_id:
-            # 验证智能体是否为群成员
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND agent_id=?", (group_id, sender_agent_id))
             if not cur.fetchone():
                 return False, "智能体不在群中"
             cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content) VALUES (?, ?, ?)", (group_id, sender_agent_id, content))
         else:
-            # 验证用户是否为群成员
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, sender_id))
             if not cur.fetchone():
                 return False, "用户不在群中"
@@ -163,25 +179,6 @@ def get_group_credits(group_id: int):
 
 
 def remove_member_from_group(group_id: int, remover_id: int, member_identifier: str):
-
-
-def leave_group(group_id, user_id):
-    conn = get_db()
-    conn.execute('DELETE FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
-    conn.commit()
-    conn.close()
-    return {'ok': True}
-
-
-def dismiss_group(group_id):
-    conn = get_db()
-    conn.execute('DELETE FROM group_messages WHERE group_id=?', (group_id,))
-    conn.execute('DELETE FROM group_members WHERE group_id=?', (group_id,))
-    conn.execute('DELETE FROM groups WHERE id=?', (group_id,))
-    conn.commit()
-    conn.close()
-    return {'ok': True}
-
     """移除群成员（仅群主可操作）"""
     with db_cursor() as cur:
         cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
@@ -201,3 +198,19 @@ def dismiss_group(group_id):
         with db_cursor(commit=True) as cur2:
             cur2.execute("DELETE FROM group_members WHERE id=?", (member["id"],))
         return True, "移除成功"
+
+
+def leave_group(group_id: int, user_id: int):
+    """成员退出群聊"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        return {"ok": True}
+
+
+def dismiss_group(group_id: int):
+    """群主解散群聊"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
+        cur.execute("DELETE FROM group_members WHERE group_id=?", (group_id,))
+        cur.execute("DELETE FROM groups WHERE id=?", (group_id,))
+        return {"ok": True}
