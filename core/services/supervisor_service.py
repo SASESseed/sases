@@ -116,7 +116,7 @@ def get_proposed_run(user_id, conversation_id=None):
 
 def get_active_run(user_id):
     with db_cursor() as cur:
-        cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND status='running' ORDER BY id DESC LIMIT 1", (user_id,))
+        cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND status IN ('running', 'proposed') ORDER BY id DESC LIMIT 1", (user_id,))
         return _dict(cur.fetchone())
 
 
