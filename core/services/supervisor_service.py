@@ -117,7 +117,28 @@ def get_proposed_run(user_id, conversation_id=None):
 def get_active_run(user_id):
     with db_cursor() as cur:
         cur.execute("SELECT * FROM supervisor_runs WHERE user_id=? AND status IN ('running', 'proposed') ORDER BY id DESC LIMIT 1", (user_id,))
-        return _dict(cur.fetchone())
+        run = _dict(cur.fetchone())
+
+    # 只有 running 状态才检查超时；proposed 等用户确认，不自动清
+    if run and run.get('status') == 'running':
+        try:
+            from datetime import timedelta
+            history = json.loads(run['history'] or '[]')
+            last_at = None
+            if history:
+                last_at = history[-1].get('at')
+            if not last_at:
+                last_at = run.get('created_at')
+            if last_at:
+                last_dt = datetime.fromisoformat(last_at.replace('Z', '').replace(' ', 'T'))
+                if datetime.now() - last_dt > timedelta(minutes=30):
+                    print('[supervisor] run ' + str(run['id']) + ' 超时 30 分钟，自动中断')
+                    finish_run(run['id'], 'timeout')
+                    return None
+        except Exception as e:
+            print('[supervisor] 超时检测失败: ' + str(e))
+
+    return run
 
 
 def create_run(user_id, conversation_id, supervisor_id, goal):
