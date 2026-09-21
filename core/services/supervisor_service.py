@@ -12,25 +12,44 @@ USE_STRUCTURED_REVIEW = True
 def build_context(user_id, conversation_id, query):
     parts = []
     try:
-        _skip_prefixes = ('[TASK]:', '[STEP_DONE]:', '[SUMMARY]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[RED_PACKET]:', '[IMAGE]:')
+        _hard_skip = ('[TASK]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[RED_PACKET]:', '[IMAGE]:')
         with db_cursor() as cur:
             cur.execute(
-                "SELECT sender, content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 50",
+                "SELECT sender, content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 80",
                 (conversation_id,),
             )
             rows = cur.fetchall()
-        _count = 0
+        _chat_lines = []
+        _summary_line = None
+        _step_lines = []
         for row in reversed(rows):
             sender = row["sender"] if "sender" in row.keys() else "?"
             content = row["content"] or ""
-            if any(content.startswith(p) for p in _skip_prefixes):
+            if any(content.startswith(p) for p in _hard_skip):
+                continue
+            if content.startswith('[SUMMARY]:'):
+                _summary_line = "任务总结：" + content[10:][:150]
+                continue
+            if content.startswith('[STEP_DONE]:'):
+                try:
+                    import json as _json
+                    d = _json.loads(content[12:])
+                    desc = (d.get('description') or '')[:40]
+                    status = d.get('status', '?')
+                    out = (d.get('output') or '')[:80]
+                    _step_lines.append(str(d.get('step', '?')) + '.[' + status + '] ' + desc + ' → ' + out)
+                except Exception:
+                    pass
                 continue
             if not content.strip():
                 continue
-            parts.append(sender + "：" + content[:100])
-            _count += 1
-            if _count >= 3:
-                break
+            _chat_lines.append(sender + "：" + content[:100])
+        for line in _chat_lines[-2:]:
+            parts.append(line)
+        if _step_lines:
+            parts.append("执行步骤：" + " | ".join(_step_lines[-3:]))
+        if _summary_line:
+            parts.append(_summary_line)
     except Exception as e:
         print("[supervisor] build_context 历史读取失败: " + str(e))
     try:
