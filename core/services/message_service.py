@@ -206,7 +206,6 @@ async def send_message(
     # 检测 #1~#4 编号前缀
     _numbered_prefix_matched = False
     _force_swarm = False
-    _force_swarm = False
     for _p, _m in COMMAND_PREFIX_MAP.items():
         if content.startswith(_p):
             _numbered_prefix_matched = True
@@ -276,12 +275,11 @@ async def send_message(
             _is_greeting = intent_service._is_obvious_chat(content)
             _is_sases_agent = False
             try:
-                if agent_id:
-                    with db_cursor() as _cur:
-                        _cur.execute('SELECT name FROM model_configs WHERE id=?', (agent_id,))
-                        _r = _cur.fetchone()
-                    if _r and 'sases' in ((_r['name'] or '').lower()):
-                        _is_sases_agent = True
+                # 判定用"切换后的身份"，不切换时才用会话默认
+                _check_id = sender_agent_id if sender_agent_id else agent_id
+                # 只有系统默认助手 sases_assistant_2 才走项目库快答
+                if _check_id == 'sases_assistant_2':
+                    _is_sases_agent = True
             except Exception:
                 pass
             if not _is_operation and not _numbered_prefix_matched and not _is_greeting and _is_sases_agent:
