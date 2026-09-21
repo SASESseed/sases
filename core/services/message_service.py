@@ -339,6 +339,12 @@ async def send_message(
                         _skip_propose = True
                         break
 
+                _skip_propose = False
+                for _kw in ('harness', 'module_id', 'file_patch', 'web_fetch', 'git_ops', 'HARNESS:', 'run_python', 'file_read', 'grep_code', 'dir_tree'):
+                    if _kw in content:
+                        _skip_propose = True
+                        break
+
                 if sender_agent_id and not content.startswith('#') and not _skip_propose:
                     try:
                         from . import supervisor_service
