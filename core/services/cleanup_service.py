@@ -102,6 +102,43 @@ def cleanup_low_value_memory(min_importance: float = 0.3, min_days: int = 60) ->
 
 
 
+def cleanup_protocol_messages(days: int = 30) -> int:
+    """删除 N 天前的协议消息（TASK/STEP_DONE/SUMMARY 等）"""
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    prefixes = ('[TASK]:', '[STEP_DONE]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[SUMMARY]:')
+    with db_cursor(commit=True) as cur:
+        conds = ' OR '.join(['content LIKE ?' for _ in prefixes])
+        params = [p + '%' for p in prefixes]
+        params.append(cutoff)
+        cur.execute('DELETE FROM messages WHERE (' + conds + ') AND created_at < ?', params)
+        return cur.rowcount
+
+
+def cleanup_old_execution_notes(days: int = 180) -> int:
+    """删除 N 天前、outcome 非 important 的执行笔记"""
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM execution_notes WHERE created_at < ? AND (outcome IS NULL OR outcome != 'important')", (cutoff,))
+        return cur.rowcount
+
+
+def cleanup_low_value_patterns() -> dict:
+    """清理低价值 pattern：tentative 超 30 天删，active 低命中超 90 天归档"""
+    now = datetime.now()
+    t30 = (now - timedelta(days=30)).isoformat()
+    t90 = (now - timedelta(days=90)).isoformat()
+    deleted = 0
+    archived = 0
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM interaction_patterns WHERE status='tentative' AND created_at < ?", (t30,))
+        deleted = cur.rowcount
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE interaction_patterns SET status='archived' WHERE status='active' AND hit_count <= 5 AND created_at < ? AND (last_hit_at IS NULL OR last_hit_at < ?)", (t90, t90))
+        archived = cur.rowcount
+    return {'deleted': deleted, 'archived': archived}
+
+
+
 def cleanup_all() -> dict:
     """执行全部清理任务，返回各项删除数量"""
     result = {

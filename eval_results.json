@@ -1,0 +1,27 @@
+[
+  {
+    "id": "T1",
+    "status": "error",
+    "error": "FOREIGN KEY constraint failed"
+  },
+  {
+    "id": "T2",
+    "status": "error",
+    "error": "FOREIGN KEY constraint failed"
+  },
+  {
+    "id": "T3",
+    "status": "error",
+    "error": "FOREIGN KEY constraint failed"
+  },
+  {
+    "id": "T4",
+    "status": "error",
+    "error": "FOREIGN KEY constraint failed"
+  },
+  {
+    "id": "T5",
+    "status": "error",
+    "error": "FOREIGN KEY constraint failed"
+  }
+]
