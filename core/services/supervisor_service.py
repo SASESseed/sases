@@ -128,8 +128,17 @@ def create_run(user_id, conversation_id, supervisor_id, goal):
 
 def cancel_run(run_id, user_id):
     with db_cursor(commit=True) as cur:
-        cur.execute("UPDATE supervisor_runs SET status='cancelled', finished_at=? WHERE id=? AND user_id=? AND status='running'", (datetime.now().isoformat(), run_id, user_id))
-        return cur.rowcount > 0
+        cur.execute("UPDATE supervisor_runs SET status='cancelled', finished_at=? WHERE id=? AND user_id=? AND status IN ('running', 'proposed')", (datetime.now().isoformat(), run_id, user_id))
+        _ok = cur.rowcount > 0
+    try:
+        with db_cursor(commit=True) as cur:
+            cur.execute("UPDATE swarm_pending_tasks SET cancelled=1, status='cancelled', updated_at=? WHERE supervisor_run_id=? AND status IN ('pending', 'running')", (datetime.now().isoformat(), run_id))
+            _n = cur.rowcount
+            if _n:
+                print('[supervisor] cancel_run ' + str(run_id) + ' 同时取消 ' + str(_n) + ' 个 swarm 任务')
+    except Exception as e:
+        print('[supervisor] cancel_run 中断 swarm 失败: ' + str(e))
+    return _ok
 
 
 def finish_run(run_id, status='completed'):

@@ -53,6 +53,15 @@ async def reject(body: ConfirmBody, user_id: int = Depends(get_current_user)):
     return {'run_id': body.run_id, 'status': 'rejected'}
 
 
+@router.post("/cancel")
+async def cancel(body: ConfirmBody, user_id: int = Depends(get_current_user)):
+    ok = supervisor_service.cancel_run(body.run_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail='run not found or not cancellable')
+    return {'run_id': body.run_id, 'status': 'cancelled'}
+
+
+
 @router.get("/proposed")
 async def get_proposed(conversation_id: int = None, user_id: int = Depends(get_current_user)):
     run = supervisor_service.get_proposed_run(user_id, conversation_id)
