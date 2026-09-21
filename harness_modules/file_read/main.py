@@ -34,7 +34,7 @@ def run(params):
         return {'success': False, 'error': '文件不存在: ' + safe}
     if os.path.isdir(abs_path):
         return {'success': False, 'error': safe + ' 是目录，请用 dir_tree'}
-    max_lines = int(params.get('max_lines', 200))
+    max_lines = int(params.get('max_lines', 300))
     if max_lines < 1 or max_lines > 1000:
         max_lines = 200
     offset = int(params.get('offset', 0))
