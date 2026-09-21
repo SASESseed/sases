@@ -336,7 +336,7 @@ async def send_message(
                 if sender_agent_id and not content.startswith('#') and not _skip_propose:
                     try:
                         from . import supervisor_service
-                        _ctx2 = supervisor_service.build_context(user_id, conversation_id, content)
+                        _ctx2 = supervisor_service.build_context(user_id, conversation_id, content, mode='execute', supervisor_id=sender_agent_id or agent_id)
                         _p2 = '你是 SASES 调度员。用户可能在对话中提出想让系统做的事。\n\n上下文：' + _ctx2 + '\n\n用户消息：' + content[:300] + '\n\n如果用户消息是明确的执行请求（要改代码/加功能/跑任务），输出 JSON：{"propose": true, "goal": "具体任务描述"}\n否则输出：{"propose": false}\n只输出 JSON，不要其他文字。'
                         import openai as _oai2
                         from .. import config as _cfg2
@@ -375,7 +375,7 @@ async def send_message(
                         _receipt = "收到，我来处理：" + content[:50]
                         try:
                             from . import supervisor_service
-                            _ctx = supervisor_service.build_context(user_id, conversation_id, content)
+                            _ctx = supervisor_service.build_context(user_id, conversation_id, content, mode='execute', supervisor_id=sender_agent_id or agent_id)
                             _prompt = '你是调度助手。基于以下上下文，用一句话（不超过30字）回应用户，像真人说话，不要复述用户原话。上下文：' + _ctx + ' 用户新消息：' + content[:200] + ' 只输出这一句话。'
                             import openai as _oai
                             from .. import config as _cfg
