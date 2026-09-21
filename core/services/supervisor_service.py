@@ -61,6 +61,48 @@ def build_context(user_id, conversation_id, query, mode='execute', supervisor_id
                 parts.append("记忆：" + mc)
     except Exception as e:
         print("[supervisor] build_context 记忆读取失败: " + str(e))
+    if mode == 'chat':
+        _allow_project = bool(supervisor_id) and supervisor_id.startswith('sases_assistant')
+        if _allow_project:
+            try:
+                from . import project_service
+                _chunks = project_service.retrieve_project_chunks(query, top_k=3)
+                if _chunks:
+                    _pctx = project_service.format_chunks_for_prompt(_chunks)
+                    if _pctx:
+                        parts.append(_pctx[:1000])
+            except Exception as _e:
+                print('[supervisor] chat mode 项目库失败: ' + str(_e))
+        try:
+            with db_cursor() as _cur:
+                _cur.execute('SELECT user_input, summary FROM execution_notes WHERE user_id=? ORDER BY id DESC LIMIT 5', (user_id,))
+                _rows = _cur.fetchall()
+            if _rows:
+                _lines = []
+                for _r in _rows[:3]:
+                    _ui = (_r['user_input'] if 'user_input' in _r.keys() else '') or ''
+                    _sm = (_r['summary'] if 'summary' in _r.keys() else '') or ''
+                    if _ui:
+                        _lines.append('- ' + _ui[:60] + ' → ' + _sm[:60])
+                if _lines:
+                    parts.append('【历史任务】' + chr(10) + chr(10).join(_lines))
+        except Exception as _e:
+            print('[supervisor] chat mode 执行笔记失败: ' + str(_e))
+        try:
+            from . import pattern_service
+            _pats = pattern_service.retrieve_patterns(query, domain='dev', top_k=3)
+            if _pats:
+                _plines = []
+                for _p in _pats:
+                    _ev = (_p.get('evidence') or '')[:80] if isinstance(_p, dict) else ''
+                    if _ev:
+                        _plines.append('- ' + _ev)
+                if _plines:
+                    parts.append('【相关经验】' + chr(10) + chr(10).join(_plines))
+        except Exception as _e:
+            print('[supervisor] chat mode 经验库失败: ' + str(_e))
+
+
     return "\n".join(parts)
 
 
