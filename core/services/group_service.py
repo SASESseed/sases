@@ -3,28 +3,6 @@ from ..db import db_cursor
 
 
 def create_group(name: str, owner_id: int):
-
-def leave_group(group_id, user_id):
-    with db_cursor() as cur:
-        cur.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        cur.execute("SELECT COUNT(*) FROM group_members WHERE group_id=?", (group_id,))
-        if cur.fetchone()[0] == 0:
-            cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
-            cur.execute("DELETE FROM groups WHERE id=?", (group_id,))
-    return True
-
-
-def dismiss_group(group_id, user_id):
-    with db_cursor() as cur:
-        cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
-        row = cur.fetchone()
-        if not row or str(row[0]) != str(user_id):
-            raise PermissionError("只有群主可以解散群聊")
-        cur.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
-        cur.execute("DELETE FROM group_members WHERE group_id=?", (group_id,))
-        cur.execute("DELETE FROM groups WHERE id=?", (group_id,))
-    return True
-
     """创建群聊，返回群 ID"""
     with db_cursor(commit=True) as cur:
         cur.execute("INSERT INTO groups (name, owner_id, mode) VALUES (?, ?, 'normal')", (name, owner_id))

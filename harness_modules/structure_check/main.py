@@ -55,12 +55,28 @@ def run(params):
         if cur['indent'] == nxt['indent'] and nxt['line'] - cur['line'] <= 2:
             warnings.append('函数截断: ' + cur['name'] + ' 第 ' + str(cur['line']) + ' 行')
 
+    in_docstring = False
     for i, line in enumerate(lines):
         s = line.strip()
         if not s:
             continue
-        if (s.startswith(chr(39)*3) or s.startswith(chr(34)*3) or s.startswith(chr(39)) or s.startswith(chr(34))) and '=' not in s:
-            warnings.append('疑似孤立字符串: 第 ' + str(i+1) + ' 行: ' + s[:60])
+        _tri = chr(39)*3
+        _trd = chr(34)*3
+        _cnt = s.count(_tri) + s.count(_trd)
+        if in_docstring:
+            if _cnt > 0:
+                in_docstring = False
+            continue
+        if s.startswith(_tri) or s.startswith(_trd):
+            if _cnt == 1:
+                in_docstring = True
+            continue
+        if ',' in s or '=' in s or 'return' in s or 'print' in s:
+            continue
+        if s.startswith(')') or s.startswith(']') or s.startswith('}'):
+            continue
+        if (s.startswith(chr(39)) and s.endswith(chr(39)) and len(s) > 2) or (s.startswith(chr(34)) and s.endswith(chr(34)) and len(s) > 2):
+            warnings.append('孤立字符串: 第 ' + str(i+1) + ' 行: ' + s[:60])
 
     return {
         'success': True,
