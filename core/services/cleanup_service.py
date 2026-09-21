@@ -147,6 +147,10 @@ def cleanup_all() -> dict:
         "finished_swarm_tasks": 0,
         "orphan_uploads": 0,
         "low_value_memory": 0,
+        "protocol_messages": 0,
+        "old_execution_notes": 0,
+        "patterns_deleted": 0,
+        "patterns_archived": 0,
     }
     try:
         result["expired_memory"] = cleanup_expired_memory()
@@ -174,6 +178,24 @@ def cleanup_all() -> dict:
         result['low_value_memory'] = cleanup_low_value_memory()
     except Exception as e:
         print('[cleanup] 低价值记忆清理失败: ' + str(e))
+
+
+    try:
+        result['protocol_messages'] = cleanup_protocol_messages(days=30)
+    except Exception as e:
+        print('[cleanup] 协议消息清理失败: ' + str(e))
+
+    try:
+        result['old_execution_notes'] = cleanup_old_execution_notes(days=180)
+    except Exception as e:
+        print('[cleanup] 执行笔记清理失败: ' + str(e))
+
+    try:
+        _p = cleanup_low_value_patterns()
+        result['patterns_deleted'] = _p['deleted']
+        result['patterns_archived'] = _p['archived']
+    except Exception as e:
+        print('[cleanup] pattern 清理失败: ' + str(e))
 
 
     print(f"[cleanup] 清理完成: {result}")
