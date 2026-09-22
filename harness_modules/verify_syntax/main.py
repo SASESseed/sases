@@ -84,7 +84,8 @@ def run(params):
             return {'success': True, 'file_path': safe, 'skipped': True, 'reason': err}
     else:
         return {'success': True, 'file_path': safe, 'skipped': True, 'reason': 'ext not checked: ' + ext}
-    result = {'success': ok, 'file_path': safe, 'syntax_ok': bool(ok)}
+    # success 始终 True（工具调用成功）；syntax_ok 才是结论
+    result = {'success': True, 'file_path': safe, 'syntax_ok': bool(ok)}
 
     auto_rollback = params.get('auto_rollback', True)
     if not ok and auto_rollback:
