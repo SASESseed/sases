@@ -1202,6 +1202,12 @@ async def handle_step_done(
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
                 _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
+                _s1_chk = task.get('steps', [{}])[0] if task.get('steps') else {}
+                _s1_mod = _s1_chk.get('module_id', '') or ''
+                _s1_type = _s1_chk.get('type', 'command')
+                _is_hands_on = (_s1_type == 'harness' and _s1_mod in ('file_patch', 'run_python', 'verify_patch'))
+                if not _is_hands_on:
+                    _is_simple = False
                 if _is_simple:
                     from . import supervisor_service as _sv_done
                     _sv_done.finish_run(_run_id, 'completed')
@@ -1329,6 +1335,12 @@ async def handle_step_done(
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
                 _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
+                _s1_chk = task.get('steps', [{}])[0] if task.get('steps') else {}
+                _s1_mod = _s1_chk.get('module_id', '') or ''
+                _s1_type = _s1_chk.get('type', 'command')
+                _is_hands_on = (_s1_type == 'harness' and _s1_mod in ('file_patch', 'run_python', 'verify_patch'))
+                if not _is_hands_on:
+                    _is_simple = False
                 if _is_simple:
                     from . import supervisor_service as _sv_done
                     _sv_done.finish_run(_run_id, 'completed')
