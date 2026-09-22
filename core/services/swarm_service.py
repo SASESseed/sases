@@ -102,6 +102,12 @@ Windows CMD 不支持 grep，用 findstr 代替。
 【文件假设纪律】不要假设文件存在（如 red_packet_routes.py 可能不存在）。做任何 patch 前先用 grep_code 或 file_read 确认路径。
 
 
+
+
+【改动后必验证】
+- 每次 file_patch 修改 .py 或 .js 文件后，必须紧接着调用 verify_syntax（type=harness, module_id=verify_syntax, params: {file_path}）
+- 如果 verify_syntax 返回 success=False，说明改动引入了语法错误
+- 此时应该用 verify_syntax 返回的 latest_backup 路径，通过 file_patch overwrite 还原，或直接放弃本次改动
 【harness 调用铁律（极其重要）】
 - 任何 harness 工具（file_read / file_patch / run_python / api_call / grep_code / dir_tree / web_fetch / git_ops / harness_reload 等）必须用 type=harness + module_id + params 三个字段
 - 绝对不能写成 command: "harness:xxx" 或 command: "file_read" 或 command: "file_patch ..."

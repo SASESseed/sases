@@ -85,6 +85,18 @@ def run(params):
     else:
         return {'success': True, 'file_path': safe, 'skipped': True, 'reason': 'ext not checked: ' + ext}
     result = {'success': ok, 'file_path': safe, 'syntax_ok': bool(ok)}
+
+    auto_rollback = params.get('auto_rollback', True)
+    if not ok and auto_rollback:
+        bak = _find_latest_backup(safe)
+        if bak:
+            try:
+                shutil.copy2(bak, abs_p)
+                result['rolled_back'] = True
+                result['restored_from'] = os.path.relpath(bak, REPO_ROOT).replace(chr(92), '/')
+            except Exception as _e:
+                result['rollback_error'] = str(_e)
+
     if not ok:
         result['error'] = err
         bak = _find_latest_backup(safe)
