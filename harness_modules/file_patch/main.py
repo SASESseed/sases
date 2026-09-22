@@ -30,6 +30,7 @@ SELF_PROTECTED_FILES = {
     "harness_modules/file_patch/manifest.json",
     "core/services/executor_service.py",
 }
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKUP_DIR = ".backups"
 
 
@@ -292,26 +293,27 @@ def _run_inner(params):
             "  或 overwrite=true（整体覆写）"
         )
 
-
 def run(params):
     result = _run_inner(params)
-    if isinstance(result, dict) and result.get('success'):
-        fp = result.get('file_path') or params.get('file_path')
+    if not isinstance(result, dict):
+        return result
+    if result.get("success"):
+        fp = result.get("file_path") or params.get("file_path")
         if fp:
-            abs_p = os.path.abspath(fp)
+            abs_p = os.path.join(REPO_ROOT, fp) if not os.path.isabs(fp) else fp
             ok, err = _verify_syntax_after_write(abs_p, fp)
             if not ok:
-                bak = result.get('backup')
+                bak = result.get("backup")
                 rolled = False
                 if bak and os.path.exists(bak):
                     try:
                         import shutil as _sh
                         _sh.copy2(bak, abs_p)
                         rolled = True
-                    except Exception as _ex:
-                        print('[file_patch] rollback failed: ' + str(_ex))
-                result['success'] = False
-                result['syntax_error'] = err
-                result['rolled_back'] = rolled
-                result['error'] = 'SYNTAX_ERROR' + (' (rolled back)' if rolled else '') + ': ' + err
+                    except Exception:
+                        pass
+                result["success"] = False
+                result["syntax_error"] = err
+                result["rolled_back"] = rolled
+                result["error"] = "SYNTAX_ERROR" + (" (rolled back)" if rolled else "") + ": " + err
     return result
