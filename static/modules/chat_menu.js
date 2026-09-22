@@ -1,4 +1,16 @@
 // static/modules/chat_menu.js
+function openTransferDialog() {
+  const chatState = window.chatState || {};
+  const conversationId = chatState.conversationId || null;
+  if (typeof window.openRedPacketDialog === 'function') {
+    return window.openRedPacketDialog();
+  }
+  return null;
+}
+
+window.openTransferDialog = openTransferDialog;
+
+
 function openRedPacketDialog() {
   const chatState = window.chatState || {};
   const conversationId = chatState.conversationId || null;
