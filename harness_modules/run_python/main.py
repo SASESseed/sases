@@ -77,6 +77,8 @@ def _check_ast(code):
 
 
 def run(params):
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONUTF8'] = '1'
     code = params.get('code', '')
     if not code:
         return {'success': False, 'error': 'missing code'}
@@ -94,6 +96,10 @@ def run(params):
             tmp = f.name
         _env = os.environ.copy()
         _env['PYTHONPATH'] = REPO_ROOT
+        _env = os.environ.copy()
+        _env['PYTHONIOENCODING'] = 'utf-8'
+        _env['PYTHONUTF8'] = '1'
+
         r = subprocess.run([sys.executable, tmp], capture_output=True, text=True, timeout=TIMEOUT, encoding='utf-8', errors='replace', cwd=REPO_ROOT, env=_env)
         return {
             'success': r.returncode == 0,
