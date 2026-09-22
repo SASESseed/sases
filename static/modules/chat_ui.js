@@ -320,47 +320,6 @@ export function renderFileBubble(content, role = 'user', senderName = null) {
 }
 
 
-export function renderFileBubble(content, role = 'user', senderName = null) {
-  const parts = content.substring('[FILE]:'.length).split('|');
-  const url = parts[0] || '';
-  const name = parts[1] || 'file';
-  const size = parseInt(parts[2] || '0', 10);
-  const sizeStr = size > 1024 * 1024 ? (size / 1024 / 1024).toFixed(2) + ' MB' : (size > 1024 ? (size / 1024).toFixed(1) + ' KB' : size + ' B');
-  const wrapper = document.createElement('div');
-  wrapper.style.display = 'flex';
-  wrapper.style.flexDirection = 'row';
-  wrapper.style.alignItems = 'flex-start';
-  wrapper.style.margin = '8px 12px';
-  wrapper.style.justifyContent = (role === 'user') ? 'flex-end' : 'flex-start';
-  const fileBox = document.createElement('div');
-  fileBox.style.display = 'flex';
-  fileBox.style.alignItems = 'center';
-  fileBox.style.padding = '10px 14px';
-  fileBox.style.background = role === 'user' ? '#007aff' : '#f0f0f0';
-  fileBox.style.color = role === 'user' ? '#fff' : '#333';
-  fileBox.style.borderRadius = '8px';
-  fileBox.style.maxWidth = '240px';
-  fileBox.style.cursor = 'pointer';
-  fileBox.onclick = () => window.open(url, '_blank');
-  fileBox.innerHTML = '<div style="font-size:24px;margin-right:10px;">📄</div><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(name) + '</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">' + sizeStr + '</div></div>';
-  const avatar = document.createElement('div');
-  avatar.style.width = '36px';
-  avatar.style.height = '36px';
-  avatar.style.borderRadius = '50%';
-  avatar.style.background = role === 'user' ? '#007aff' : '#e0e0e0';
-  avatar.style.color = role === 'user' ? '#fff' : '#333';
-  avatar.style.display = 'flex';
-  avatar.style.alignItems = 'center';
-  avatar.style.justifyContent = 'center';
-  avatar.style.flexShrink = '0';
-  avatar.style.fontSize = '16px';
-  avatar.style.marginLeft = role === 'user' ? '8px' : '0';
-  avatar.style.marginRight = role === 'user' ? '0' : '8px';
-  avatar.textContent = (senderName || (role === 'user' ? '我' : 'AI')).charAt(0).toUpperCase();
-  if (role === 'user') { wrapper.appendChild(fileBox); wrapper.appendChild(avatar); }
-  else { wrapper.appendChild(avatar); wrapper.appendChild(fileBox); }
-  return wrapper;
-}
 
 
 
