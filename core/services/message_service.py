@@ -316,7 +316,7 @@ async def send_message(
             print(f"[MSG_DEBUG] is_task={is_task}")
 
             # 对话模式（v0.18.0）：非任务、非技术指令、非问候，直接回答
-            print(f"[chat-debug] sender={sender_agent_id!r} is_task={is_task} is_op={_is_operation} is_h={_is_harness_call} is_g={_is_greeting}")
+            pass
             if sender_agent_id and not is_task and not _is_operation and not _is_harness_call and not _is_greeting:
                 try:
                     from . import supervisor_service as _sv
@@ -333,9 +333,9 @@ async def send_message(
                             _lines = [l.strip() for l in _rc.split(chr(10)) if l.strip() and not l.strip().startswith(('我们', '需要', '首先', '分析', '但', '然而', '因此', '所以', '根据'))]
                             if _lines:
                                 _chat_reply = ' '.join(_lines[-3:])[:300]
-                    print(f"[chat-debug-raw] content={_cresp.choices[0].message.content!r} reasoning={getattr(_cresp.choices[0].message, 'reasoning_content', None)[:100] if getattr(_cresp.choices[0].message, 'reasoning_content', None) else None}")
+                    pass
 
-                    print(f"[chat-debug-2] ctx_len={len(_chat_ctx)} reply={_chat_reply[:80]!r}")
+                    pass
 
                     if _chat_reply:
                         with db_cursor(commit=True) as _ccur:
