@@ -19,6 +19,7 @@
   - 自动备份到 .backups/
 """
 import os
+import difflib
 from datetime import datetime
 
 ALLOWED_DIRS = ("static/", "core/", "scripts/", "docs/", "harness_modules/")
@@ -90,7 +91,13 @@ def _mode_snippet(abs_path, safe_path, params):
 
     count = original.count(old_snippet)
     if count == 0:
-        raise ValueError(f"原片段在 {safe_path} 中未找到。建议改用锚点模式。")
+        _cs = _find_similar_lines(original, old_snippet[:60])
+        _h = chr(10) + '（无相似候选，请先 file_read 查看原文）'
+        if _cs:
+            _h = chr(10) + '最相似候选：' + chr(10)
+            for _r, _ln, _tx in _cs:
+                _h += '  行 ' + str(_ln) + ': ' + _tx + chr(10)
+        raise ValueError(f"原片段在 {safe_path} 中未找到。建议改用锚点模式。" + _h)
     if count != expected_count:
         raise ValueError(f"原片段在 {safe_path} 中出现 {count} 次，期望 {expected_count} 次。")
 
@@ -107,6 +114,23 @@ def _mode_snippet(abs_path, safe_path, params):
         "backup": backup_path,
         "restart_required": safe_path.startswith("core/"),
     }
+
+
+def _find_similar_lines(content, anchor, top_k=3):
+    lines = content.split(chr(10))
+    scored = []
+    a = (anchor or '').strip()
+    if not a:
+        return []
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if not s:
+            continue
+        r = difflib.SequenceMatcher(None, a, s).ratio()
+        if r > 0.4:
+            scored.append((r, i + 1, s[:120]))
+    scored.sort(reverse=True)
+    return scored[:top_k]
 
 
 def _mode_anchor(abs_path, safe_path, params):
@@ -128,7 +152,14 @@ def _mode_anchor(abs_path, safe_path, params):
     matched_indices = [i for i, line in enumerate(lines) if anchor in line]
 
     if len(matched_indices) == 0:
-        raise ValueError(f"锚点 '{anchor}' 在 {safe_path} 中未找到任何匹配行")
+        _cs = _find_similar_lines(original, anchor)
+        _h = ''
+        if _cs:
+            _h = chr(10) + '最相似候选：' + chr(10)
+            for _r, _ln, _tx in _cs:
+                _h += '  行 ' + str(_ln) + ': ' + _tx + chr(10)
+            _h += '请从上述候选选一个作为 anchor_pattern。'
+        raise ValueError(f"锚点 '{anchor}' 在 {safe_path} 中未找到任何匹配行" + _h)
     if len(matched_indices) > 1:
         raise ValueError(
             f"锚点 '{anchor}' 匹配到 {len(matched_indices)} 行，期望 1 行。"
