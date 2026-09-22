@@ -325,7 +325,7 @@ async def send_message(
                     import openai as _coai
                     from .. import config as _ccfg
                     _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
-                    _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=400)
+                    _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=4000)
                     _chat_reply = (_cresp.choices[0].message.content or '').strip()
                     print(f"[chat-debug-raw] content={_cresp.choices[0].message.content!r} reasoning={getattr(_cresp.choices[0].message, 'reasoning_content', None)[:100] if getattr(_cresp.choices[0].message, 'reasoning_content', None) else None}")
 
