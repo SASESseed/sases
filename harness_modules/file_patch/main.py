@@ -153,7 +153,7 @@ def _mode_anchor(abs_path, safe_path, params):
 
     if len(matched_indices) == 0:
         _cs = _find_similar_lines(original, anchor)
-        _h = ''
+        _h = chr(10) + '（无相似候选，请先 file_read 查看原文）'
         if _cs:
             _h = chr(10) + '最相似候选：' + chr(10)
             for _r, _ln, _tx in _cs:

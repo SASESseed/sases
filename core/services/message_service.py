@@ -163,7 +163,7 @@ COMMAND_PREFIX_MAP = {
 DRAFT_PREFIXES = ("草稿：", "草稿:", "编辑：", "编辑:")
 
 
-# replaced
+async def send_message(
     user_id: int,
     conversation_id: int,
     agent_id: str,
