@@ -327,6 +327,12 @@ async def send_message(
                     _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
                     _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=4000)
                     _chat_reply = (_cresp.choices[0].message.content or '').strip()
+                    if not _chat_reply:
+                        _rc = getattr(_cresp.choices[0].message, 'reasoning_content', None) or ''
+                        if _rc:
+                            _lines = [l.strip() for l in _rc.split(chr(10)) if l.strip() and not l.strip().startswith(('我们', '需要', '首先', '分析', '但', '然而', '因此', '所以', '根据'))]
+                            if _lines:
+                                _chat_reply = ' '.join(_lines[-3:])[:300]
                     print(f"[chat-debug-raw] content={_cresp.choices[0].message.content!r} reasoning={getattr(_cresp.choices[0].message, 'reasoning_content', None)[:100] if getattr(_cresp.choices[0].message, 'reasoning_content', None) else None}")
 
                     print(f"[chat-debug-2] ctx_len={len(_chat_ctx)} reply={_chat_reply[:80]!r}")
