@@ -49,7 +49,7 @@ export async function openIdentitySwitch(chatState, api) {
 
   try {
     const data = await api.listMyAgents();
-    const agents = data.agents || [];
+    const agents = (data.agents || []).filter(a => !(a.agent_id || '').startsWith('sases_assistant'));
     const container = document.getElementById('identity-switch-list');
     if (agents.length === 0) {
       container.innerHTML = '<div class="subpage-placeholder">暂无智能体</div>';
