@@ -30,6 +30,7 @@ async def run_one(task):
             user_input=task['goal'],
             supervisor_id=SUPERVISOR_ID,
             supervisor_run_id=run_id,
+        _pt_result = await swarm_service.plan_task(
         )
     except Exception as e:
         print('[' + task['id'] + '] plan_task 失败: ' + str(e))
