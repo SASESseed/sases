@@ -62,7 +62,7 @@ def _verify_js(abs_p):
         return None, str(e)
 
 
-def run(params):  # test-rollback
+def run(params):
     fp = params.get('file_path', '')
     if not fp:
         return {'success': False, 'error': 'missing file_path'}

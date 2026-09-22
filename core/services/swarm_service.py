@@ -108,6 +108,13 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - 每次 file_patch 修改 .py 或 .js 文件后，必须紧接着调用 verify_syntax（type=harness, module_id=verify_syntax, params: {file_path}）
 - 如果 verify_syntax 返回 success=False，说明改动引入了语法错误
 - 此时应该用 verify_syntax 返回的 latest_backup 路径，通过 file_patch overwrite 还原，或直接放弃本次改动
+【file_patch 后必须验证（重要）】
+- 每次 file_patch 改 .py 或 .js 成功后，下一步应调 verify_syntax 验证
+- 例如：{"step":N,"type":"harness","module_id":"verify_syntax","params":{"file_path":"<刚改的文件>","auto_rollback":true}}
+- verify_syntax 返回 syntax_ok=false 时，会自动从 .backups/ 恢复，你只需据此重新规划
+- 若 modify 后不验证，坏语法可能在用户下次刷新时崩溃浏览器
+
+
 【harness 调用铁律（极其重要）】
 - 任何 harness 工具（file_read / file_patch / run_python / api_call / grep_code / dir_tree / web_fetch / git_ops / harness_reload 等）必须用 type=harness + module_id + params 三个字段
 - 绝对不能写成 command: "harness:xxx" 或 command: "file_read" 或 command: "file_patch ..."
