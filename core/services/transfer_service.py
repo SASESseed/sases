@@ -7,18 +7,15 @@ RED_PACKET_EXPIRE_HOURS = 24
 
 
 def get_sent_red_packets(user_id, limit=50):
-    """查询指定用户已发送的红包记录"""
+    '''查询指定用户已发送的红包记录'''
     with db_cursor() as cur:
         cur.execute(
-            "SELECT id, receiver_id, amount, status, created_at FROM red_packets "
-            "WHERE sender_id = ? ORDER BY created_at DESC LIMIT ?",
-            (user_id, limit),
+            'SELECT id, receiver_id, amount, status, message, created_at '
+            'FROM transactions WHERE sender_id=? AND tx_type LIKE ? '
+            'ORDER BY id DESC LIMIT ?',
+            (user_id, '%red_packet%', limit)
         )
-        return [dict(row) for row in cur.fetchall()]
-
-
-
-# ========== 转账（即时） ==========
+        return [dict(r) for r in cur.fetchall()]
 
 def create_transfer(sender_id: int, receiver_id: int, amount: float, message: str = ''):
     """转账：立即扣发送方，加接收方，一步完成"""
