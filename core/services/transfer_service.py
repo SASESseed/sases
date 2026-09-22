@@ -6,6 +6,18 @@ from ..db import db_cursor
 RED_PACKET_EXPIRE_HOURS = 24
 
 
+def get_sent_red_packets(user_id, limit=50):
+    """查询指定用户已发送的红包记录"""
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, receiver_id, amount, status, created_at FROM red_packets "
+            "WHERE sender_id = ? ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
+
 # ========== 转账（即时） ==========
 
 def create_transfer(sender_id: int, receiver_id: int, amount: float, message: str = ''):
