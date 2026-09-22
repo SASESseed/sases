@@ -98,6 +98,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
   content = stripSummaryPrefix(content);
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role, senderName); }
+  if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
