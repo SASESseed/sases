@@ -228,7 +228,7 @@ export function openChatPlusPanel() {
       { icon: '📷', label: '相册', action: () => { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadImage) window.__sasesUploadImage(f); }; input.click(); } },
       { icon: '💰', label: '转账', action: () => alert('转账功能待实现') },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
-{ icon: '📁', label: '文件', action: () => { const input = document.createElement('input'); input.type='file'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadFile) window.__sasesUploadFile(f); }; input.click(); } },
+{ icon: '📁', label: '文件', action: () => { const input = document.createElement('input'); input.type='file'; input.accept=''; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadFile) window.__sasesUploadFile(f); }; input.click(); } },
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];
     let html = '<div class="chat-plus-grid">';

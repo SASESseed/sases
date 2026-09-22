@@ -82,9 +82,22 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 【路径铁律】所有 file_path 必须用相对路径（如 core/services/x.py）。禁止用 C: 开头的绝对路径。dir 输出里的绝对路径要手工截取成相对部分。
 
+【Windows 命令纪律】
+Windows CMD 不支持 pwd，用 cd 代替。
+Windows CMD 不支持 ls，用 dir 代替。
+Windows CMD 不支持 cat，用 type 代替。
+Windows CMD 不支持 grep，用 findstr 代替。
+
 【搜索纪律】禁止 dir /s /b 全盘扫描（会超时 30 秒）。必须先指定目录：
   正确: dir /s /b core/services/*.py
   错误: dir /s /b *.py
+
+【类比迁移纪律（重要）】
+当任务描述含"类似X""参考X""仿照X"时：
+1. 第一步必须用 grep_code 搜索 X 相关关键词，定位 X 的实现在哪些文件
+2. 用 file_read 读 X 的实现，看清它的格式（如 uploadImage: async (file) => 而非 async function uploadImage）
+3. 复制 X 的格式，把名字换掉，做对应改动
+4. 禁止凭经验猜锚点，锚点必须从 file_read 输出的原文里复制
 
 【文件假设纪律】不要假设文件存在（如 red_packet_routes.py 可能不存在）。做任何 patch 前先用 grep_code 或 file_read 确认路径。
 
