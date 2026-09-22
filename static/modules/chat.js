@@ -550,6 +550,28 @@ window.__sasesUploadFile = async (file) => {
 };
 
 
+window.__sasesUploadFile = async (file) => {
+  if (!file) return;
+  if (!chatState.conversationId) { alert('请先进入会话'); return; }
+  try {
+    const res = await api.uploadFile(file);
+    if (!res || !res.url) { alert('上传失败'); return; }
+    const _content = '[FILE]:' + res.url + '|' + (res.original_name || file.name) + '|' + (res.size_bytes || file.size || 0);
+    appendMessage('user', _content, chatState.senderAgentId ? '智能体' : '我', null, new Date().toISOString(), false, chatState);
+    await api.sendMessage({
+      conversation_id: chatState.conversationId,
+      agent_id: chatState.agentId,
+      content: _content,
+      sender_agent_id: chatState.senderAgentId,
+      mode: chatState.mode
+    });
+  } catch (e) {
+    alert('上传失败：' + (e.message || '未知错误'));
+  }
+};
+
+
+
 window.__sasesUploadImage = async (file) => {
   if (!file) return;
   if (!chatState.conversationId) {
