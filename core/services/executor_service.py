@@ -50,6 +50,9 @@ def _get_semaphore() -> asyncio.Semaphore:
 # ========== 命令安全检查 ==========
 
 def is_command_safe(cmd: str) -> tuple:
+    # JSON 形式的 harness 调用绕过 shell 字符检查
+    if cmd.strip().startswith('{') and 'module_id' in cmd:
+        return True, ''
     if not cmd or not cmd.strip():
         return False, "命令为空"
 
