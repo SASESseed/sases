@@ -1176,6 +1176,13 @@ async def handle_step_done(
             _delete_pending_from_db(task_id)
             _run_id = task.get("supervisor_run_id")
             if _run_id:
+                # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
+                _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
+                if _is_simple:
+                    from . import supervisor_service as _sv_done
+                    _sv_done.finish_run(_run_id, 'completed')
+                    print(f"[supervisor] run {_run_id} 单步任务成功，直接完成")
+                    return {'status': 'completed', 'task_id': task_id, 'summary': summary}
                 try:
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
@@ -1296,6 +1303,13 @@ async def handle_step_done(
 
             _run_id = task.get("supervisor_run_id")
             if _run_id:
+                # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
+                _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
+                if _is_simple:
+                    from . import supervisor_service as _sv_done
+                    _sv_done.finish_run(_run_id, 'completed')
+                    print(f"[supervisor] run {_run_id} 单步任务成功，直接完成")
+                    return {'status': 'completed', 'task_id': task_id, 'summary': summary}
                 try:
                     from . import supervisor_service
                     _steps_text = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])

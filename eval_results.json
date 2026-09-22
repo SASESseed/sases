@@ -1,7 +1,9 @@
 [
   {
     "id": "T1",
-    "status": "timeout",
-    "elapsed": 120
+    "status": "completed",
+    "rounds": 0,
+    "credits": 0,
+    "elapsed": 7
   }
 ]
