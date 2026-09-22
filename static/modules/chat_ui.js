@@ -269,54 +269,27 @@ export function showImagePreview(url) {
 }
 
 
-export function renderFileBubble(content, role = 'user', senderName = null) {
-  const raw = content.substring('[FILE]:'.length);
-  const parts = raw.split('|');
+export function renderFileBubble(content, role, senderName) {
+  const parts = (content || '').substring(7).split('|');
   const url = parts[0] || '';
   const name = parts[1] || 'file';
-  const size = parseInt(parts[2] || '0');
-  const sizeText = size > 1048576 ? (size/1048576).toFixed(1)+'MB' : size > 1024 ? (size/1024).toFixed(1)+'KB' : size+'B';
-  const wrapper = document.createElement('div');
-  wrapper.style.display = 'flex';
-  wrapper.style.alignItems = 'flex-start';
-  wrapper.style.margin = '8px 12px';
-  wrapper.style.justifyContent = (role === 'user') ? 'flex-end' : 'flex-start';
-  const card = document.createElement('a');
-  card.href = url;
-  card.download = name;
-  card.style.textDecoration = 'none';
-  card.style.display = 'flex';
-  card.style.alignItems = 'center';
-  card.style.gap = '10px';
-  card.style.padding = '10px 14px';
-  card.style.background = role === 'user' ? '#007aff' : '#fff';
-  card.style.color = role === 'user' ? '#fff' : '#333';
-  card.style.borderRadius = '8px';
-  card.style.maxWidth = '240px';
-  card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-  card.innerHTML = '<div style="font-size:28px;">📎</div><div style="flex:1;"><div style="font-size:14px;font-weight:600;word-break:break-all;">' + name + '</div><div style="font-size:12px;opacity:0.7;">' + sizeText + '</div></div>';
-  const avatar = document.createElement('div');
-  avatar.style.width = '36px';
-  avatar.style.height = '36px';
-  avatar.style.borderRadius = '50%';
-  avatar.style.background = role === 'user' ? '#007aff' : '#e0e0e0';
-  avatar.style.color = role === 'user' ? '#fff' : '#333';
-  avatar.style.display = 'flex';
-  avatar.style.alignItems = 'center';
-  avatar.style.justifyContent = 'center';
-  avatar.style.flexShrink = '0';
-  avatar.style.fontSize = '16px';
-  avatar.style.marginLeft = role === 'user' ? '8px' : '0';
-  avatar.style.marginRight = role === 'user' ? '0' : '8px';
-  avatar.textContent = (senderName || (role === 'user' ? '我' : 'AI')).charAt(0).toUpperCase();
-  if (role === 'user') {
-    wrapper.appendChild(card);
-    wrapper.appendChild(avatar);
-  } else {
-    wrapper.appendChild(avatar);
-    wrapper.appendChild(card);
-  }
-  return wrapper;
+  const size = parseInt(parts[2] || '0', 10);
+  const sz = size > 1048576 ? (size/1048576).toFixed(2) + 'MB' : (size > 1024 ? (size/1024).toFixed(1) + 'KB' : size + 'B');
+  const w = document.createElement('div');
+  w.style.margin = '8px 12px';
+  w.style.display = 'flex';
+  w.style.justifyContent = role === 'user' ? 'flex-end' : 'flex-start';
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.style.padding = '10px 14px';
+  a.style.background = role === 'user' ? '#007aff' : '#f0f0f0';
+  a.style.color = role === 'user' ? '#fff' : '#333';
+  a.style.borderRadius = '8px';
+  a.style.textDecoration = 'none';
+  a.textContent = name + ' (' + sz + ')';
+  w.appendChild(a);
+  return w;
 }
 
 
@@ -370,11 +343,29 @@ export function renderImageBubble(content, role = 'user', senderName = null) {
 
 export function renderRedPacketBubble(content) {
   let data = {};
-  try { data = JSON.parse(content.substring('[RED_PACKET]:'.length)); } catch (e) {}
+  try { data = JSON.parse(content.substring(12)); } catch (e) {}
   const div = document.createElement('div');
   div.className = 'red-packet-bubble';
   div.dataset.redPacketTx = data.tx_id || '';
-  div.innerHTML = '<div style="font-size:13px;opacity:0.9;">🧧 红包</div><div style="font-size:20px;font-weight:700;margin-top:4px;">¥' + (data.amount || 0) + '</div>' + (data.message ? '<div style="font-size:12px;opacity:0.85;margin-top:4px;">' + data.message + '</div>' : '');
+  const t1 = document.createElement('div');
+  t1.style.fontSize = '13px';
+  t1.style.opacity = '0.9';
+  t1.textContent = '🧧 红包';
+  div.appendChild(t1);
+  const t2 = document.createElement('div');
+  t2.style.fontSize = '20px';
+  t2.style.fontWeight = '700';
+  t2.style.marginTop = '4px';
+  t2.textContent = '¥' + (data.amount || 0);
+  div.appendChild(t2);
+  if (data.message) {
+    const t3 = document.createElement('div');
+    t3.style.fontSize = '12px';
+    t3.style.opacity = '0.85';
+    t3.style.marginTop = '4px';
+    t3.textContent = data.message;
+    div.appendChild(t3);
+  }
   return div;
 }
 
