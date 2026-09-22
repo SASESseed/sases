@@ -22,6 +22,8 @@ async def run_one(task):
     run_id = supervisor_service.create_run(USER_ID, CONVERSATION_ID, SUPERVISOR_ID, task['goal'])
     print('[' + task['id'] + '] run_id=' + str(run_id))
     try:
+        _pt_result = None
+
         await swarm_service.plan_task(
             user_id=USER_ID,
             conversation_id=CONVERSATION_ID,
