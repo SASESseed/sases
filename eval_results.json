@@ -3,10 +3,5 @@
     "id": "T1",
     "status": "timeout",
     "elapsed": 120
-  },
-  {
-    "id": "T2",
-    "status": "timeout",
-    "elapsed": 120
   }
 ]

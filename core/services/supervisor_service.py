@@ -9,7 +9,26 @@ USE_STRUCTURED_REVIEW = True
 
 
 
+import time as _ctx_time
+_CTX_CACHE = {}
+_CTX_TTL = 5
+_CTX_MAX = 200
+
+
+def _ctx_key(user_id, conversation_id, mode, supervisor_id, query):
+    return (user_id, conversation_id, mode, supervisor_id, (query or '')[:50])
+
+
 def build_context(user_id, conversation_id, query, mode='execute', supervisor_id=None):
+    _ck = _ctx_key(user_id, conversation_id, mode, supervisor_id, query)
+    _ct = _ctx_time.time()
+    if _ck in _CTX_CACHE:
+        _cts, _cval = _CTX_CACHE[_ck]
+        if _ct - _cts < _CTX_TTL:
+            print('[supervisor] build_context 缓存命中')
+            return _cval
+        else:
+            del _CTX_CACHE[_ck]
     parts = []
     try:
         _hard_skip = ('[TASK]:', '[TASK_DRAFT]:', '[RETRY_TASK]:', '[RED_PACKET]:', '[IMAGE]:')
@@ -103,7 +122,13 @@ def build_context(user_id, conversation_id, query, mode='execute', supervisor_id
             print('[supervisor] chat mode 经验库失败: ' + str(_e))
 
 
-    return "\n".join(parts)
+    _result = "\n".join(parts)
+    _CTX_CACHE[_ck] = (_ct, _result)
+    if len(_CTX_CACHE) > _CTX_MAX:
+        _sorted_keys = sorted(_CTX_CACHE.items(), key=lambda x: x[1][0])[:50]
+        for _k, _ in _sorted_keys:
+            _CTX_CACHE.pop(_k, None)
+    return _result
 
 
 # (旧版 build_context 已删除，见上方新版本)

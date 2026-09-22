@@ -250,7 +250,7 @@ async def _execute_task(task: Dict[str, Any]):
                     output = f"命令被安全策略拒绝: {reason}"
                     status = "blocked"
                     dur = 0
-                    print(f"[executor]   ⛔ {reason}")
+                    print(f"[executor]   [!] {reason}")
                 else:
                     output, status, dur = await _run_command(cmd)
                     print(f"[executor]   结果: {status} ({dur}ms)")
@@ -280,12 +280,12 @@ async def _execute_task_with_semaphore(task: Dict[str, Any]):
     sem = _get_semaphore()
     async with sem:
         try:
-            print(f"[executor] ▶ 开始执行任务 {task_id}")
+            print(f"[executor] > 开始执行任务 {task_id}")
             await _execute_task(task)
-            print(f"[executor] ✓ 任务 {task_id} 处理完毕")
+            print(f"[executor] OK 任务 {task_id} 处理完毕")
         except Exception as e:
             import traceback
-            print(f"[executor] ✗ 任务 {task_id} 执行异常: {e}")
+            print(f"[executor] X 任务 {task_id} 执行异常: {e}")
             traceback.print_exc()
         finally:
             _running_task_ids.discard(task_id)
