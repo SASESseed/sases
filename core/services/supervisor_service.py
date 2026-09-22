@@ -402,6 +402,24 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     except Exception as _le:
         print('[supervisor] 死循环检测异常: ' + str(_le))
 
+    # v0.18.2: 连续3轮无实质改动，判定无进展
+    try:
+        _hist_check = json.loads(run['history'] or '[]')
+        if len(_hist_check) >= 3:
+            _recent3 = _hist_check[-3:]
+            _any_patch = False
+            for _h in _recent3:
+                _etxt = str(_h.get('exec', ''))
+                if '[success] file_patch' in _etxt or '[success] run_python' in _etxt or '[success] verify_patch' in _etxt:
+                    _any_patch = True
+                    break
+            if not _any_patch:
+                print('[supervisor] 连续3轮无 file_patch/run_python 成功，判定无进展，停止')
+                finish_run(run_id, 'no_progress')
+                return False, None
+    except Exception as _pe:
+        print('[supervisor] 无进展检测失败: ' + str(_pe))
+
     record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary, review=review)
     run = get_run(run_id)
     if not run or (run['current_round'] or 0) >= (run['max_rounds'] or 5):

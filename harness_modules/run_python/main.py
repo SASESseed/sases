@@ -92,7 +92,7 @@ def run(params):
         with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False, encoding='utf-8') as f:
             f.write(full)
             tmp = f.name
-        r = subprocess.run([sys.executable, tmp], capture_output=True, text=True, timeout=TIMEOUT, encoding='utf-8', errors='replace')
+        r = subprocess.run([sys.executable, tmp], capture_output=True, text=True, timeout=TIMEOUT, encoding='utf-8', errors='replace', cwd=REPO_ROOT)
         return {
             'success': r.returncode == 0,
             'stdout': (r.stdout or '')[:3000],

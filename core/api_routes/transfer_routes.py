@@ -11,15 +11,7 @@ from ..db import db_cursor
 from ..services import transfer_service
 
 router = APIRouter(prefix="/transfer", tags=["transfer"])
-@router.get('/red_packet/sent')
-def get_sent_red_packets():
-    return {'records': []}
 
-
-@router.get("/red_packet/sent")
-async def list_sent_red_packets(user_id: int, limit: int = 20):
-    from core.services import transfer_service
-    return transfer_service.list_sent_red_packets(user_id, limit)
 security = HTTPBearer()
 
 
@@ -155,3 +147,8 @@ async def get_tx_detail(tx_id: int, user_id: int = Depends(get_current_user)):
         "tx_type": tx["tx_type"],
         "created_at": tx["created_at"],
     }
+
+@router.get("/red_packet/sent")
+async def get_sent_red_packets(user_id: int = Depends(get_current_user)):
+    """查询当前用户已发送的红包记录"""
+    return {'records': transfer_service.get_sent_red_packets(user_id)}
