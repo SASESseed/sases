@@ -65,6 +65,30 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 
 调用格式：{"step":N,"type":"harness","module_id":"工具ID","params":{...}}
 
+【harness 工具参数速查（重要）】
+- file_read: file_path(必填), max_lines(默认200), offset(默认0)
+- file_patch: file_path(必填) + 三选一模式：
+    锚点模式: anchor_pattern + position(before/after/replace_line) + new_content
+    精确片段: old_snippet + new_snippet + expected_count
+    整体覆写: overwrite=true + new_content
+- grep_code: pattern(必填！不是 keyword/query), path, file_ext, max_results
+- dir_tree: path(默认.), max_depth(默认2)
+- run_python: code(Python源码字符串)
+- api_call: url(必填), method(默认GET), headers, body
+- verify_patch: file_path(必填), expect_contains, expect_not_contains
+- harness_reload: 无参数
+- web_fetch: url(必填)
+- git_ops: action(必填: status/diff/log/add/commit/push/pull/rollback/snapshot)
+
+【路径铁律】所有 file_path 必须用相对路径（如 core/services/x.py）。禁止用 C: 开头的绝对路径。dir 输出里的绝对路径要手工截取成相对部分。
+
+【搜索纪律】禁止 dir /s /b 全盘扫描（会超时 30 秒）。必须先指定目录：
+  正确: dir /s /b core/services/*.py
+  错误: dir /s /b *.py
+
+【文件假设纪律】不要假设文件存在（如 red_packet_routes.py 可能不存在）。做任何 patch 前先用 grep_code 或 file_read 确认路径。
+
+
 【harness 调用铁律（极其重要）】
 - 任何 harness 工具（file_read / file_patch / run_python / api_call / grep_code / dir_tree / web_fetch / git_ops / harness_reload 等）必须用 type=harness + module_id + params 三个字段
 - 绝对不能写成 command: "harness:xxx" 或 command: "file_read" 或 command: "file_patch ..."
