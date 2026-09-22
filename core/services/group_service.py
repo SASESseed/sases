@@ -3,6 +3,10 @@ from ..db import db_cursor
 
 
 def create_group(name: str, owner_id: int):
+
+    def exit_group(self, group_id, user_id):
+        return self.repo.remove_member(group_id, user_id)
+
     """创建群聊，返回群 ID"""
     with db_cursor(commit=True) as cur:
         cur.execute("INSERT INTO groups (name, owner_id, mode) VALUES (?, ?, 'normal')", (name, owner_id))
