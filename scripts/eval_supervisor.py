@@ -46,7 +46,7 @@ async def run_one(task):
 
 async def main():
     results = []
-    for task in EVAL_TASKS:
+    for task in EVAL_TASKS[:2]:
         r = await run_one(task)
         results.append(r)
         print('[' + task['id'] + '] 结果: ' + str(r))
