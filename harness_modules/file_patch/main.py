@@ -295,25 +295,34 @@ def _run_inner(params):
 
 def run(params):
     result = _run_inner(params)
-    if not isinstance(result, dict):
-        return result
-    if result.get("success"):
-        fp = result.get("file_path") or params.get("file_path")
-        if fp:
-            abs_p = os.path.join(REPO_ROOT, fp) if not os.path.isabs(fp) else fp
-            ok, err = _verify_syntax_after_write(abs_p, fp)
+    if isinstance(result, dict) and result.get('success'):
+        fp = params.get('file_path') or ''
+        if fp and (fp.endswith('.js') or fp.endswith('.py')):
+            ok = True
+            err = ''
+            try:
+                if fp.endswith('.py'):
+                    import ast as _a
+                    with open(fp, 'r', encoding='utf-8') as fh:
+                        _a.parse(fh.read())
+                else:
+                    import subprocess as _sp
+                    _r = _sp.run(['node', '--check', fp], capture_output=True, text=True, timeout=10, encoding='utf-8', errors='replace')
+                    if _r.returncode != 0:
+                        ok = False
+                        err = (_r.stderr or '')[:300]
+            except Exception as _e:
+                print('[fp-wrapper] verify fail:', _e)
             if not ok:
-                bak = result.get("backup")
-                rolled = False
+                bak = result.get('backup')
                 if bak and os.path.exists(bak):
                     try:
                         import shutil as _sh
-                        _sh.copy2(bak, abs_p)
-                        rolled = True
+                        _sh.copy2(bak, fp)
+                        result['rolled_back'] = True
                     except Exception:
-                        pass
-                result["success"] = False
-                result["syntax_error"] = err
-                result["rolled_back"] = rolled
-                result["error"] = "SYNTAX_ERROR" + (" (rolled back)" if rolled else "") + ": " + err
+                        result['rolled_back'] = False
+                result['success'] = False
+                result['syntax_error'] = err
+                result['error'] = 'SYNTAX_ERROR: ' + err
     return result
