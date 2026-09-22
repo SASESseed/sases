@@ -270,6 +270,7 @@ export function showImagePreview(url) {
 
 
 export function renderFileBubble(content, role, senderName) {
+const x = 'unclosed string
   const parts = (content || '').substring(7).split('|');
   const url = parts[0] || '';
   const name = parts[1] || 'file';

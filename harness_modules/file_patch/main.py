@@ -228,7 +228,36 @@ def _mode_create(abs_path, safe_path, params):
     }
 
 
-def run(params):
+
+
+def _verify_syntax_after_write(abs_path, safe_path):
+    """写入后自动验证语法。返回 (ok, error)"""
+    import os as _os
+    ext = _os.path.splitext(safe_path)[1].lower()
+    if ext == '.py':
+        try:
+            import ast as _ast
+            with open(abs_path, 'r', encoding='utf-8') as f:
+                _ast.parse(f.read())
+            return True, ''
+        except SyntaxError as e:
+            return False, 'line ' + str(e.lineno) + ': ' + str(e.msg)
+        except Exception as e:
+            return False, str(e)
+    if ext == '.js':
+        try:
+            import subprocess as _sp
+            r = _sp.run(['node', '--check', abs_path], capture_output=True, text=True, timeout=10, encoding='utf-8', errors='replace')
+            if r.returncode == 0:
+                return True, ''
+            return False, (r.stderr or '')[:400]
+        except FileNotFoundError:
+            return True, 'node not available'
+        except Exception as e:
+            return True, str(e)
+    return True, ''
+
+def _run_inner(params):
     file_path = params.get("file_path", "")
     safe_path = _validate_path(file_path)
     abs_path = os.path.abspath(safe_path)
@@ -262,3 +291,27 @@ def run(params):
             "  - old_snippet（精确片段模式）\n"
             "  或 overwrite=true（整体覆写）"
         )
+
+
+def run(params):
+    result = _run_inner(params)
+    if isinstance(result, dict) and result.get('success'):
+        fp = result.get('file_path') or params.get('file_path')
+        if fp:
+            abs_p = os.path.abspath(fp)
+            ok, err = _verify_syntax_after_write(abs_p, fp)
+            if not ok:
+                bak = result.get('backup')
+                rolled = False
+                if bak and os.path.exists(bak):
+                    try:
+                        import shutil as _sh
+                        _sh.copy2(bak, abs_p)
+                        rolled = True
+                    except Exception as _ex:
+                        print('[file_patch] rollback failed: ' + str(_ex))
+                result['success'] = False
+                result['syntax_error'] = err
+                result['rolled_back'] = rolled
+                result['error'] = 'SYNTAX_ERROR' + (' (rolled back)' if rolled else '') + ': ' + err
+    return result
