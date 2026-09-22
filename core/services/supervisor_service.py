@@ -405,8 +405,8 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     # v0.18.2: 连续3轮无实质改动，判定无进展
     try:
         _hist_check = json.loads(run['history'] or '[]')
-        if len(_hist_check) >= 3:
-            _recent3 = _hist_check[-3:]
+        if len(_hist_check) >= 2:
+            _recent3 = _hist_check[-2:]
             _any_patch = False
             for _h in _recent3:
                 _etxt = str(_h.get('exec', ''))

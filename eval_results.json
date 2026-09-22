@@ -1,9 +1,9 @@
 [
   {
-    "id": "T4",
-    "status": "restart_pending",
-    "rounds": 1,
-    "credits": 2,
-    "elapsed": 23
+    "id": "T5",
+    "status": "completed",
+    "rounds": 3,
+    "credits": 6,
+    "elapsed": 48
   }
 ]

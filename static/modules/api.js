@@ -336,6 +336,19 @@ export const api = {
   }),
   getPendingRedPackets: () => request('/transfer/pending'),
   claimRedPacket: (tx_id) => request('/transfer/claim', { method: 'POST', body: JSON.stringify({ tx_id }) }),
+  uploadFile: async (file) => {
+    const b64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    return request('/upload/file', {
+      method: 'POST',
+      body: JSON.stringify({ original_name: file.name, base64_data: b64 })
+    });
+  },
+
   uploadImage: async (file) => {
     const b64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
