@@ -316,6 +316,7 @@ async def send_message(
             print(f"[MSG_DEBUG] is_task={is_task}")
 
             # 对话模式（v0.18.0）：非任务、非技术指令、非问候，直接回答
+            print(f"[chat-debug] sender={sender_agent_id!r} is_task={is_task} is_op={_is_operation} is_h={_is_harness_call} is_g={_is_greeting}")
             if sender_agent_id and not is_task and not _is_operation and not _is_harness_call and not _is_greeting:
                 try:
                     from . import supervisor_service as _sv
@@ -403,41 +404,7 @@ async def send_message(
                         print('[supervisor] 提议检查失败: ' + str(_e2))
 
 
-                # 对话模式（v0.18.0）：非执行意图，直接回答
-                if sender_agent_id and not _skip_propose and not _is_operation and not _is_harness_call and not _is_greeting:
-                    try:
-                        from . import supervisor_service as _sv
-                        _chat_ctx = _sv.build_context(user_id, conversation_id, content, mode='chat', supervisor_id=sender_agent_id)
-                        _chat_prompt = '你是 SASES 调度员，正在与用户对话。参考资料：' + _chat_ctx + ' 用户说：' + content[:300] + ' 请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。'
-                        import openai as _coai
-                        from .. import config as _ccfg
-                        _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
-                        _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=400)
-                        _chat_reply = (_cresp.choices[0].message.content or '').strip()
-                        if _chat_reply:
-                            with db_cursor(commit=True) as _ccur:
-                                _ccur.execute(
-                                    "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
-                                    (conversation_id, _chat_reply, sender_agent_id)
-                                )
-                                _ccur.execute(
-                                    "UPDATE conversations SET updated_at=? WHERE id=?",
-                                    (datetime.now().isoformat(), conversation_id)
-                                )
-                            return {
-                                'conversation_id': conversation_id,
-                                'user_message': content,
-                                'assistant_reply': _chat_reply,
-                                'agent_id': agent_id,
-                                'sender_agent_id': sender_agent_id,
-                                'mode': mode,
-                                'chat_mode': True
-                            }
-                    except Exception as _che:
-                        print('[supervisor] 对话模式失败: ' + str(_che))
-
-
-
+                # (旧对话模式已删)
                 # 调度者回执（v0.18.0 带上下文）
                 if sender_agent_id:
                     try:
