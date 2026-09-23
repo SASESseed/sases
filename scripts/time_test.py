@@ -1,8 +1,9 @@
-from datetime import datetime
+import datetime
 
 
 def main():
-    print(datetime.now())
+    now = datetime.datetime.now()
+    print(now.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 if __name__ == "__main__":
