@@ -244,10 +244,10 @@ export function openChatPlusPanel() {
   const content = document.getElementById('chat-plus-content');
   if (content) {
     const items = [
-      { icon: '📷', label: '相册', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachment = { type: 'image', file: f, name: f.name, size: f.size }; import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachment)); }; inp.click(); } },
+      { icon: '📷', label: '相册', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachments = window.chatState.pendingAttachments || []; window.chatState.pendingAttachments.push({ type: 'image', file: f, name: f.name, size: f.size }); import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachments)); }; inp.click(); } },
       { icon: '💰', label: '转账', action: () => openTransferDialog() },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
-{ icon: '📁', label: '文件', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachment = { type: 'file', file: f, name: f.name, size: f.size }; import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachment)); }; inp.click(); } },
+{ icon: '📁', label: '文件', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachments = window.chatState.pendingAttachments || []; window.chatState.pendingAttachments.push({ type: 'file', file: f, name: f.name, size: f.size }); import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachments)); }; inp.click(); } },
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];
     let html = '<div class="chat-plus-grid">';
@@ -284,12 +284,21 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// chat-plus-panel-outside-close: 点击面板外部自动关闭
-document.addEventListener('click', function(e) {
+// chat-plus-panel-outside-close: v6
+const _cpOverlay = document.getElementById('chat-plus-overlay');
+if (_cpOverlay) {
+  _cpOverlay.addEventListener('click', function() {
+    const panel = document.getElementById('chat-plus-panel');
+    if (panel) panel.style.display = 'none';
+  });
+}
+document.body.addEventListener('click', function(e) {
   const panel = document.getElementById('chat-plus-panel');
-  if (!panel || panel.style.display !== 'block') return;
+  if (!panel) return;
+  const cs = window.getComputedStyle(panel);
+  if (cs.display === 'none' || cs.visibility === 'hidden') return;
   if (panel.contains(e.target)) return;
-  const btn = document.getElementById('input-plus-btn');
-  if (btn && (btn === e.target || btn.contains(e.target))) return;
+  const plusBtn = document.getElementById('input-plus-btn');
+  if (plusBtn && (plusBtn === e.target || plusBtn.contains(e.target))) return;
   panel.style.display = 'none';
 });

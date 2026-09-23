@@ -302,12 +302,9 @@ export function renderAttachmentPreview(att) {
     el = document.createElement('div');
     el.id = 'attachment-preview';
     el.style.cssText = 'display:none;padding:6px 12px;background:#f5f5f5;border-top:1px solid #ddd;font-size:13px;';
-    const wrapper = document.querySelector('.chat-input-wrapper');
-    const area = document.querySelector('.chat-input-area');
-    if (wrapper && wrapper.parentNode) {
-      wrapper.parentNode.insertBefore(el, wrapper);
-    } else if (area) {
-      area.insertBefore(el, area.firstChild);
+    const inputArea = document.getElementById('chat-input');
+    if (inputArea && inputArea.parentNode) {
+      inputArea.parentNode.insertBefore(el, inputArea);
     } else {
       document.body.appendChild(el);
     }

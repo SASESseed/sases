@@ -72,35 +72,30 @@ async function sendMessage() {
   const input = document.getElementById('chat-input');
 
   // 若有待发送附件，先上传再拼接
-  if (chatState.pendingAttachment) {
-    const att = chatState.pendingAttachment;
+  if (chatState.pendingAttachments && chatState.pendingAttachments.length) {
+    const atts = chatState.pendingAttachments;
+    let prefix = '';
     try {
-      let _url = '';
-      if (att.type === 'image') {
-        const res = await api.uploadImage(att.file);
-        _url = res && res.url ? res.url : '';
-        if (_url) input.value = '[IMAGE]:' + _url + (input.value ? ' ' + input.value : '');
-      } else {
-        const res = await api.uploadFile(att.file);
-        _url = res && res.url ? res.url : '';
-        if (_url) input.value = '[FILE]:' + _url + '|' + att.name + '|' + att.size + (input.value ? ' ' + input.value : '');
+      for (const att of atts) {
+        if (att.type === 'image') {
+          const res = await api.uploadImage(att.file);
+          if (res && res.url) prefix += '[IMAGE]:' + res.url + ' ';
+        } else {
+          const res = await api.uploadFile(att.file);
+          if (res && res.url) prefix += '[FILE]:' + res.url + '|' + att.name + '|' + att.size + ' ';
+        }
       }
     } catch (e) {
       alert('上传失败: ' + (e.message || ''));
       return;
     }
-    chatState.pendingAttachment = null;
+    chatState.pendingAttachments = [];
     if (typeof window.__sasesClearAttachment === 'function') window.__sasesClearAttachment();
+    input.value = prefix + (input.value || '');
   }
 
   let text = input.value.trim();
   if (!text) return;
-
-  if (chatState.pendingQuote) {
-    text = `> 引用：${chatState.pendingQuote}\n${text}`;
-    chatState.pendingQuote = null;
-    hideQuoteBar();
-  }
 
   const tempId = 'temp-' + Date.now();
   appendMessage('user', text, chatState.senderAgentId ? '智能体' : '我', tempId, new Date().toISOString(), true, chatState);
@@ -558,7 +553,7 @@ window.sendMessage = sendMessage;
 
 
 window.__sasesClearAttachment = function() {
-  if (window.chatState) window.chatState.pendingAttachment = null;
+  if (window.chatState) window.chatState.pendingAttachments = [];
   const el = document.getElementById('attachment-preview');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
 };
