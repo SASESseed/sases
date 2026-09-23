@@ -532,6 +532,7 @@ function updateSendButtonVisibility() {
 
 window.updateSendButtonVisibility = updateSendButtonVisibility;
 window.sendMessage = sendMessage;
+window.sendTransfer = sendTransfer;
 
 
 window.__sasesUploadFile = async (file) => {
