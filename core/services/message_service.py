@@ -228,6 +228,14 @@ async def send_message(
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
     _supervisor_id = sender_agent_id or agent_id
+
+    # 附件富化：把 [IMAGE]:/[FILE]: 消息内容读进来，放最前面对所有路径生效
+    if isinstance(content, str) and (content.startswith('[IMAGE]:') or content.startswith('[FILE]:')):
+        try:
+            content = _enrich_attachment(content)
+        except Exception as _ee:
+            print('[message] _enrich 失败: ' + str(_ee))
+
     print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
     # 附件消息（[IMAGE]: / [FILE]:）直接入库，不调模型
