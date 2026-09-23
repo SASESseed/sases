@@ -63,6 +63,56 @@ def _verify_js(abs_p):
         return None, str(e)
 
 
+def _check_undefined_calls(content, ext):
+    if ext == '.js':
+        calls = set()
+        for p in UI_PREFIXES:
+            for m in re.finditer(r'\\b(' + p + r'[A-Z][A-Za-z0-9_]*)\\s*\\(', content):
+                calls.add(m.group(1))
+        if not calls:
+            return []
+        defs = set()
+        for m in re.finditer(r'\\b(?:async\\s+)?function\\s+([A-Za-z_][A-Za-z0-9_]*)', content):
+            defs.add(m.group(1))
+        for m in re.finditer(r'\\b(?:const|let|var)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=', content):
+            defs.add(m.group(1))
+        for m in re.finditer(r'\\bwindow\\.([A-Za-z_][A-Za-z0-9_]*)\\s*=', content):
+            defs.add(m.group(1))
+        for m in re.finditer(r'([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*(?:async\\s+)?(?:function|\\()', content):
+            defs.add(m.group(1))
+        for m in re.finditer(r'import\\s+\\{([^}]+)\\}', content):
+            for name in m.group(1).split(','):
+                name = name.strip().split(' as ')[-1].strip()
+                if name:
+                    defs.add(name)
+        return sorted(calls - defs)
+    elif ext == '.py':
+        try:
+            tree = ast.parse(content)
+        except Exception:
+            return []
+        calls = set()
+        defs = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                n = node.func.id
+                for p in UI_PREFIXES:
+                    if n.startswith(p) and len(n) > len(p) and n[len(p)].isupper():
+                        calls.add(n)
+                        break
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                defs.add(node.name)
+            elif isinstance(node, ast.ImportFrom):
+                for a in node.names:
+                    defs.add(a.asname or a.name)
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    defs.add(a.asname or a.name.split('.')[0])
+        return sorted(calls - defs)
+    return []
+
+
+
 def run(params):
     fp = params.get('file_path', '')
     if not fp:
