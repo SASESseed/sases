@@ -207,7 +207,15 @@ function showSingleSessionActions(conversationId, pinned, btn) {
   }
 }
 
-function showGroupSessionActions(groupId) {
+function showGroupSessionActions(groupId, btn) {
+  if (btn && typeof showSessionMenu === 'function') {
+    showSessionMenu(btn, [
+      { label: '退出群聊', action: 'quit', danger: true }
+    ], function (a) {
+      if (a === 'quit') quitGroup(groupId);
+    });
+    return;
+  }
   const action = prompt(
     `${t('choose_action')}\n1. 退出群聊\n0. ${t('cancel')}`
   );
