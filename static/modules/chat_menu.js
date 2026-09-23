@@ -247,7 +247,7 @@ export function openChatPlusPanel() {
       { icon: '📷', label: '相册', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachment = { type: 'image', file: f, name: f.name, size: f.size }; import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachment)); }; inp.click(); } },
       { icon: '💰', label: '转账', action: () => openTransferDialog() },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
-{ icon: '📁', label: '文件', action: () => { const input = document.createElement('input'); input.type='file'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadFile) window.__sasesUploadFile(f); }; input.click(); } },
+{ icon: '📁', label: '文件', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachment = { type: 'file', file: f, name: f.name, size: f.size }; import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachment)); }; inp.click(); } },
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];
     let html = '<div class="chat-plus-grid">';
@@ -282,4 +282,14 @@ document.addEventListener('click', (e) => {
   if (menu && !menu.contains(e.target)) {
     closeContextMenu();
   }
+});
+
+// chat-plus-panel-outside-close: 点击面板外部自动关闭
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('chat-plus-panel');
+  if (!panel || panel.style.display !== 'block') return;
+  if (panel.contains(e.target)) return;
+  const btn = document.getElementById('input-plus-btn');
+  if (btn && (btn === e.target || btn.contains(e.target))) return;
+  panel.style.display = 'none';
 });
