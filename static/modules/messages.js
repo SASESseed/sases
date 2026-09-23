@@ -123,7 +123,7 @@ async function loadConversations(container) {
           const pinned = btn.dataset.pinned === '1' ? true : false;
           showSingleSessionActions(id, pinned, btn);
         } else if (type === 'group') {
-          showGroupSessionActions(id);
+          showGroupSessionActions(id, btn);
         }
       });
     });
