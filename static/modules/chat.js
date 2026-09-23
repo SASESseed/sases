@@ -70,6 +70,29 @@ async function sendTransfer(receiver_id, amount, message, conversation_id) {
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
+
+  // 若有待发送附件，先上传再拼接
+  if (chatState.pendingAttachment) {
+    const att = chatState.pendingAttachment;
+    try {
+      let _url = '';
+      if (att.type === 'image') {
+        const res = await api.uploadImage(att.file);
+        _url = res && res.url ? res.url : '';
+        if (_url) input.value = '[IMAGE]:' + _url + (input.value ? ' ' + input.value : '');
+      } else {
+        const res = await api.uploadFile(att.file);
+        _url = res && res.url ? res.url : '';
+        if (_url) input.value = '[FILE]:' + _url + '|' + att.name + '|' + att.size + (input.value ? ' ' + input.value : '');
+      }
+    } catch (e) {
+      alert('上传失败: ' + (e.message || ''));
+      return;
+    }
+    chatState.pendingAttachment = null;
+    if (typeof window.__sasesClearAttachment === 'function') window.__sasesClearAttachment();
+  }
+
   let text = input.value.trim();
   if (!text) return;
 
