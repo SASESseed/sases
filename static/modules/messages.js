@@ -157,7 +157,19 @@ function showSessionMenu(btn, items, onSelect) {
 
 
 
-function showSingleSessionActions(conversationId, pinned) {
+function showSingleSessionActions(conversationId, pinned, btn) {
+  if (btn && typeof showSessionMenu === 'function') {
+    showSessionMenu(btn, [
+      { label: pinned ? '取消置顶' : '置顶', action: 'pin' },
+      { label: '标记已读', action: 'read' },
+      { label: '删除会话', action: 'delete', danger: true }
+    ], function (a) {
+      if (a === 'pin') togglePin(conversationId, !pinned);
+      else if (a === 'read') markRead(conversationId);
+      else if (a === 'delete') deleteConversation(conversationId);
+    });
+    return;
+  }
   const action = prompt(
     `${t('choose_action')}\n1. ${pinned ? t('unpin') : t('pin')}\n2. ${t('mark_read')}\n3. ${t('delete_conversation')}\n0. ${t('cancel')}`
   );
