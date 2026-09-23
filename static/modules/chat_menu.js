@@ -1,14 +1,21 @@
 // static/modules/chat_menu.js
 function openTransferDialog() {
-  const chatState = window.chatState || {};
-  const conversationId = chatState.conversationId || null;
-  if (typeof window.openRedPacketDialog === 'function') {
-    return window.openRedPacketDialog();
+  const receiver = prompt('收款人 SASES ID：');
+  if (!receiver) return;
+  const amountStr = prompt('转账金额：');
+  if (!amountStr) return;
+  const amount = parseFloat(amountStr);
+  if (!amount || amount <= 0) { alert('金额无效'); return; }
+  const note = prompt('留言（可选）：') || '';
+  const cid = window.chatState && window.chatState.conversationId;
+  if (!cid) { alert('请先进入会话'); return; }
+  if (typeof window.sendTransfer === 'function') {
+    window.sendTransfer(receiver, amount, note, cid);
+  } else {
+    alert('sendTransfer 未就绪');
   }
-  return null;
 }
 
-window.openTransferDialog = openTransferDialog;
 
 
 function openRedPacketDialog() {

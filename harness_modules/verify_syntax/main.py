@@ -68,23 +68,23 @@ def _check_undefined_calls(content, ext):
     if ext == '.js':
         calls = set()
         for prefix in UI_PREFIXES:
-            for m in _re.finditer(prefix + '[A-Z][A-Za-z0-9_]*', content):
-                calls.add(m.group(0))
+            for m in _re.finditer(r'(?<![A-Za-z0-9_.])' + prefix + r'[A-Z][A-Za-z0-9_]*\s*\(', content):
+                calls.add(m.group(0)[:-1].strip())
         if not calls:
             return []
         defs = set()
-        for m in _re.finditer('import\s*\{([^}]+)\}', content):
+        for m in _re.finditer(r'import\s*\{([^}]+)\}', content):
             for name in m.group(1).split(','):
                 n = name.strip().split(' as ')[-1].strip()
                 if n:
                     defs.add(n)
-        for m in _re.finditer('import\s+([A-Za-z_]\w*)\s+from', content):
+        for m in _re.finditer(r'import\s+([A-Za-z_]\w*)\s+from', content):
             defs.add(m.group(1))
-        for m in _re.finditer('function\s+([A-Za-z_]\w*)', content):
+        for m in _re.finditer(r'function\s+([A-Za-z_]\w*)', content):
             defs.add(m.group(1))
-        for m in _re.finditer('(?:const|let|var)\s+([A-Za-z_]\w*)\s*=', content):
+        for m in _re.finditer(r'(?:const|let|var)\s+([A-Za-z_]\w*)\s*=', content):
             defs.add(m.group(1))
-        for m in _re.finditer('window\.([A-Za-z_]\w*)\s*=', content):
+        for m in _re.finditer(r'window\.([A-Za-z_]\w*)\s*=', content):
             defs.add(m.group(1))
         return sorted(calls - defs)
     elif ext == '.py':
