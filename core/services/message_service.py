@@ -160,6 +160,61 @@ COMMAND_PREFIX_MAP = {
 }
 
 
+def _enrich_attachment(content):
+    """[IMAGE]:/[FILE]: 消息 → 附加内容描述，供模型理解"""
+    import os as _os, base64 as _b64, glob as _glob
+    try:
+        _prefix, _rest = content.split(':', 1)
+        # support [FILE]:/uploads/xxx|filename|size
+        _rel = _rest.split('|')[0].strip().lstrip('/')
+    except Exception:
+        return content
+    _root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    _abs = _os.path.join(_root, _rel)
+    if not _os.path.exists(_abs):
+        return content + ' (文件不存在)'
+    if content.startswith('[FILE]:'):
+        try:
+            _txt = open(_abs, 'r', encoding='utf-8', errors='replace').read(5000)
+            return '[用户发了一个文件 ' + _rel + '，内容如下]' + chr(10) + _txt
+        except Exception as _e:
+            return content + ' (读文件失败: ' + str(_e) + ')'
+    if content.startswith('[IMAGE]:'):
+        try:
+            from .. import config as _cfg
+            import openai as _oai
+            _raw = open(_abs, 'rb').read()
+            if len(_raw) > 4 * 1024 * 1024:
+                return content + ' (图片过大)'
+            _mime = 'image/png'
+            _low = _rel.lower()
+            if _low.endswith('.jpg') or _low.endswith('.jpeg'):
+                _mime = 'image/jpeg'
+            elif _low.endswith('.gif'):
+                _mime = 'image/gif'
+            elif _low.endswith('.webp'):
+                _mime = 'image/webp'
+            _b64s = _b64.b64encode(_raw).decode()
+            _cli = _oai.OpenAI(api_key=_cfg.DEEPSEEK_API_KEY, base_url=_cfg.DEEPSEEK_BASE_URL, timeout=30)
+            _r = _cli.chat.completions.create(
+                model=_cfg.VISION_MODEL_NAME,
+                messages=[{'role': 'user', 'content': [
+                    {'type': 'text', 'text': '用 100 字以内描述这张图片的内容、文字、场景。'},
+                    {'type': 'image_url', 'image_url': {'url': 'data:' + _mime + ';base64,' + _b64s}}
+                ]}],
+                max_tokens=300
+            )
+            _desc = (_r.choices[0].message.content or '').strip()
+            if not _desc:
+                _rc = getattr(_r.choices[0].message, 'reasoning_content', None) or ''
+                _desc = _rc.strip()[:200]
+            return '[用户发了一张图片] 图片描述：' + _desc
+        except Exception as _e:
+            print('[message] vision API 失败: ' + str(_e))
+            return content + ' (vision 分析失败)'
+    return content
+
+
 DRAFT_PREFIXES = ("草稿：", "草稿:", "编辑：", "编辑:")
 
 
@@ -189,15 +244,11 @@ async def send_message(
         with db_cursor(commit=True) as _c:
             _c.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'user', ?, ?)", (conversation_id, content, sender_agent_id))
             _c.execute('UPDATE conversations SET updated_at=? WHERE id=?', (datetime.now().isoformat(), conversation_id))
-        return {
-            'conversation_id': conversation_id,
-            'user_message': content,
-            'assistant_reply': '',
-            'agent_id': agent_id,
-            'sender_agent_id': sender_agent_id,
-            'mode': mode,
-            'attachment_only': True
-        }
+        # 关键改动：把附件内容附加进来，不再 return，继续走正常问答
+        try:
+            content = _enrich_attachment(content)
+        except Exception as _e:
+            print('[message] enrich 失败: ' + str(_e))
 
 
 

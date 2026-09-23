@@ -296,6 +296,32 @@ export function renderFileBubble(content, role, senderName) {
 
 
 
+export function renderAttachmentPreview(att) {
+  let el = document.getElementById('attachment-preview');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'attachment-preview';
+    el.style.cssText = 'display:none;padding:6px 12px;background:#f5f5f5;border-top:1px solid #ddd;font-size:13px;';
+    const inputArea = document.getElementById('chat-input');
+    if (inputArea && inputArea.parentNode) {
+      inputArea.parentNode.insertBefore(el, inputArea);
+    } else {
+      document.body.appendChild(el);
+    }
+  }
+  if (!att) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'block';
+  const icon = att.type === 'image' ? '🖼' : '📎';
+  const sizeKb = att.size ? (att.size / 1024).toFixed(1) : '?';
+  el.innerHTML = '<span>' + icon + ' ' + att.name + ' (' + sizeKb + ' KB)</span><button onclick="window.__sasesClearAttachment&&window.__sasesClearAttachment()" style="margin-left:12px;border:none;background:none;color:#ff3b30;cursor:pointer;font-size:14px;">✕</button>';
+}
+
+
+
 export function renderImageBubble(content, role = 'user', senderName = null) {
   const url = content.substring('[IMAGE]:'.length);
   const wrapper = document.createElement('div');

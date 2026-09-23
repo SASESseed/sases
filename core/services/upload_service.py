@@ -7,9 +7,11 @@ from ..db import db_cursor
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'uploads')
 
 ALLOWED_EXT = {
-    '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image',
-    '.pdf': 'file', '.txt': 'file', '.md': 'file', '.zip': 'file',
-    '.py': 'file', '.js': 'file', '.json': 'file', '.csv': 'file',
+    '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.svg': 'image',
+    '.pdf': 'file', '.txt': 'file', '.md': 'file', '.zip': 'file', '.rar': 'file', '.7z': 'file', '.tar': 'file', '.gz': 'file',
+    '.py': 'file', '.js': 'file', '.json': 'file', '.csv': 'file', '.html': 'file', '.css': 'file', '.xml': 'file', '.yaml': 'file', '.yml': 'file',
+    '.doc': 'file', '.docx': 'file', '.xls': 'file', '.xlsx': 'file', '.ppt': 'file', '.pptx': 'file',
+    '.mp3': 'file', '.mp4': 'file', '.wav': 'file', '.mov': 'file', '.avi': 'file',
 }
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
