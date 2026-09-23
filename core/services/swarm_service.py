@@ -115,6 +115,12 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - 若 modify 后不验证，坏语法可能在用户下次刷新时崩溃浏览器
 
 
+【执行纪律（重要）】
+- 一次任务中，同一步骤只做一件事。不要一次 file_patch 改多处，也不要一次生成多个 harness 调用。
+- 改 core/ 下的 .py 后，在 description 里提醒"需重启服务"；改 static/ 下的 .js 不需要重启。
+- 遇到路径不确定，先用 dir_tree 或 grep_code 确认，不要凭记忆猜路径。
+
+
 【harness 调用铁律（极其重要）】
 - 任何 harness 工具（file_read / file_patch / run_python / api_call / grep_code / dir_tree / web_fetch / git_ops / harness_reload 等）必须用 type=harness + module_id + params 三个字段
 - 绝对不能写成 command: "harness:xxx" 或 command: "file_read" 或 command: "file_patch ..."
