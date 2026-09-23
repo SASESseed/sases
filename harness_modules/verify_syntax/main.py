@@ -138,6 +138,21 @@ def run(params):
     # success 始终 True（工具调用成功）；syntax_ok 才是结论
     result = {'success': True, 'file_path': safe, 'syntax_ok': bool(ok)}
 
+    if params.get('check_undefined', True):
+        try:
+            with open(abs_p, 'r', encoding='utf-8') as f:
+                _content = f.read(200 * 1024)
+            _missing = _check_undefined_calls(_content, ext)
+            if _missing:
+                result['undefined_calls'] = _missing
+                if ok:
+                    ok = False
+                    err = 'undefined calls: ' + ', '.join(_missing[:5])
+                    result['syntax_ok'] = False
+        except Exception as _ce:
+            result['undefined_check_error'] = str(_ce)
+
+
     auto_rollback = params.get('auto_rollback', True)
     if not ok and auto_rollback:
         bak = _find_latest_backup(safe)
