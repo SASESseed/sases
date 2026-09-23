@@ -97,7 +97,6 @@ export function createMessageElement(role, content, senderName, messageId, timeI
   }
   content = stripSummaryPrefix(content);
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
-    if (typeof content === 'string' && content.indexOf('[TRANSFER]:') === 0) { return renderTransferBubble(content); }
   if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role, senderName); }
   if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
   if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
@@ -343,6 +342,18 @@ export function renderImageBubble(content, role = 'user', senderName = null) {
 
 
 export function renderRedPacketBubble(content) {
+
+function renderTransferBubble(text) {
+    const parts = String(text).replace('[TRANSFER]:', '').split('|');
+    const amount = parts[0] || '0';
+    const note = parts[1] || '';
+    const el = document.createElement('div');
+    el.className = 'transfer-bubble';
+    el.style.cssText = 'background:#f59e0b;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;';
+    el.innerHTML = '<div style="font-size:12px;">💰 转账</div><div style="font-size:18px;font-weight:bold;">' + amount + ' 积分</div>' + (note ? '<div style="font-size:12px;">' + note + '</div>' : '');
+    return el;
+}
+
   let data = {};
   try { data = JSON.parse(content.substring(12)); } catch (e) {}
   const div = document.createElement('div');
