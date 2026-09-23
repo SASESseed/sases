@@ -59,7 +59,7 @@ function handleSend() {
 
 async function sendTransfer(receiver_id, amount, message, conversation_id) {
   try {
-    const res = await API.sendTransfer(receiver_id, amount, message, conversation_id);
+    const res = await api.transferCredits(receiver_id, amount, message, conversation_id);
     return res;
   } catch (e) {
     console.error('[TRANSFER] sendTransfer failed', e);
