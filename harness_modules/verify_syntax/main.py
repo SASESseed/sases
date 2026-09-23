@@ -7,6 +7,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/')
 FORBIDDEN = ('.env', 'users.db', '.key', '.bin', '.pem', '.crt', 'secret_key', 'api_key_encryption')
 BACKUP_DIR = '.backups'
+UI_PREFIXES = ('render', 'open', 'show', 'hide', 'update', 'toggle', 'close')
 
 
 def _check(p):
