@@ -555,6 +555,13 @@ function updateSendButtonVisibility() {
 
 window.updateSendButtonVisibility = updateSendButtonVisibility;
 window.sendMessage = sendMessage;
+
+
+window.__sasesClearAttachment = function() {
+  if (window.chatState) window.chatState.pendingAttachment = null;
+  const el = document.getElementById('attachment-preview');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+};
 window.sendTransfer = sendTransfer;
 
 
