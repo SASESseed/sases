@@ -121,7 +121,7 @@ async function loadConversations(container) {
         const id = btn.dataset.id;
         if (type === 'single') {
           const pinned = btn.dataset.pinned === '1' ? true : false;
-          showSingleSessionActions(id, pinned);
+          showSingleSessionActions(id, pinned, btn);
         } else if (type === 'group') {
           showGroupSessionActions(id);
         }
