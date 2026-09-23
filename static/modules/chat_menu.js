@@ -244,7 +244,7 @@ export function openChatPlusPanel() {
   const content = document.getElementById('chat-plus-content');
   if (content) {
     const items = [
-      { icon: '📷', label: '相册', action: () => { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadImage) window.__sasesUploadImage(f); }; input.click(); } },
+      { icon: '📷', label: '相册', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => { const f = inp.files[0]; if (!f) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachment = { type: 'image', file: f, name: f.name, size: f.size }; import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachment)); }; inp.click(); } },
       { icon: '💰', label: '转账', action: () => openTransferDialog() },
       { icon: '🧧', label: '红包', action: () => openRedPacketDialog() },
 { icon: '📁', label: '文件', action: () => { const input = document.createElement('input'); input.type='file'; input.onchange = () => { const f = input.files[0]; if (f && window.__sasesUploadFile) window.__sasesUploadFile(f); }; input.click(); } },
