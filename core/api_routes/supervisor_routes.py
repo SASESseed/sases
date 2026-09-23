@@ -1,3 +1,4 @@
+import asyncio
 # core/api_routes/supervisor_routes.py
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -42,6 +43,19 @@ async def confirm(body: ConfirmBody, user_id: int = Depends(get_current_user)):
     ok = supervisor_service.confirm_run(body.run_id, user_id)
     if not ok:
         raise HTTPException(status_code=404, detail='run not found or not proposed')
+    _run = supervisor_service.get_run(body.run_id)
+    if _run:
+        try:
+            from ..services import swarm_service
+            asyncio.create_task(swarm_service.plan_task(
+                user_id=user_id,
+                conversation_id=_run['conversation_id'],
+                user_input=_run['goal'],
+                supervisor_id=_run.get('supervisor_id'),
+                supervisor_run_id=body.run_id,
+            ))
+        except Exception as _e:
+            print('[supervisor] confirm 派单失败: ' + str(_e))
     return {'run_id': body.run_id, 'status': 'running'}
 
 
