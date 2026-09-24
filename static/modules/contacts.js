@@ -200,18 +200,21 @@ async function renderContacts(container) {
       if (type === 'new-agent') openNewAgentPage();
       else if (type === 'api-agent') { if (window.openModelManagement) window.openModelManagement(); }
       else if (type === 'group-chat') openGroupChatList();
-      else if (type === 'friend-requests') openNewAgentPage();
     });
   });
 
-  // 加载好友请求数量
+  // 加载好友请求数量，红点挂在"新智能体"入口
   try {
     const reqData = await api.getFriendRequests();
     const reqCount = (reqData.requests || []).length;
-    const badge = document.getElementById('friend-requests-badge');
-    if (badge && reqCount > 0) {
-      badge.textContent = reqCount;
-      badge.style.display = 'inline-block';
+    if (reqCount > 0) {
+      const entry = container.querySelector('[data-entry="new-agent"]');
+      if (entry) {
+        const badge = document.createElement('span');
+        badge.textContent = reqCount;
+        badge.style.cssText = 'background:#ff3b30;color:#fff;border-radius:10px;padding:0 6px;font-size:12px;margin-left:auto;';
+        entry.appendChild(badge);
+      }
     }
   } catch (e) {}
 
