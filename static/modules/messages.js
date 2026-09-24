@@ -78,10 +78,12 @@ async function loadConversations(container) {
 
 
       const _groupPinned = group.is_pinned ? 'pinned' : '';
+      const _groupUnread = group.unread_count || 0;
       html += `
         <div class="session-item ${_groupPinned}" data-type="group" data-group-id="${groupId}" data-title="${groupName}" data-pinned="${group.is_pinned ? 1 : 0}">
           <div class="session-avatar">
             ${groupName.charAt(0)}
+            ${_groupUnread > 0 ? '<span class="unread-badge">' + _groupUnread + '</span>' : ''}
           </div>
           <div class="session-info">
             <div class="session-name">${groupName}</div>
