@@ -65,6 +65,17 @@ def list_user_groups(user_id: int):
     return [dict(row) for row in rows]
 
 
+def toggle_group_pin(group_id: int, user_id: int, pinned: bool):
+    """置顶/取消置顶群聊（仅检查成员身份）"""
+    with db_cursor(commit=True) as cur:
+        cur.execute("SELECT 1 FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cur.fetchone():
+            return False
+        cur.execute("UPDATE groups SET is_pinned=? WHERE id=?", (1 if pinned else 0, group_id))
+        return True
+
+
+
 def get_group_info(group_id: int):
     """获取群基本信息，包括模式"""
     with db_cursor() as cur:
