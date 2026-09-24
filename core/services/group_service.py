@@ -64,7 +64,7 @@ def list_user_groups(user_id: int):
             JOIN group_members gm2 ON g.id = gm2.group_id
             WHERE gm2.user_id = ?
             ORDER BY COALESCE(g.is_pinned, 0) DESC, g.created_at DESC
-        """, (user_id,))
+        """, (user_id, user_id,))
         rows = cur.fetchall()
     return [dict(row) for row in rows]
 
