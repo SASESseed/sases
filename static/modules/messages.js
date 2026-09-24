@@ -157,31 +157,6 @@ function showSessionMenu(btn, items, onSelect) {
 
 
 
-function showSessionMenu(btn, items, onSelect) {
-  const old = document.getElementById('__session_menu__');
-  if (old) old.remove();
-  const menu = document.createElement('div');
-  menu.className = 'session-menu';
-  menu.id = '__session_menu__';
-  items.forEach(item => {
-    const el = document.createElement('div');
-    el.className = 'session-menu-item' + (item.danger ? ' danger' : '');
-    el.textContent = item.label;
-    el.onclick = (e) => { e.stopPropagation(); menu.remove(); onSelect(item.action); };
-    menu.appendChild(el);
-  });
-  document.body.appendChild(menu);
-  const r = btn.getBoundingClientRect();
-  menu.style.top = (r.bottom + 4) + 'px';
-  menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
-  setTimeout(() => {
-    const closer = () => { menu.remove(); document.removeEventListener('click', closer); };
-    document.addEventListener('click', closer);
-  }, 0);
-}
-
-
-
 function showSingleSessionActions(conversationId, pinned, btn) {
   if (btn && typeof showSessionMenu === 'function') {
     showSessionMenu(btn, [

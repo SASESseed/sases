@@ -35,19 +35,20 @@ def run(params):
             content = f.read(200 * 1024)
     except Exception as e:
         return {'success': False, 'error': 'read failed: ' + str(e)}
-    result = {'success': True, 'file_path': safe, 'total_lines': len(content.split(chr(10))), 'checks': []}
+    # success 始终 True（工具调用成功）；checks 结果才是结论
+    result = {'success': True, 'file_path': safe, 'total_lines': len(content.split(chr(10))), 'all_checks_passed': True, 'checks': []}
     inc = params.get('expect_contains') or []
     if isinstance(inc, str): inc = [inc]
     for s in inc:
         if not s: continue
         found = s in content
         result['checks'].append({'type': 'contains', 'pattern': s[:80], 'found': found})
-        if not found: result['success'] = False
+        if not found: result['all_checks_passed'] = False
     exc = params.get('expect_not_contains') or []
     if isinstance(exc, str): exc = [exc]
     for s in exc:
         if not s: continue
         found = s in content
         result['checks'].append({'type': 'not_contains', 'pattern': s[:80], 'found': found})
-        if found: result['success'] = False
+        if found: result['all_checks_passed'] = False
     return result
