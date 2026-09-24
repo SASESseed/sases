@@ -196,6 +196,21 @@ function showSingleSessionActions(conversationId, pinned, btn) {
 }
 
 function showGroupSessionActions(groupId, btn) {
+  if (btn && typeof showSessionMenu === 'function') {
+    showSessionMenu(btn, [
+      { label: '删除（本地隐藏）', action: 'delete', danger: true }
+    ], function (a) {
+      if (a === 'delete') {
+        try {
+          const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]');
+          if (!list.includes(groupId)) list.push(groupId);
+          localStorage.setItem('sases_hidden_groups', JSON.stringify(list));
+        } catch(e) {}
+        if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();
+      }
+    });
+    return;
+  }
   const action = prompt('选择操作：\n1. 删除群聊（本地隐藏）\n0. 取消');
   if (action === '1') {
     try {
@@ -205,7 +220,6 @@ function showGroupSessionActions(groupId, btn) {
     } catch(e) {}
     if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();
   }
-  return;
 }
 
 async function togglePin(conversationId, pinned) {
