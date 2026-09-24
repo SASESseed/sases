@@ -210,10 +210,6 @@ function showGroupSessionActions(groupId, btn) {
         api.markGroupRead(groupId).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
         return;
       }
-      if (a === 'read') {
-        api.markGroupRead(groupId).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
-        return;
-      }
 
       if (a === 'pin') {
         api.togglePinGroup(groupId, !pinned).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
