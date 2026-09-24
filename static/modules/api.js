@@ -261,7 +261,7 @@ export const api = {
   getComputeBalance: () => request('/compute/balance'),
   listComputeServices: () => request('/compute/services'),
   getComputePricing: () => request('/compute/pricing'),
-  rechargeCompute: (pkg) => request('/compute/recharge', { method: 'POST', body: JSON.stringify({ package: pkg }) }),
+  // rechargeCompute 已移除（v0.19.0 前端不再暴露充值入口）
   exchangeCompute: (creditsAmount) => request('/compute/exchange', { method: 'POST', body: JSON.stringify({ credits_amount: creditsAmount }) }),
   consumeCompute: (serviceKey, detail = '') => request('/compute/consume', { method: 'POST', body: JSON.stringify({ service_key: serviceKey, detail }) }),
   getComputeTransactions: (limit = 50) => request(`/compute/transactions?limit=${limit}`),
