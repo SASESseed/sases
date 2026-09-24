@@ -89,7 +89,9 @@ function openExchangePage() {
     </div>
     <button class="save-btn" id="save-exchange">${t('confirm')}</button>
   `;
-  window.openSubpage(t('exchange'), contentHtml);
+  window.openSubpage(t('exchange'), contentHtml, {
+    rightBtn: { text: '记录', onclick: () => showActionHistory('exchange') }
+  });
   setTimeout(() => {
     document.getElementById('save-exchange').onclick = async () => {
       const credits = parseFloat(document.getElementById('exchange-credits').value);
