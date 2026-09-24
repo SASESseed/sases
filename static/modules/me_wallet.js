@@ -144,6 +144,24 @@ function openStakePage() {
 window.openWallet = openWallet;
 
 
+async function showActionHistory(kind) {
+  const title = kind === 'exchange' ? '兑换记录' : '质押记录';
+  const kw = kind === 'exchange' ? '兑换' : '质押';
+  let history = [];
+  try {
+    const data = await api.getCreditHistory(50);
+    history = (data.history || []).filter(h => (h.action || '').includes(kw));
+  } catch (e) {}
+  const html = history.length === 0 ? '<div class="subpage-placeholder">暂无' + title + '</div>' : '<div class="me-menu">' + history.map(h => {
+    const date = h.created_at ? new Date(h.created_at).toLocaleString('zh-CN') : '';
+    const sign = h.points > 0 ? '+' : '';
+    const color = h.points > 0 ? '#34c759' : '#ff3b30';
+    return '<div class="me-menu-item"><div class="menu-text"><div class="menu-title">' + (h.action || '') + '</div><div class="menu-desc">' + date + '</div></div><span class="menu-value" style="color:' + color + ';">' + sign + h.points + '</span></div>';
+  }).join('') + '</div>';
+  window.openSubpage(title, html, { showMore: false });
+}
+
+
 async function openCreditDetail(kind) {
   const title = kind === 'seed' ? '种子积分明细' : '算力积分明细';
   let history = [];
