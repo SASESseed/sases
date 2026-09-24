@@ -128,6 +128,13 @@ async def toggle_pin(group_id: int, body: dict, user_id: int = Depends(get_curre
 
 
 
+@router.post("/{group_id}/read")
+async def mark_read(group_id: int, user_id: int = Depends(get_current_user)):
+    ok = group_service.mark_group_read(group_id, user_id)
+    return {'group_id': group_id, 'read': ok}
+
+
+
 @router.post("/{group_id}/mode")
 async def set_group_mode(group_id: int, body: GroupModeRequest, user_id: int = Depends(get_current_user)):
     if body.mode not in ("normal", "swarm"):
