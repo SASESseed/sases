@@ -217,6 +217,7 @@ def init_db():
             )
         """)
         _ensure_column(cur, "group_members", "agent_id", "TEXT")
+        _ensure_column(cur, "group_members", "last_read_at", "TEXT")
 
         # ========== 群消息表 ==========
         cur.execute("""
