@@ -201,8 +201,20 @@ async function renderContacts(container) {
       if (type === 'new-agent') openNewAgentPage();
       else if (type === 'api-agent') { if (window.openModelManagement) window.openModelManagement(); }
       else if (type === 'group-chat') openGroupChatList();
+      else if (type === 'friend-requests') openNewAgentPage();
     });
   });
+
+  // 加载好友请求数量
+  try {
+    const reqData = await api.getFriendRequests();
+    const reqCount = (reqData.requests || []).length;
+    const badge = document.getElementById('friend-requests-badge');
+    if (badge && reqCount > 0) {
+      badge.textContent = reqCount;
+      badge.style.display = 'inline-block';
+    }
+  } catch (e) {}
 
   // 绑定智能体行点击和触摸
   container.querySelectorAll('.swipe-row').forEach(row => {
