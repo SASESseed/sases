@@ -138,10 +138,15 @@ async function loadConversations(container) {
 
 function showSessionMenu(btn, items, onSelect) {
   const old = document.getElementById('__session_menu__');
+  if (old && old.__sourceBtn === btn) {
+    old.remove();
+    return;
+  }
   if (old) old.remove();
   const menu = document.createElement('div');
   menu.className = 'session-menu';
   menu.id = '__session_menu__';
+  menu.__sourceBtn = btn;
   items.forEach(item => {
     const el = document.createElement('div');
     el.className = 'session-menu-item' + (item.danger ? ' danger' : '');
@@ -197,21 +202,6 @@ function showGroupSessionActions(groupId, btn) {
     if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();
   }
   return;
-
-  if (btn && typeof showSessionMenu === 'function') {
-    showSessionMenu(btn, [
-      { label: '退出群聊', action: 'quit', danger: true }
-    ], function (a) {
-      if (a === 'quit') quitGroup(groupId);
-    });
-    return;
-  }
-  const action = prompt(
-    `${t('choose_action')}\n1. 退出群聊\n0. ${t('cancel')}`
-  );
-  if (action === '1') {
-    quitGroup(groupId);
-  }
 }
 
 async function togglePin(conversationId, pinned) {
