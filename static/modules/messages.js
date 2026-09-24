@@ -178,6 +178,7 @@ function showSingleSessionActions(conversationId, pinned, btn) {
     showSessionMenu(btn, [
       { label: pinned ? '取消置顶' : '置顶', action: 'pin' },
       { label: '标记已读', action: 'read' },
+      { label: '标记已读', action: 'read' },
       { label: '删除会话', action: 'delete', danger: true }
     ], function (a) {
       if (a === 'pin') togglePin(conversationId, !pinned);
@@ -210,6 +211,11 @@ function showGroupSessionActions(groupId, btn) {
         api.markGroupRead(groupId).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
         return;
       }
+      if (a === 'read') {
+        api.markGroupRead(groupId).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
+        return;
+      }
+
       if (a === 'pin') {
         api.togglePinGroup(groupId, !pinned).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
         return;
