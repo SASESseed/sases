@@ -124,7 +124,9 @@ function openStakePage() {
     </div>
     <button class="save-btn" id="save-stake">${t('confirm')}</button>
   `;
-  window.openSubpage(t('stake'), contentHtml);
+  window.openSubpage(t('stake'), contentHtml, {
+    rightBtn: { text: '记录', onclick: () => showActionHistory('stake') }
+  });
   setTimeout(() => {
     document.getElementById('save-stake').onclick = async () => {
       const credits = parseFloat(document.getElementById('stake-credits').value);
