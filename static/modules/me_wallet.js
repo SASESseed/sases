@@ -62,8 +62,11 @@ export async function openWallet() {
   window.openSubpage(t('wallet'), contentHtml);
 
   setTimeout(() => {
-    document.getElementById('wallet-seed-entry').onclick = () => openCreditDetail('seed');
-    document.getElementById('wallet-compute-detail-entry').onclick = () => openCreditDetail('compute');
+    const _seedCard = document.querySelectorAll('.wallet-card')[0];
+    if (_seedCard) _seedCard.style.cursor = 'pointer';
+    if (_seedCard) _seedCard.onclick = () => openCreditDetail('seed');
+    const _computeCard = document.getElementById('wallet-compute-entry');
+    if (_computeCard) _computeCard.onclick = () => openCreditDetail('compute');
     document.getElementById('credit-risk-entry').onclick = openCreditRiskPage;
     document.getElementById('menu-exchange').onclick = openExchangePage;
     document.getElementById('menu-stake').onclick = openStakePage;
