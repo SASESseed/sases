@@ -67,14 +67,6 @@ export async function openWallet() {
     document.getElementById('menu-exchange').onclick = openExchangePage;
     document.getElementById('menu-stake').onclick = openStakePage;
 
-    const computeEntry = document.getElementById('wallet-compute-entry');
-    if (computeEntry) {
-      computeEntry.onclick = () => {
-        if (typeof window.openComputeWallet === 'function') {
-          window.openComputeWallet(() => openWallet());
-        }
-      };
-    }
   }, 100);
 }
 
@@ -182,7 +174,7 @@ const fmt=iso=>{if(!iso)return '';const d=new Date(iso),n=new Date(),pad=x=>(x<1
 const render=arr=>arr.length===0?'<div class="subpage-placeholder" style="padding:40px 0;text-align:center;color:#999;">暂无记录</div>':arr.map(it=>'<div class="me-menu-item"><div class="menu-text"><div class="menu-title">'+it.title+'</div><div class="menu-desc" style="color:#999;font-size:12px;">'+fmt(it.time)+'</div></div><span class="menu-value" style="color:'+(it.amount>0?'#34c759':'#ff3b30')+';">'+(it.amount>0?'+':'')+it.amount+'</span></div>').join('');
 const cats=isSeed?[{k:'all',l:'全部'},{k:'income',l:'获取'},{k:'expense',l:'消耗'},{k:'stake',l:'质押'}]:[{k:'all',l:'全部'},{k:'income',l:'获取'},{k:'expense',l:'消耗'}];
 const tabs=cats.map(c=>'<div class="credit-tab credit-tab-'+c.k+'" style="flex:1;text-align:center;padding:8px 0;font-size:14px;color:#666;cursor:pointer;">'+c.l+'</div>').join('');
-const html='<div style="display:flex;border-bottom:1px solid #eee;">'+tabs+'</div><div id="credit-list" style="padding:8px 12px;"></div>';
+let html='<div style="display:flex;border-bottom:1px solid #eee;">'+tabs+'</div><div id="credit-list" style="padding:8px 12px;"></div>';
 window.openSubpage(title,html,{showMore:false,returnAction:()=>openWallet()});
 const list=document.getElementById('credit-list');
 const applyFilter=k=>{
@@ -191,6 +183,7 @@ cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(!el)retu
 };
 cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(el)el.onclick=()=>applyFilter(c.k);});
 applyFilter('all');
+  if(cwEntry) cwEntry.onclick=()=>{ if(typeof window.openComputeWallet==='function') window.openComputeWallet(()=>openCreditDetail('compute')); };
 }
 
 
