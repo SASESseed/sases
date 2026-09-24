@@ -58,17 +58,28 @@ def list_friend_agents(user_id: int):
         })
     return friends
 
-def search_agents(user_id: int, q: str):
+def search_agents(user_id: int, q: str, include_self: bool = False):
+    pattern = f"%{q}%"
     with db_cursor() as cur:
-        cur.execute("""
-            SELECT mc.id, mc.name, mc.provider, mc.model_name, mc.capabilities, mc.model_type, u.username as owner_name, mc.price
-            FROM model_configs mc
-            JOIN users u ON mc.user_id = u.id
-            WHERE mc.user_id != ?
-              AND (mc.is_shared = 1 OR mc.visibility = 'public')
-              AND (mc.name LIKE ? OR mc.provider LIKE ? OR mc.model_name LIKE ?)
-            LIMIT 20
-        """, (user_id, f"%{q}%", f"%{q}%", f"%{q}%"))
+        if include_self:
+            cur.execute("""
+                SELECT mc.id, mc.name, mc.provider, mc.model_name, mc.capabilities, mc.model_type, u.username as owner_name, mc.price
+                FROM model_configs mc
+                JOIN users u ON mc.user_id = u.id
+                WHERE (mc.user_id = ? OR (mc.is_shared = 1 OR mc.visibility = 'public'))
+                  AND (mc.name LIKE ? OR mc.provider LIKE ? OR mc.model_name LIKE ?)
+                LIMIT 20
+            """, (user_id, pattern, pattern, pattern))
+        else:
+            cur.execute("""
+                SELECT mc.id, mc.name, mc.provider, mc.model_name, mc.capabilities, mc.model_type, u.username as owner_name, mc.price
+                FROM model_configs mc
+                JOIN users u ON mc.user_id = u.id
+                WHERE mc.user_id != ?
+                  AND (mc.is_shared = 1 OR mc.visibility = 'public')
+                  AND (mc.name LIKE ? OR mc.provider LIKE ? OR mc.model_name LIKE ?)
+                LIMIT 20
+            """, (user_id, pattern, pattern, pattern))
         rows = cur.fetchall()
 
     results = []
