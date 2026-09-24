@@ -201,8 +201,13 @@ function showGroupSessionActions(groupId, btn) {
   if (btn && typeof showSessionMenu === 'function') {
     showSessionMenu(btn, [
       { label: pinned ? '取消置顶' : '置顶群聊', action: 'pin' },
+      { label: '标记已读', action: 'read' },
       { label: '删除（本地隐藏）', action: 'delete', danger: true }
     ], function (a) {
+      if (a === 'read') {
+        api.markGroupRead(groupId).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
+        return;
+      }
       if (a === 'pin') {
         api.togglePinGroup(groupId, !pinned).then(() => location.reload()).catch(e => alert('操作失败: ' + (e.message || '')));
         return;
