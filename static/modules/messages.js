@@ -66,12 +66,16 @@ async function loadConversations(container) {
     });
 
     // 渲染群聊会话
+    const _hiddenGroups = (() => { try { return JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]'); } catch(e) { return []; } })();
+
     groups.forEach(group => {
       const groupName = group.name || '群聊';
       const lastMessage = group.last_message || '';
       const lastSenderName = group.last_sender_name || '';
       const displayLast = lastSenderName ? `${lastSenderName}: ${lastMessage}` : lastMessage;
       const groupId = group.id;
+      if (_hiddenGroups.includes(groupId)) return;
+
 
       html += `
         <div class="session-item" data-type="group" data-group-id="${groupId}" data-title="${groupName}">
@@ -183,6 +187,17 @@ function showSingleSessionActions(conversationId, pinned, btn) {
 }
 
 function showGroupSessionActions(groupId, btn) {
+  const action = prompt('选择操作：\n1. 删除群聊（本地隐藏）\n0. 取消');
+  if (action === '1') {
+    try {
+      const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]');
+      if (!list.includes(groupId)) list.push(groupId);
+      localStorage.setItem('sases_hidden_groups', JSON.stringify(list));
+    } catch(e) {}
+    if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();
+  }
+  return;
+
   if (btn && typeof showSessionMenu === 'function') {
     showSessionMenu(btn, [
       { label: '退出群聊', action: 'quit', danger: true }
