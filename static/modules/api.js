@@ -324,6 +324,8 @@ export const api = {
   getGroupCredits: (group_id) => request(`/group/${group_id}/credits`),
   markGroupRead: (group_id) => request(`/group/${group_id}/read`, { method: 'POST' }),
 
+  markGroupRead: (group_id) => request(`/group/${group_id}/read`, { method: 'POST' }),
+
   togglePinGroup: (group_id, pinned) => request(`/group/${group_id}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),
 
   removeGroupMember: (group_id, username_or_id) => request(`/group/${group_id}/remove-member`, { method: 'POST', body: JSON.stringify({ username_or_id }) }),
