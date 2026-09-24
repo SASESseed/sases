@@ -201,6 +201,7 @@ def init_db():
             )
         """)
         _ensure_column(cur, "groups", "mode", "TEXT DEFAULT 'normal'")
+        _ensure_column(cur, "groups", "is_pinned", "INTEGER DEFAULT 0")
 
         # ========== 群成员表 ==========
         cur.execute("""
