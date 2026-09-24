@@ -77,8 +77,9 @@ async function loadConversations(container) {
       if (_hiddenGroups.includes(groupId)) return;
 
 
+      const _groupPinned = group.is_pinned ? 'pinned' : '';
       html += `
-        <div class="session-item" data-type="group" data-group-id="${groupId}" data-title="${groupName}">
+        <div class="session-item ${_groupPinned}" data-type="group" data-group-id="${groupId}" data-title="${groupName}" data-pinned="${group.is_pinned ? 1 : 0}">
           <div class="session-avatar">
             ${groupName.charAt(0)}
           </div>
