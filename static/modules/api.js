@@ -322,6 +322,8 @@ export const api = {
   sendGroupMessage: (group_id, content, agent_id = null) => request(`/group/${group_id}/messages`, { method: 'POST', body: JSON.stringify({ content, agent_id }) }),
   getGroupMembers: (group_id) => request(`/group/${group_id}/members`),
   getGroupCredits: (group_id) => request(`/group/${group_id}/credits`),
+  markGroupRead: (group_id) => request(`/group/${group_id}/read`, { method: 'POST' }),
+
   togglePinGroup: (group_id, pinned) => request(`/group/${group_id}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }),
 
   removeGroupMember: (group_id, username_or_id) => request(`/group/${group_id}/remove-member`, { method: 'POST', body: JSON.stringify({ username_or_id }) }),
