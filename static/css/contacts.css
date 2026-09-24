@@ -225,3 +225,22 @@
   color: var(--text-primary);
 }
 .contact-search-input::placeholder { color: var(--text-faint); }
+/* ===== 微信风格覆盖 ===== */
+.agent-row { min-height: 56px !important; padding: 8px 12px !important; background: #fff; display: flex; align-items: center; gap: 12px; }
+.agent-avatar { width: 40px !important; height: 40px !important; border-radius: 4px !important; font-size: 18px !important; position: relative; }
+.agent-info { flex: 1; overflow: hidden; }
+.agent-name { font-size: 16px !important; color: #333 !important; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-desc { font-size: 13px !important; color: #888 !important; line-height: 18px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-id-display { display: none !important; }
+.letter-title { padding: 4px 12px !important; background: #f7f7f7 !important; font-size: 13px !important; color: #888 !important; position: sticky; top: 0; z-index: 5; }
+.friend-list-wrapper { position: relative; background: #fff; }
+.letter-index { position: fixed !important; right: 4px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; z-index: 10; }
+.letter-index-item { font-size: 11px; color: #666; padding: 1px 4px; cursor: pointer; }
+.letter-index-item:active { color: #007aff; }
+.subpage-search-bar { padding: 8px 12px !important; background: #f7f7f7 !important; }
+.subpage-search-bar .search-input { width: 100%; height: 32px; border-radius: 6px !important; background: #fff !important; border: none !important; padding: 0 12px; font-size: 14px; }
+.me-menu { background: #fff; margin-bottom: 12px; border-radius: 0; }
+.me-menu-item { min-height: 44px !important; padding: 10px 16px !important; background: #fff; font-size: 16px; display: flex; align-items: center; border-bottom: 0.5px solid #e5e5e5; }
+.me-menu-item:last-child { border-bottom: none; }
+.section-title { padding: 6px 16px !important; font-size: 13px !important; color: #888 !important; background: #f7f7f7 !important; }
+.swipe-btn { min-width: 72px; font-size: 15px; }

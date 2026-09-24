@@ -74,7 +74,7 @@ async function loadConversations(container) {
       const lastSenderName = group.last_sender_name || '';
       const displayLast = lastSenderName ? `${lastSenderName}: ${lastMessage}` : lastMessage;
       const groupId = group.id;
-      if (_hiddenGroups.includes(groupId)) return;
+      if (_hiddenGroups.map(String).includes(String(groupId))) return;
 
 
       const _groupPinned = group.is_pinned ? 'pinned' : '';
@@ -217,8 +217,9 @@ function showGroupSessionActions(groupId, btn) {
       }
       if (a === 'delete') {
         try {
-          const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]');
-          if (!list.includes(groupId)) list.push(groupId);
+          const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]').map(String);
+          const _gid = String(groupId);
+          if (!list.includes(_gid)) list.push(_gid);
           localStorage.setItem('sases_hidden_groups', JSON.stringify(list));
         } catch(e) {}
         if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();
@@ -229,8 +230,9 @@ function showGroupSessionActions(groupId, btn) {
   const action = prompt('选择操作：\n1. 删除群聊（本地隐藏）\n0. 取消');
   if (action === '1') {
     try {
-      const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]');
-      if (!list.includes(groupId)) list.push(groupId);
+      const list = JSON.parse(localStorage.getItem('sases_hidden_groups') || '[]').map(String);
+      const _gid = String(groupId);
+          if (!list.includes(_gid)) list.push(_gid);
       localStorage.setItem('sases_hidden_groups', JSON.stringify(list));
     } catch(e) {}
     if (btn && btn.closest('.session-item')) btn.closest('.session-item').remove();

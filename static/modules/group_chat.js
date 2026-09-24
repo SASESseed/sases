@@ -181,40 +181,33 @@ async function applyGroupMode(mode) {
 async function openGroupSettings() {
   const contentHtml = `
     <div class="group-settings-container">
-      <div class="wallet-card" id="group-credits-card" style="margin-bottom:16px;">
-        <div class="wallet-label">群积分</div>
-        <div class="wallet-balance" id="group-credits-balance">0</div>
+      <div class="member-grid" id="group-members-container"><div class="subpage-placeholder">加载中...</div></div>
+      <div class="me-menu">
+        <div class="me-menu-item"><span class="menu-label">群聊名称</span><span class="menu-value">${currentGroupName}</span></div>
+        <div class="me-menu-item" id="identity-switch-entry"><span class="menu-label">身份切换</span><span class="menu-value" id="identity-current">以本人身份</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="group-mode-entry"><span class="menu-label">群模式</span><span class="menu-value" id="group-mode-current">${currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式'}</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="announcement-entry"><span class="menu-label">群公告</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="nickname-entry"><span class="menu-label">我在本群的昵称</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="search-history-entry"><span class="menu-label">查找聊天记录</span><span class="menu-arrow">›</span></div>
       </div>
       <div class="me-menu">
-        <div class="me-menu-item">
-          <span class="menu-label">群名称</span>
-          <span class="menu-value">${currentGroupName}</span>
-        </div>
-        <div class="me-menu-item" id="identity-switch-entry">
-          <span class="menu-label">身份切换</span>
-          <span class="menu-value" id="identity-current">以本人身份</span>
-          <span class="menu-arrow">›</span>
-        </div>
-        <div class="me-menu-item" id="group-mode-entry">
-          <span class="menu-label">群模式</span>
-          <span class="menu-value" id="group-mode-current">${currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式'}</span>
-          <span class="menu-arrow">›</span>
-        </div>
+        <div class="me-menu-item" id="mute-entry"><span class="menu-label">消息免打扰</span><div class="switch" id="mute-switch"><div class="slider"></div></div></div>
+        <div class="me-menu-item" id="pin-entry"><span class="menu-label">置顶聊天</span><div class="switch" id="pin-switch"><div class="slider"></div></div></div>
       </div>
-      <div class="section-title">群成员</div>
-      <div id="group-members-container" class="me-menu">
-        <div class="subpage-placeholder">加载中...</div>
+      <div class="me-menu">
+        <div class="me-menu-item" id="group-credits-entry"><span class="menu-label">群积分</span><span class="menu-value" id="group-credits-balance">0</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="group-leaderboard-entry"><span class="menu-label">群排行榜</span><span class="menu-arrow">›</span></div>
       </div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button id="invite-member-btn" class="save-btn" style="flex:1;">邀请成员</button>
-        <button id="remove-member-btn" class="save-btn" style="flex:1; background:#ff3b30;">移除成员</button>
+      <div class="me-menu">
+        <div class="me-menu-item" id="clear-history-entry"><span class="menu-label">清空聊天记录</span></div>
+        <div class="me-menu-item danger" id="leave-group-entry"><span class="menu-label">退出群聊</span></div>
       </div>
     </div>
   `;
   window.openSubpage('群设置', contentHtml, { showMore: false });
 
   loadGroupCredits();
-  loadGroupMembers();
+  await loadGroupMembers();
 
   const identityEntry = document.getElementById('identity-switch-entry');
   if (identityEntry) identityEntry.addEventListener('click', openAgentSwitch);
@@ -222,11 +215,32 @@ async function openGroupSettings() {
   const groupModeEntry = document.getElementById('group-mode-entry');
   if (groupModeEntry) groupModeEntry.addEventListener('click', openGroupModeMenu);
 
-  const inviteBtn = document.getElementById('invite-member-btn');
-  if (inviteBtn) inviteBtn.addEventListener('click', openInviteDialog);
+  const announcementEntry = document.getElementById('announcement-entry');
+  if (announcementEntry) announcementEntry.addEventListener('click', openAnnouncementEditor);
 
-  const removeBtn = document.getElementById('remove-member-btn');
-  if (removeBtn) removeBtn.addEventListener('click', openRemoveDialog);
+  const nicknameEntry = document.getElementById('nickname-entry');
+  if (nicknameEntry) nicknameEntry.addEventListener('click', openNicknameEditor);
+
+  const searchHistoryEntry = document.getElementById('search-history-entry');
+  if (searchHistoryEntry) searchHistoryEntry.addEventListener('click', openGroupSearch);
+
+  const muteEntry = document.getElementById('mute-entry');
+  if (muteEntry) muteEntry.addEventListener('click', toggleGroupMute);
+
+  const pinEntry = document.getElementById('pin-entry');
+  if (pinEntry) pinEntry.addEventListener('click', toggleGroupPin);
+
+  const groupCreditsEntry = document.getElementById('group-credits-entry');
+  if (groupCreditsEntry) groupCreditsEntry.addEventListener('click', openGroupCreditsDetail);
+
+  const groupLeaderboardEntry = document.getElementById('group-leaderboard-entry');
+  if (groupLeaderboardEntry) groupLeaderboardEntry.addEventListener('click', openGroupLeaderboard);
+
+  const clearHistoryEntry = document.getElementById('clear-history-entry');
+  if (clearHistoryEntry) clearHistoryEntry.addEventListener('click', clearGroupHistory);
+
+  const leaveGroupEntry = document.getElementById('leave-group-entry');
+  if (leaveGroupEntry) leaveGroupEntry.addEventListener('click', leaveGroup);
 }
 
 async function loadGroupCredits() {
@@ -244,26 +258,26 @@ async function loadGroupMembers() {
     const data = await api.getGroupMembers(currentGroupId);
     const members = data.members || [];
     const container = document.getElementById('group-members-container');
-    if (members.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无成员</div>';
-      return;
-    }
     let html = '';
     members.forEach(member => {
       const icon = member.member_type === 'agent' ? '🤖' : '👤';
-      const displayName = member.display_name;
-      const role = member.role === 'owner' ? '群主' : (member.role === 'agent' ? '智能体' : '成员');
+      const displayName = member.display_name || '成员';
       html += `
-        <div class="me-menu-item member-item">
-          <span class="menu-icon">${icon}</span>
-          <div class="menu-text">
-            <div class="menu-title">${displayName}</div>
-            <div class="menu-desc">${role}</div>
-          </div>
+        <div class="member-grid-item" data-user-id="${member.user_id || ''}" data-agent-id="${member.agent_id || ''}">
+          <div class="member-grid-avatar">${icon}</div>
+          <div class="member-grid-name">${displayName}</div>
         </div>
       `;
     });
+    html += `
+      <div class="member-grid-item member-grid-action" id="invite-member-btn"><div class="member-grid-avatar action">＋</div><div class="member-grid-name">邀请</div></div>
+      <div class="member-grid-item member-grid-action" id="remove-member-btn"><div class="member-grid-avatar action">－</div><div class="member-grid-name">移除</div></div>
+    `;
     container.innerHTML = html;
+    const inviteBtn = document.getElementById('invite-member-btn');
+    if (inviteBtn) inviteBtn.addEventListener('click', openInviteDialog);
+    const removeBtn = document.getElementById('remove-member-btn');
+    if (removeBtn) removeBtn.addEventListener('click', openRemoveDialog);
   } catch (e) {
     document.getElementById('group-members-container').innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
   }
@@ -364,4 +378,22 @@ async function openAgentSwitch() {
   } catch (e) {
     document.getElementById('agent-switch-list').innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
   }
+}
+
+function openAnnouncementEditor() { alert('群公告编辑开发中'); }
+function openNicknameEditor() { alert('昵称编辑开发中'); }
+function openGroupSearch() { alert('查找聊天记录开发中'); }
+function toggleGroupMute() { alert('免打扰开发中'); }
+function toggleGroupPin() {
+  api.togglePinGroup(currentGroupId, true).then(() => location.reload()).catch(e => alert('操作失败: ' + e.message));
+}
+function openGroupCreditsDetail() { alert('群积分详情开发中'); }
+function openGroupLeaderboard() { alert('群排行榜开发中'); }
+function clearGroupHistory() {
+  if (!confirm('确定清空本群聊天记录（仅你的视角）？')) return;
+  alert('清空功能开发中');
+}
+function leaveGroup() {
+  if (!confirm('确定退出群聊？')) return;
+  api.removeGroupMember(currentGroupId, 'self').then(() => { window.closeSubpage(); location.reload(); }).catch(e => alert('失败: ' + e.message));
 }
