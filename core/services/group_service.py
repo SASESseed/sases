@@ -55,7 +55,11 @@ def list_user_groups(user_id: int):
     with db_cursor() as cur:
         cur.execute("""
             SELECT g.id, g.name, g.owner_id, g.mode, COALESCE(g.is_pinned, 0) as is_pinned,
-                   (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id) as member_count
+                   (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id) as member_count,
+                   (SELECT COUNT(*) FROM group_messages gm3
+                    WHERE gm3.group_id = g.id
+                      AND gm3.created_at > COALESCE(gm2.last_read_at, '1970-01-01')
+                      AND (gm3.sender_id IS NULL OR gm3.sender_id != ?)) as unread_count
             FROM groups g
             JOIN group_members gm2 ON g.id = gm2.group_id
             WHERE gm2.user_id = ?
