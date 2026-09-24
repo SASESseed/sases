@@ -159,7 +159,11 @@ function showSessionMenu(btn, items, onSelect) {
   menu.style.top = (r.bottom + 4) + 'px';
   menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
   setTimeout(() => {
-    const closer = () => { menu.remove(); document.removeEventListener('click', closer); };
+    const closer = (e) => {
+      if (btn.contains(e.target)) return;
+      menu.remove();
+      document.removeEventListener('click', closer);
+    };
     document.addEventListener('click', closer);
   }, 0);
 }
