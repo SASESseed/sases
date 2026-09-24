@@ -170,7 +170,6 @@ async function renderContacts(container) {
       <div class="me-menu-item" data-entry="new-agent">🧑‍🤝‍🧑 ${t('new_agent')}</div>
       <div class="me-menu-item" data-entry="api-agent">🔑 ${t('api_agent')}</div>
       <div class="me-menu-item" data-entry="group-chat">👥 ${t('group_chat')}</div>
-      <div class="me-menu-item" data-entry="friend-requests"><span style="width:24px;text-align:center;">📨</span><span>好友请求</span><span id="friend-requests-badge" style="display:none;background:#ff3b30;color:#fff;border-radius:10px;padding:0 6px;font-size:12px;margin-left:auto;"></span></div>
     </div>
     <div class="section-title">${t('my_agents')}</div>
     ${myAgentsHtml}
