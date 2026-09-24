@@ -54,12 +54,12 @@ def list_user_groups(user_id: int):
     """获取用户所在的群聊列表"""
     with db_cursor() as cur:
         cur.execute("""
-            SELECT g.id, g.name, g.owner_id, g.mode,
+            SELECT g.id, g.name, g.owner_id, g.mode, COALESCE(g.is_pinned, 0) as is_pinned,
                    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id) as member_count
             FROM groups g
             JOIN group_members gm2 ON g.id = gm2.group_id
             WHERE gm2.user_id = ?
-            ORDER BY g.created_at DESC
+            ORDER BY COALESCE(g.is_pinned, 0) DESC, g.created_at DESC
         """, (user_id,))
         rows = cur.fetchall()
     return [dict(row) for row in rows]
