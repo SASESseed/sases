@@ -46,7 +46,13 @@ export async function openWallet() {
       <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px;">点击进入算力钱包 ›</div>
     </div>
     <div class="me-menu">
-...
+      <div class="me-menu-item" id="wallet-seed-entry"><span class="menu-icon">🌱</span><span class="menu-label">种子积分明细</span><span class="menu-arrow">></span></div>
+      <div class="me-menu-item" id="wallet-compute-detail-entry"><span class="menu-icon">⚡</span><span class="menu-label">算力积分明细</span><span class="menu-arrow">></span></div>
+    </div>
+    <div class="me-menu">
+      <div class="me-menu-item" id="credit-risk-entry"><span class="menu-icon">⚠️</span><span class="menu-label">积分风险与使用说明</span><span class="menu-arrow">></span></div>
+    </div>
+    <div class="me-menu">
       <div class="me-menu-item" id="menu-exchange"><span class="menu-label">${t('exchange')}</span><span class="menu-arrow">›</span></div>
       <div class="me-menu-item" id="menu-stake"><span class="menu-label">${t('stake')}</span><span class="menu-arrow">›</span></div>
     </div>
