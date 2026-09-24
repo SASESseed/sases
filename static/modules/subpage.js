@@ -37,6 +37,19 @@ export function openSubpage(title, contentHtml, options = {}) {
     }
   }
 
+  const rightBtn = document.getElementById('subpage-right-btn');
+  if (rightBtn) {
+    if (options.rightBtn) {
+      rightBtn.textContent = options.rightBtn.text;
+      rightBtn.style.display = 'block';
+      rightBtn.onclick = options.rightBtn.onclick;
+    } else {
+      rightBtn.style.display = 'none';
+      rightBtn.onclick = null;
+    }
+  }
+
+
   const backBtn = document.getElementById('subpage-back-btn');
   if (backBtn) {
     backBtn.onclick = closeSubpage;
