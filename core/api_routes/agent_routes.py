@@ -41,8 +41,8 @@ async def list_friend_agents(user_id: int = Depends(get_current_user)):
     return {"friends": friends}
 
 @router.get("/search")
-async def search_agents(q: str, user_id: int = Depends(get_current_user)):
-    results = agent_service.search_agents(user_id, q)
+async def search_agents(q: str, include_self: bool = False, user_id: int = Depends(get_current_user)):
+    results = agent_service.search_agents(user_id, q, include_self)
     return {"results": results}
 
 @router.post("/friend-request")
