@@ -69,6 +69,15 @@ def list_user_groups(user_id: int):
     return [dict(row) for row in rows]
 
 
+def mark_group_read(group_id: int, user_id: int):
+    """标记群聊已读（更新 last_read_at）"""
+    from datetime import datetime as _dt
+    with db_cursor(commit=True) as cur:
+        cur.execute("UPDATE group_members SET last_read_at=? WHERE group_id=? AND user_id=?", (_dt.now().isoformat(), group_id, user_id))
+        return cur.rowcount > 0
+
+
+
 def toggle_group_pin(group_id: int, user_id: int, pinned: bool):
     """置顶/取消置顶群聊（仅检查成员身份）"""
     with db_cursor(commit=True) as cur:
