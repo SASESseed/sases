@@ -118,6 +118,16 @@ async def remove_member(group_id: int, body: GroupRemoveMemberRequest, user_id: 
     return {"status": "removed"}
 
 
+@router.post("/{group_id}/pin")
+async def toggle_pin(group_id: int, body: dict, user_id: int = Depends(get_current_user)):
+    pinned = bool(body.get('pinned'))
+    ok = group_service.toggle_group_pin(group_id, user_id, pinned)
+    if not ok:
+        raise HTTPException(status_code=403, detail='not a member')
+    return {'group_id': group_id, 'pinned': pinned}
+
+
+
 @router.post("/{group_id}/mode")
 async def set_group_mode(group_id: int, body: GroupModeRequest, user_id: int = Depends(get_current_user)):
     if body.mode not in ("normal", "swarm"):
