@@ -50,7 +50,7 @@ export async function openComputeWallet(returnAction) {
       const sign = isIncome ? '+' : '';
       const color = isIncome ? '#34c759' : '#ff3b30';
       const typeText = {
-        'recharge': '充值',
+        'recharge': '充值（旧记录）',
         'exchange': '积分兑换',
         'consume': '消费'
       }[tx.tx_type] || tx.tx_type;
@@ -67,20 +67,6 @@ export async function openComputeWallet(returnAction) {
     txHtml += '</div>';
   }
 
-  let packagesHtml = '';
-  if (pricing && pricing.packages) {
-    packagesHtml = '<div class="compute-packages">';
-    pricing.packages.forEach(p => {
-      packagesHtml += `
-        <div class="compute-package-card" data-package="${p.price}">
-          <div class="compute-package-price">¥${p.price}</div>
-          <div class="compute-package-compute">${p.compute} 算力</div>
-          ${p.bonus !== '0%' ? `<div class="compute-package-bonus">${p.bonus}</div>` : ''}
-        </div>
-      `;
-    });
-    packagesHtml += '</div>';
-  }
 
   const contentHtml = `
     <div class="wallet-card" style="background: linear-gradient(135deg, #667eea, #764ba2);">
@@ -91,8 +77,6 @@ export async function openComputeWallet(returnAction) {
       </div>
     </div>
 
-    <div class="section-title">充值套餐</div>
-    ${packagesHtml}
 
     <div class="me-menu">
       <div class="me-menu-item" id="compute-exchange-entry">
@@ -115,19 +99,6 @@ export async function openComputeWallet(returnAction) {
     returnAction: returnAction
   });
 
-  document.querySelectorAll('.compute-package-card').forEach(card => {
-    card.onclick = async () => {
-      const pkg = parseInt(card.dataset.package);
-      if (!confirm(`确认模拟充值 ¥${pkg}？`)) return;
-      try {
-        const res = await api.rechargeCompute(pkg);
-        alert(res.message);
-        openComputeWallet(returnAction);
-      } catch (e) {
-        alert('充值失败：' + e.message);
-      }
-    };
-  });
 
   const exchangeEntry = document.getElementById('compute-exchange-entry');
   if (exchangeEntry) {

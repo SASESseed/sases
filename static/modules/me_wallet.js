@@ -46,10 +46,6 @@ export async function openWallet() {
       <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px;">点击进入算力钱包 ›</div>
     </div>
     <div class="me-menu">
-      <div class="me-menu-item" id="wallet-seed-entry"><span class="menu-icon">🌱</span><span class="menu-label">种子积分明细</span><span class="menu-arrow">></span></div>
-      <div class="me-menu-item" id="wallet-compute-detail-entry"><span class="menu-icon">⚡</span><span class="menu-label">算力积分明细</span><span class="menu-arrow">></span></div>
-    </div>
-    <div class="me-menu">
       <div class="me-menu-item" id="credit-risk-entry"><span class="menu-icon">⚠️</span><span class="menu-label">积分风险与使用说明</span><span class="menu-arrow">></span></div>
     </div>
     <div class="me-menu">
@@ -170,38 +166,31 @@ async function showActionHistory(kind) {
 
 
 async function openCreditDetail(kind) {
-  const title = kind === 'seed' ? '种子积分明细' : '算力积分明细';
-  let history = [];
-  try {
-    const data = await api.getCreditHistory(50);
-    history = data.history || [];
-  } catch (e) {}
-  const isStake = h => (h.action || '').includes('质押') || (h.action || '').includes('stake');
-  const income = history.filter(h => (h.points || 0) > 0 && !isStake(h));
-  const expense = history.filter(h => (h.points || 0) < 0 && !isStake(h));
-  const stake = history.filter(isStake);
-  const render = (arr, empty) => arr.length === 0 ? '<div class="subpage-placeholder">' + empty + '</div>' : '<div class="me-menu">' + arr.map(h => {
-    const date = h.created_at ? new Date(h.created_at).toLocaleString('zh-CN') : '';
-    const sign = h.points > 0 ? '+' : '';
-    const color = h.points > 0 ? '#34c759' : '#ff3b30';
-    return '<div class="me-menu-item"><div class="menu-text"><div class="menu-title">' + (h.action || '积分变动') + '</div><div class="menu-desc">' + date + '</div></div><span class="menu-value" style="color:' + color + ';">' + sign + h.points + '</span></div>';
-  }).join('') + '</div>';
-  const html = '<div class="me-menu">' +
-    '<div class="me-menu-item tab-btn" id="tab-income" style="flex:1;justify-content:center;">获取 (' + income.length + ')</div>' +
-    '<div class="me-menu-item tab-btn" id="tab-expense" style="flex:1;justify-content:center;">消耗 (' + expense.length + ')</div>' +
-    '<div class="me-menu-item tab-btn" id="tab-stake" style="flex:1;justify-content:center;">质押 (' + stake.length + ')</div>' +
-    '</div>' +
-    '<div id="credit-list">' + render(income, '暂无获取记录') + '</div>';
-  window.openSubpage(title, html, { showMore: false, returnAction: () => openWallet() });
-  const list = document.getElementById('credit-list');
-  const setActive = (id) => {
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  };
-  document.getElementById('tab-income').onclick = () => { list.innerHTML = render(income, '暂无获取记录'); setActive('tab-income'); };
-  document.getElementById('tab-expense').onclick = () => { list.innerHTML = render(expense, '暂无消耗记录'); setActive('tab-expense'); };
-  document.getElementById('tab-stake').onclick = () => { list.innerHTML = render(stake, '暂无质押记录'); setActive('tab-stake'); };
-  setActive('tab-income');
+const isSeed=kind==='seed';
+const title=isSeed?'种子积分明细':'算力积分明细';
+let items=[];
+try {
+if (isSeed) {
+const raw=(await api.getCreditHistory(50)).history||[];
+items=raw.map(h=>({title:h.action||'积分变动',amount:h.points||0,time:h.created_at,cat:(h.action||'').includes('质押')?'stake':((h.points||0)>0?'income':'expense')}));
+} else {
+const raw=(await api.getComputeTransactions(50)).transactions||[];
+items=raw.map(t=>({title:({recharge:'充值',exchange:'积分兑换',consume:'算力消费'}[t.tx_type]||t.tx_type)+(t.service_key?' · '+t.service_key:''),amount:t.amount||0,time:t.created_at,cat:(t.amount||0)>0?'income':'expense'}));
+}
+} catch (e) {}
+const fmt=iso=>{if(!iso)return '';const d=new Date(iso),n=new Date(),pad=x=>(x<10?'0'+x:x);const hm=pad(d.getHours())+':'+pad(d.getMinutes());if(d.toDateString()===n.toDateString())return hm;if(d.toDateString()===new Date(n.getTime()-86400000).toDateString())return '昨天 '+hm;return (d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm;};
+const render=arr=>arr.length===0?'<div class="subpage-placeholder" style="padding:40px 0;text-align:center;color:#999;">暂无记录</div>':arr.map(it=>'<div class="me-menu-item"><div class="menu-text"><div class="menu-title">'+it.title+'</div><div class="menu-desc" style="color:#999;font-size:12px;">'+fmt(it.time)+'</div></div><span class="menu-value" style="color:'+(it.amount>0?'#34c759':'#ff3b30')+';">'+(it.amount>0?'+':'')+it.amount+'</span></div>').join('');
+const cats=isSeed?[{k:'all',l:'全部'},{k:'income',l:'获取'},{k:'expense',l:'消耗'},{k:'stake',l:'质押'}]:[{k:'all',l:'全部'},{k:'income',l:'获取'},{k:'expense',l:'消耗'}];
+const tabs=cats.map(c=>'<div class="credit-tab credit-tab-'+c.k+'" style="flex:1;text-align:center;padding:8px 0;font-size:14px;color:#666;cursor:pointer;">'+c.l+'</div>').join('');
+const html='<div style="display:flex;border-bottom:1px solid #eee;">'+tabs+'</div><div id="credit-list" style="padding:8px 12px;"></div>';
+window.openSubpage(title,html,{showMore:false,returnAction:()=>openWallet()});
+const list=document.getElementById('credit-list');
+const applyFilter=k=>{
+list.innerHTML=render(k==='all'?items:items.filter(it=>it.cat===k));
+cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(!el)return;const a=c.k===k;el.style.color=a?'#007aff':'#666';el.style.fontWeight=a?'600':'400';el.style.borderBottom=a?'2px solid #007aff':'none';});
+};
+cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(el)el.onclick=()=>applyFilter(c.k);});
+applyFilter('all');
 }
 
 
