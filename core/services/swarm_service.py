@@ -1339,20 +1339,20 @@ async def handle_step_done(
                 if not _is_hands_on:
                     _is_simple = False
                 # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
-                # 修复：只对成功的 file_patch / run_python 生效，避免误判
+                # 修复 v2：用 command 字段判断（results 里 module_id 被合并进 command）
                 if _run_id:
                     try:
                         _has_core = False
                         for _r in task['results']:
                             _r_status = str(_r.get('status') or '')
-                            _r_mod = str(_r.get('module_id') or '')
+                            _r_cmd = str(_r.get('command') or '')
                             _desc = str(_r.get('description') or '')
-                            _params = str(_r.get('params') or '')
+                            _out = str(_r.get('output') or '')
                             if _r_status != 'success':
                                 continue
-                            if _r_mod not in ('file_patch', 'run_python'):
+                            if _r_cmd not in ('file_patch', 'run_python'):
                                 continue
-                            if 'core/' in _desc or 'core/' in _params:
+                            if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True
                                 break
                         if _has_core:
@@ -1514,20 +1514,20 @@ async def handle_step_done(
                 if not _is_hands_on:
                     _is_simple = False
                 # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
-                # 修复：只对成功的 file_patch / run_python 生效，避免误判
+                # 修复 v2：用 command 字段判断（results 里 module_id 被合并进 command）
                 if _run_id:
                     try:
                         _has_core = False
                         for _r in task['results']:
                             _r_status = str(_r.get('status') or '')
-                            _r_mod = str(_r.get('module_id') or '')
+                            _r_cmd = str(_r.get('command') or '')
                             _desc = str(_r.get('description') or '')
-                            _params = str(_r.get('params') or '')
+                            _out = str(_r.get('output') or '')
                             if _r_status != 'success':
                                 continue
-                            if _r_mod not in ('file_patch', 'run_python'):
+                            if _r_cmd not in ('file_patch', 'run_python'):
                                 continue
-                            if 'core/' in _desc or 'core/' in _params:
+                            if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True
                                 break
                         if _has_core:
