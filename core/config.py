@@ -8,7 +8,6 @@ load_dotenv()
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
-# e2e-restart-test
 
 # ========== Embedding 配置（用于知识库语义检索） ==========
 # 优先用专用 Embedding API，未配置时回退到 DeepSeek 配置
