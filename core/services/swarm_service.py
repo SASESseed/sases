@@ -1362,6 +1362,10 @@ async def handle_step_done(
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                            try:
+                                supervisor_service.signal_restart(_run_id, 'restart_pending')
+                            except Exception as _se:
+                                print(f"[supervisor] signal_restart 失败: {_se}")
                         except Exception as _e:
                             print(f"[supervisor] 标记 restart_pending 失败: {_e}")
                         return {"status": "restart_pending", "task_id": task_id}
@@ -1508,6 +1512,10 @@ async def handle_step_done(
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                            try:
+                                supervisor_service.signal_restart(_run_id, 'restart_pending')
+                            except Exception as _se:
+                                print(f"[supervisor] signal_restart 失败: {_se}")
                         except Exception as _e:
                             print(f"[supervisor] 标记 restart_pending 失败: {_e}")
                         return {"status": "restart_pending", "task_id": task_id}
