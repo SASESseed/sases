@@ -465,28 +465,12 @@ async def resume_restart_pending_runs():
             return
         for row in rows:
             _rid = row['id']
+            # 修复死循环：直接标记 completed，不再重新 plan_task
+            # 原因：文件已改完 + 服务已重启，任务实质已完成；
+            # 重新 plan 会导致再次碰到 core/ 再次 restart_pending 无限循环
             with db_cursor(commit=True) as cur2:
-                cur2.execute("UPDATE supervisor_runs SET status='running' WHERE id=?", (_rid,))
-            try:
-                _hist = json.loads(row.get('history') or '[]')
-                _last_plan = ''
-                if _hist:
-                    _last_plan = (_hist[-1].get('plan') or '')[:200]
-            except Exception:
-                _last_plan = ''
-            _goal = (row.get('goal') or '')[:300]
-            _text = '继续未完成的任务。原目标：' + _goal + '。上一轮完成：' + _last_plan + '。请继续做剩余部分。'
-            print('[supervisor] resuming run ' + str(_rid))
-            try:
-                await swarm_service.plan_task(
-                    user_id=row['user_id'],
-                    conversation_id=row['conversation_id'],
-                    user_input=_text,
-                    supervisor_id=row.get('supervisor_id'),
-                    supervisor_run_id=_rid,
-                )
-            except Exception as e:
-                print('[supervisor] resume run ' + str(_rid) + ' failed: ' + str(e))
+                cur2.execute("UPDATE supervisor_runs SET status='completed' WHERE id=?", (_rid,))
+            print('[supervisor] resume: run ' + str(_rid) + ' 标记 completed（重启已完成）')
     except Exception as e:
         print('[supervisor] resume_restart_pending_runs failed: ' + str(e))
 
