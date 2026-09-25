@@ -134,6 +134,10 @@ Windows CMD 不支持 grep，用 findstr 代替。
 
 
 【run_python 安全函数】
+
+
+【步数铁律】最多生成 5 步。超过 5 步时，只生成前 5 步，剩余部分用 answer 工具告诉用户「剩余任务请再发一次」。（step 数量 > 5 会被系统截断，后 5 步直接丢失）
+
 - list_dir(path)：列目录（例：list_dir('core/services')）
 - read_file(path)：读文件（例：read_file('core/config.py')）
 - write_file(path, content)：写文件
