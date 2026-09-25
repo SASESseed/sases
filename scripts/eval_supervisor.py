@@ -46,7 +46,7 @@ async def run_one(task):
 
 async def main():
     results = []
-    for task in EVAL_TASKS:
+    for task in EVAL_TASKS[:2]:
         if ONLY != 'all' and task['id'] != ONLY:
             continue
         r = await run_one(task)

@@ -156,8 +156,6 @@ COMMAND_PREFIX_MAP = {
     "#5": "clear_lock",
     "#5:": "unlock",
     "#5：": "unlock",
-    "#5:": "unlock",
-    "#5：": "unlock",
     "#1:": "exec", "#1：": "exec",
     "#2:": "task", "#2：": "task",
     "#3:": "draft", "#3：": "draft",
@@ -274,6 +272,36 @@ async def send_message(
     mode: str = "normal"
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
+
+
+    # #5 清锁（最先拦截，绕过所有锁检查）
+    if isinstance(content, str) and content.strip().startswith('#5'):
+        try:
+            from . import swarm_service as _sw5
+            _cl = _sw5.clear_conversation_lock(conversation_id)
+            _msg = '已清除会话锁' if _cl else '无活跃锁'
+        except Exception as _e5:
+            _msg = '清锁失败: ' + str(_e5)
+        if conversation_id:
+            try:
+                with db_cursor(commit=True) as _c5:
+                    _c5.execute(
+                        "INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)",
+                        (conversation_id, _msg, sender_agent_id or agent_id)
+                    )
+                    _c5.execute('UPDATE conversations SET updated_at=? WHERE id=?', (datetime.now().isoformat(), conversation_id))
+            except Exception:
+                pass
+        return {
+            'conversation_id': conversation_id,
+            'user_message': content,
+            'assistant_reply': _msg,
+            'agent_id': agent_id,
+            'sender_agent_id': sender_agent_id,
+            'mode': mode,
+            'clear_lock': True
+        }
+
     _supervisor_id = sender_agent_id or agent_id
     _raw_content = content if isinstance(content, str) else ''
     # 不切换身份时，若会话默认是 SASES 助手，自动用 agent_id 当发送者
