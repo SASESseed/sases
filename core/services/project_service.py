@@ -187,6 +187,7 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
 
 
 def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None, user_id=0):
+    user_id = int(user_id or 0)
     """检索项目库分片。user_id=0 时只查系统文档；否则查系统文档 + 该用户私有文档。"""
     rows = []
     with db_cursor() as cur:
