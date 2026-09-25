@@ -97,9 +97,6 @@ def _split_markdown(text):
 
 
 def import_document(source_file, source_version, raw_text, auto_replace=True, user_id=0, allow_system=False):
-    if user_id == 0 and not allow_system:
-        raise PermissionError("拒绝执行: user_id=0 为系统调用，需显式传入 allow_system=True")
-
     """导入一份文档。auto_replace=True 时先删除同 source_file 的旧分片。
     user_id=0 表示系统文档，需 allow_system=True 才能写入（默认只允许脚本/管理员）。"""
     if user_id == 0 and not allow_system:
@@ -187,8 +184,8 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
 
 
 def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None, user_id=0):
-    user_id = int(user_id or 0)
     """检索项目库分片。user_id=0 时只查系统文档；否则查系统文档 + 该用户私有文档。"""
+    user_id = int(user_id or 0)
     rows = []
     with db_cursor() as cur:
         cur.execute("SELECT id, source_file, section_path, content, embedding, freshness_score, updated_at FROM project_docs WHERE status='active' AND (user_id=0 OR user_id IS NULL OR user_id=?)", (user_id,))

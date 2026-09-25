@@ -1446,6 +1446,32 @@ async def handle_step_done(
         if failed and task["retry_count"] < 2:
             task["retry_count"] += 1
             print(f"[swarm] 发现 {len(failed)} 个失败步骤，触发重拆 (第 {task['retry_count']} 次)")
+
+            # 重拆前先检查：已成功的步骤里是否有 core/ 改动
+            _core_before_replan = False
+            try:
+                for _r in task["results"]:
+                    _st = str(_r.get('status') or '')
+                    _cmd = str(_r.get('command') or '')
+                    _desc = str(_r.get('description') or '')
+                    _out = str(_r.get('output') or '')
+                    if _st == 'success' and _cmd == 'file_patch' and ('core/' in _desc or 'core/' in _out):
+                        _core_before_replan = True
+                        break
+            except Exception:
+                pass
+            if _core_before_replan and not _is_resumed_chk:
+                try:
+                    supervisor_service.finish_run(_run_id, 'restart_pending')
+                    print(f"[supervisor] run {_run_id} 重拆前发现 core/ 改动，优先触发 restart_pending")
+                    try:
+                        supervisor_service.signal_restart(_run_id, 'restart_pending')
+                    except Exception as _se:
+                        print(f"[supervisor] signal_restart 失败: {_se}")
+                except Exception as _e:
+                    print(f"[supervisor] 标记 restart_pending 失败: {_e}")
+                return {"status": "restart_pending", "task_id": task_id}
+
             new_steps = await replan_failed_steps(task)
 
             if new_steps:
