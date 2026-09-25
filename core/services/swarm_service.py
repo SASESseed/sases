@@ -1408,6 +1408,17 @@ async def handle_step_done(
                     _review = None
                     if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
                         _review = await supervisor_service.task_summarizer(task)
+                    # 每轮写入 history，供 resume 时判断是否已达成目标
+                    if _run_id and _review:
+                        try:
+                            supervisor_service.record_round(
+                                _run_id,
+                                plan_summary=_steps_text,
+                                exec_summary=_exec_text,
+                                review=_review,
+                            )
+                        except Exception as _e_rec:
+                            print(f"[supervisor] record_round 失败: {_e_rec}")
                     _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text, review=_review)
                     if _continue:
                         if _review and getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
@@ -1619,6 +1630,17 @@ async def handle_step_done(
                     _review = None
                     if getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
                         _review = await supervisor_service.task_summarizer(task)
+                    # 每轮写入 history，供 resume 时判断是否已达成目标
+                    if _run_id and _review:
+                        try:
+                            supervisor_service.record_round(
+                                _run_id,
+                                plan_summary=_steps_text,
+                                exec_summary=_exec_text,
+                                review=_review,
+                            )
+                        except Exception as _e_rec:
+                            print(f"[supervisor] record_round 失败: {_e_rec}")
                     _continue, _ = await supervisor_service.check_and_continue(_run_id, summary, plan_text=_steps_text, exec_text=_exec_text, review=_review)
                     if _continue:
                         if _review and getattr(supervisor_service, 'USE_STRUCTURED_REVIEW', False):
