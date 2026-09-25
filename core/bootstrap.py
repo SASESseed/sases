@@ -188,6 +188,8 @@ async def lifespan(app: FastAPI):
     backup_task = asyncio.create_task(backup_service.periodic_backup_task())
     executor_task = asyncio.create_task(executor_service.start_background_executor())
     cleanup_task = asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24))
+    from .services import state_service as _state_svc
+    _state_task = asyncio.create_task(_state_svc.periodic_state_sync(interval_hours=24))
     pattern_task = asyncio.create_task(periodic_pattern_finalize())
     git_push_task = asyncio.create_task(periodic_git_push())
     syntax_check_task = asyncio.create_task(periodic_syntax_check())
@@ -218,6 +220,7 @@ async def lifespan(app: FastAPI):
     backup_task.cancel()
     executor_task.cancel()
     cleanup_task.cancel()
+    _state_task.cancel()
 
     if '_restart_watch_task' in dir():
         _restart_watch_task.cancel()
