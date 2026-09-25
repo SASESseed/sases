@@ -1355,7 +1355,17 @@ async def handle_step_done(
                             if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True
                                 break
-                        if _has_core:
+                        # running_resumed 状态下跳过 restart_pending（防止续跑死循环）
+                        _is_resumed_chk = False
+                        try:
+                            from . import supervisor_service as _sv_chk
+                            _run_row_chk = _sv_chk.get_run(_run_id)
+                            if _run_row_chk and _run_row_chk.get('status') == 'running_resumed':
+                                _is_resumed_chk = True
+                                print(f"[supervisor] run {_run_id} 处于 running_resumed，跳过 restart_pending")
+                        except Exception:
+                            pass
+                        if _has_core and not _is_resumed_chk:
                             from . import supervisor_service as _sv_pre
                             _sv_pre.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
@@ -1530,7 +1540,17 @@ async def handle_step_done(
                             if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True
                                 break
-                        if _has_core:
+                        # running_resumed 状态下跳过 restart_pending（防止续跑死循环）
+                        _is_resumed_chk = False
+                        try:
+                            from . import supervisor_service as _sv_chk
+                            _run_row_chk = _sv_chk.get_run(_run_id)
+                            if _run_row_chk and _run_row_chk.get('status') == 'running_resumed':
+                                _is_resumed_chk = True
+                                print(f"[supervisor] run {_run_id} 处于 running_resumed，跳过 restart_pending")
+                        except Exception:
+                            pass
+                        if _has_core and not _is_resumed_chk:
                             from . import supervisor_service as _sv_pre
                             _sv_pre.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")

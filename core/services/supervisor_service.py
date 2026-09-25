@@ -473,6 +473,38 @@ async def resume_restart_pending_runs():
             print('[supervisor] resume: run ' + str(_rid) + ' 标记 completed（重启已完成）')
     except Exception as e:
         print('[supervisor] resume_restart_pending_runs failed: ' + str(e))
+async def resume_restart_pending_runs():
+    import asyncio
+    await asyncio.sleep(10)
+    try:
+        from . import swarm_service
+        with db_cursor() as cur:
+            cur.execute("SELECT id, conversation_id, user_id, goal, supervisor_id, history FROM supervisor_runs WHERE status='restart_pending' ORDER BY id DESC LIMIT 5")
+            rows = [dict(r) for r in cur.fetchall()]
+        if not rows:
+            return
+        for row in rows:
+            _rid = row['id']
+            # 续跑：改成 running_resumed，继续 plan_task
+            # handle_step_done 检测到 running_resumed 会跳过 restart_pending 判断，防止死循环
+            with db_cursor(commit=True) as cur2:
+                cur2.execute("UPDATE supervisor_runs SET status='running_resumed' WHERE id=?", (_rid,))
+            _goal = (row.get('goal') or '')[:300]
+            _text = '继续未完成的任务。原目标：' + _goal + '。已完成的部分不要重复，请继续做剩余部分。'
+            print('[supervisor] resume: run ' + str(_rid) + ' 标记 running_resumed，继续执行')
+            try:
+                await swarm_service.plan_task(
+                    user_id=row['user_id'],
+                    conversation_id=row['conversation_id'],
+                    user_input=_text,
+                    supervisor_id=row.get('supervisor_id'),
+                    supervisor_run_id=_rid,
+                )
+            except Exception as e:
+                print('[supervisor] resume run ' + str(_rid) + ' failed: ' + str(e))
+    except Exception as e:
+        print('[supervisor] resume_restart_pending_runs failed: ' + str(e))
+
 
 
 
