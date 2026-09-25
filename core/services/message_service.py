@@ -516,7 +516,7 @@ async def send_message(
             # 文字导入（"导入知识库：xxx" 格式）
             _INLINE_PREFIXES = ('导入知识库：', '导入知识库:', '加入知识库：', '加入知识库:', '存到知识库：', '存到知识库:')
             _inline_text = None
-            if sender_agent_id:
+            if _is_sases_agent:
                 for _ip in _INLINE_PREFIXES:
                     if content.startswith(_ip):
                         _inline_text = content[len(_ip):].strip()

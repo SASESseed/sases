@@ -19,8 +19,10 @@ def _ctx_key(user_id, conversation_id, mode, supervisor_id, query):
     return (user_id, conversation_id, mode, supervisor_id, (query or '')[:50])
 
 
-def import_file_to_kb(file_url, original_name, user_id):
-    """把用户上传的文件导入项目库"""
+def import_file_to_kb(file_url, original_name, user_id, supervisor_id=None):
+    """把用户上传的文件导入项目库（仅 SASES 助手触发）"""
+    if not supervisor_id or not (supervisor_id.startswith('sases_assistant') or supervisor_id.startswith('sases_api_')):
+        return {'success': False, 'error': 'only sases assistant can import to kb'}
     import os as _os_i
     try:
         from . import project_service

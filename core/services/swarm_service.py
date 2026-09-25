@@ -1677,8 +1677,10 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
 
 
     # 写入执行笔记（v0.17.0）
+    # 隔离：任务执行产生的笔记不写入个人项目库（避免污染用户知识库检索）
+    _ISOLATE_EXECUTION_NOTE = True
     try:
-        if user_id and task_id and results:
+        if user_id and task_id and results and not _ISOLATE_EXECUTION_NOTE:
             from . import project_service
             _digest = ' | '.join([str(r.get('step')) + '.' + str(r.get('status', '?')) for r in results[:5]])
             _outcome = 'success' if all(r.get('review') != 'retry' for r in results) else 'partial'
