@@ -188,7 +188,7 @@ def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None, u
             d = dict(r)
             d['_origin'] = 'project'
             rows.append(d)
-        cur.execute("SELECT id, task_id, user_input, summary, embedding, created_at FROM execution_notes WHERE status='active'")
+        cur.execute("SELECT id, task_id, user_input, summary, embedding, created_at FROM execution_notes WHERE status='active' AND (user_id=? OR user_id IS NULL)", (user_id,))
         for r in cur.fetchall():
             d = dict(r)
             d['_origin'] = 'execution'
