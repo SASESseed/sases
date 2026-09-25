@@ -171,7 +171,6 @@ export function showFreeModeGuide(container) {
 
     <div>· #5：清除会话锁，例 #5：清锁</div>
 
-    <div>· #5：清除会话锁，例 #5：清锁</div>
 
     <div>· 点击 🤖 切换智能体身份</div>
     <div style="margin-top:8px; text-align:right;">
