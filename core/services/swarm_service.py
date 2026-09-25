@@ -1494,6 +1494,18 @@ async def handle_step_done(
             except Exception:
                 pass
             if _core_before_replan and not _is_resumed_chk:
+                # 先写一条"已完成"的 review，避免 resume 时误判为未完成
+                try:
+                    _steps_txt_re = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
+                    _exec_txt_re = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                    supervisor_service.record_round(
+                        _run_id,
+                        plan_summary=_steps_txt_re,
+                        exec_summary=_exec_txt_re,
+                        review={'goal_achieved': True, 'goal_reason': '改动完成，仅需重启验证', 'missing': [], 'next_hint': ''},
+                    )
+                except Exception as _e_rec4:
+                    print(f"[supervisor] record_round (replan) 失败: {_e_rec4}")
                 try:
                     supervisor_service.finish_run(_run_id, 'restart_pending')
                     print(f"[supervisor] run {_run_id} 重拆前发现 core/ 改动，优先触发 restart_pending")
