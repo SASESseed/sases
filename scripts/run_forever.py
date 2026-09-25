@@ -15,6 +15,18 @@ while True:
         time.sleep(2)
         continue
 
+    # 启动前清理 8001 端口占用（防止孤儿进程卡住）
+    try:
+        import subprocess as _sp
+        _r = _sp.run(["netstat", "-ano"], capture_output=True, text=True, timeout=5)
+        for _line in _r.stdout.splitlines():
+            if ":8001" in _line and "LISTENING" in _line:
+                _pid = _line.strip().split()[-1]
+                _sp.run(["taskkill", "/F", "/PID", _pid], capture_output=True, timeout=5)
+                print(f"[wrapper] killed orphan pid={_pid} on :8001", flush=True)
+    except Exception as _e:
+        print(f"[wrapper] port cleanup failed: {_e}", flush=True)
+
     print("[wrapper] start", flush=True)
     s = time.time()
     p = subprocess.Popen(C, cwd=R, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
