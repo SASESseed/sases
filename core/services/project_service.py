@@ -116,6 +116,28 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
         print(f"[project] 相同内容已在 {_ex['source_file']} 存在，跳过")
         return 0
 
+    # 语义去重（与现有分片比对，相似度 > 0.92 则跳过）
+    try:
+        import numpy as _np_s
+        _new_emb = _get_embedder().get_embedding(raw_text)
+        if _new_emb is not None:
+            _new_vec = _np_s.asarray(_new_emb, dtype=_np_s.float32).flatten()
+            with db_cursor() as _cur_s:
+                _cur_s.execute("""
+                    SELECT id, source_file, embedding FROM project_docs 
+                    WHERE status='active' AND (user_id=0 OR user_id IS NULL OR user_id=?) LIMIT 500""", (user_id,))
+                _cands = _cur_s.fetchall()
+            for _c in _cands:
+                _old_emb = _blob_to_embed(_c['embedding'])
+                if _old_emb is None:
+                    continue
+                _sim = _cosine_sim(_new_vec, _old_emb)
+                if _sim > 0.92:
+                    print('[project] 语义重复(sim=' + str(round(_sim, 3)) + ')，与 ' + str(_c['source_file']) + ' 相似，跳过')
+                    return 0
+    except Exception as _e_s:
+        print('[project] 语义去重异常（忽略）: ' + str(_e_s))
+
     chunks = _split_markdown(raw_text)
     if not chunks:
         print(f"[project] {source_file} 未分片成功")

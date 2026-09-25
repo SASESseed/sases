@@ -215,6 +215,48 @@ def _enrich_attachment(content):
     return content
 
 
+def _extract_text_from_image(image_url):
+    """Extract full text from an image for KB import."""
+    import os as _os_x, base64 as _b64_x, openai as _oai_x
+    from .. import config as _cfg_x
+    try:
+        _fn = (image_url or '').split('/')[-1]
+        if not _fn:
+            return None
+        _fp = _os_x.path.join('uploads', _fn)
+        if not _os_x.path.exists(_fp):
+            return None
+        with open(_fp, 'rb') as _f:
+            _raw = _f.read()
+        _low = _fn.lower()
+        _mime = 'image/png'
+        if _low.endswith('.jpg') or _low.endswith('.jpeg'):
+            _mime = 'image/jpeg'
+        elif _low.endswith('.gif'):
+            _mime = 'image/gif'
+        elif _low.endswith('.webp'):
+            _mime = 'image/webp'
+        _b64s = _b64_x.b64encode(_raw).decode()
+        _cli = _oai_x.OpenAI(api_key=_cfg_x.DEEPSEEK_API_KEY, base_url=_cfg_x.DEEPSEEK_BASE_URL, timeout=60)
+        _r = _cli.chat.completions.create(
+            model=_cfg_x.VISION_MODEL_NAME,
+            messages=[{'role': 'user', 'content': [
+                {'type': 'text', 'text': '请完整提取这张图片中的所有文字内容，保留排版结构。只输出文字，不要任何说明。'},
+                {'type': 'image_url', 'image_url': {'url': 'data:' + _mime + ';base64,' + _b64s}}
+            ]}],
+            max_tokens=4000
+        )
+        _msg = _r.choices[0].message
+        _txt = (_msg.content or '').strip()
+        if not _txt:
+            _rc = getattr(_msg, 'reasoning_content', None) or ''
+            _txt = _rc.strip()
+        return _txt or None
+    except Exception as _e_x:
+        print('[message] 提取图片文字失败: ' + str(_e_x))
+        return None
+
+
 DRAFT_PREFIXES = ("草稿：", "草稿:", "编辑：", "编辑:")
 
 
