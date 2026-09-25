@@ -11,6 +11,7 @@ DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.co
 # auto-restart e2e test
 # auto-restart e2e test 2
 # auto-restart e2e test 2
+# auto-restart e2e test 2
 MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
 
 # ========== Embedding 配置（用于知识库语义检索） ==========
