@@ -1338,6 +1338,25 @@ async def handle_step_done(
                 _is_hands_on = (_s1_type == 'harness' and _s1_mod in ('file_patch', 'run_python', 'verify_patch'))
                 if not _is_hands_on:
                     _is_simple = False
+                # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
+                if _run_id:
+                    try:
+                        _has_core = False
+                        for _r in task['results']:
+                            _cmd = str(_r.get('command') or '')
+                            _desc = str(_r.get('description') or '')
+                            _params = str(_r.get('params') or '')
+                            if 'core/' in _desc or 'core/' in _params:
+                                _has_core = True
+                                break
+                        if _has_core:
+                            from . import supervisor_service as _sv_pre
+                            _sv_pre.finish_run(_run_id, 'restart_pending')
+                            print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                            _sv_pre.signal_restart(_run_id, 'restart_pending')
+                            return {'status': 'restart_pending', 'task_id': task_id}
+                    except Exception as _e_pre:
+                        print(f"[supervisor] pre-restart 失败: {_e_pre}")
                 if _is_simple:
                     from . import supervisor_service as _sv_done
                     _sv_done.finish_run(_run_id, 'completed')
@@ -1488,6 +1507,25 @@ async def handle_step_done(
                 _is_hands_on = (_s1_type == 'harness' and _s1_mod in ('file_patch', 'run_python', 'verify_patch'))
                 if not _is_hands_on:
                     _is_simple = False
+                # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
+                if _run_id:
+                    try:
+                        _has_core = False
+                        for _r in task['results']:
+                            _cmd = str(_r.get('command') or '')
+                            _desc = str(_r.get('description') or '')
+                            _params = str(_r.get('params') or '')
+                            if 'core/' in _desc or 'core/' in _params:
+                                _has_core = True
+                                break
+                        if _has_core:
+                            from . import supervisor_service as _sv_pre
+                            _sv_pre.finish_run(_run_id, 'restart_pending')
+                            print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
+                            _sv_pre.signal_restart(_run_id, 'restart_pending')
+                            return {'status': 'restart_pending', 'task_id': task_id}
+                    except Exception as _e_pre:
+                        print(f"[supervisor] pre-restart 失败: {_e_pre}")
                 if _is_simple:
                     from . import supervisor_service as _sv_done
                     _sv_done.finish_run(_run_id, 'completed')
