@@ -139,6 +139,33 @@ def cleanup_low_value_patterns() -> dict:
 
 
 
+def scan_test_marks(dry_run: bool = True) -> dict:
+    """扫描代码里的测试残留标记。dry_run=True 只报告不删除。"""
+    import os as _os
+    PATTERNS = ['e2e-restart-test', 'restart-cycle-test', 'file_patch 权限测试', '# TEST:']
+    SCAN_DIRS = ['core', 'static', 'scripts', 'harness_modules']
+    findings = []
+    for _d in SCAN_DIRS:
+        if not _os.path.isdir(_d):
+            continue
+        for _root, _, _files in _os.walk(_d):
+            if 'venv' in _root or '.git' in _root or '__pycache__' in _root or '.backups' in _root:
+                continue
+            for _f in _files:
+                if not _f.endswith(('.py', '.js', '.css', '.html')):
+                    continue
+                _fp = _os.path.join(_root, _f)
+                try:
+                    with open(_fp, 'r', encoding='utf-8', errors='ignore') as _fh:
+                        for _i, _line in enumerate(_fh, 1):
+                            for _p in PATTERNS:
+                                if _p in _line:
+                                    findings.append({'file': _fp, 'line': _i, 'text': _line.strip()[:120]})
+                except Exception:
+                    pass
+    return {'dry_run': dry_run, 'count': len(findings), 'findings': findings}
+
+
 def cleanup_all() -> dict:
     """执行全部清理任务，返回各项删除数量"""
     result = {
