@@ -111,7 +111,6 @@ export function createMessageElement(role, content, senderName, messageId, timeI
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role, senderName); }
   if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
-  if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
@@ -335,7 +334,8 @@ export function renderAttachmentPreview(att) {
 
 
 export function renderImageBubble(content, role = 'user', senderName = null) {
-  const url = content.substring('[IMAGE]:'.length);
+  const raw = content.substring('[IMAGE]:'.length);
+  const url = raw.split('|')[0].split(' ')[0].trim();
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.flexDirection = 'row';
