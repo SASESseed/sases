@@ -446,6 +446,35 @@ async def send_message(
                 is_task = await intent_service.is_task_intent(content)
             print(f"[MSG_DEBUG] is_task={is_task}")
 
+            # 图片导入知识库
+            if _is_sases_agent:
+                _img_kw = ("图片导入知识库", "图片存入知识库", "这张图导入知识库", "把图存入知识库")
+                if any(_k in content for _k in _img_kw):
+                    if not conversation_id:
+                        conversation_id = create_conversation(user_id, agent_id or "sases_assistant_2", "图片导入")
+                    try:
+                        from . import image_import_service as _iis
+                        _img_reply = _iis.try_handle_image_import(content, conversation_id, user_id)
+                        if _img_reply:
+                            try:
+                                with db_cursor(commit=True) as _cwi:
+                                    _cwi.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _img_reply, sender_agent_id or agent_id))
+                                    _cwi.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                            except Exception as _eiw:
+                                print("[message] 图片导入回写失败: " + str(_eiw))
+                            return {
+                                "conversation_id": conversation_id,
+                                "user_message": content,
+                                "assistant_reply": _img_reply,
+                                "agent_id": agent_id,
+                                "sender_agent_id": sender_agent_id or agent_id,
+                                "mode": mode,
+                                "import_mode": "image"
+                            }
+                    except Exception as _eii:
+                        print("[message] 图片导入异常: " + str(_eii))
+
+
             # 文字导入（"导入知识库：xxx" 格式）
             _INLINE_PREFIXES = ('导入知识库：', '导入知识库:', '加入知识库：', '加入知识库:', '存到知识库：', '存到知识库:')
             _inline_text = None

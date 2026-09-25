@@ -55,4 +55,33 @@ def import_image_to_kb(image_url, user_id):
         return {'success': False, 'error': str(e)}
     if n > 0:
         return {'success': True, 'chunks': n, 'source': src}
-    return {'success': False, 'error': '图片文字重复或未新增'
+    return {'success': False, 'error': '图片文字重复或未新增'}
+
+
+
+
+def try_handle_image_import(content, conversation_id, user_id):
+    """检查 content 是否触发图片导入"""
+    from ..db import db_cursor
+    KW = ('图片导入知识库', '图片存入知识库', '这张图导入知识库', '把图存入知识库')
+    if not any(k in content for k in KW):
+        return None
+    irep = ''
+    try:
+        with db_cursor() as cur:
+            cur.execute('SELECT content FROM messages WHERE conversation_id=? AND content LIKE '[IMAGE]:%' ORDER BY id DESC LIMIT 1', (conversation_id,))
+            fi = cur.fetchone()
+        if not fi:
+            irep = '未找到最近的图片，请先发一张图。'
+        else:
+            fc = fi['content'] if 'content' in fi.keys() else ''
+            furl = fc[8:].split('|')[0].strip()
+            res = import_image_to_kb(furl, user_id)
+            if res.get('success'):
+                irep = '已导入 ' + str(res.get('chunks', 0)) + ' 个分片（' + res.get('source', '') + '）。'
+            else:
+                irep = '导入失败：' + res.get('error', '未知')
+    except Exception as e:
+        print('[image_import] 失败: ' + str(e))
+        irep = '图片导入异常：' + str(e)
+    return irep
