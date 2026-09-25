@@ -14,8 +14,8 @@ from . import memory_service
 client = openai.OpenAI(
     api_key=config.DEEPSEEK_API_KEY,
     base_url=config.DEEPSEEK_BASE_URL,
-    timeout=40,
-    max_retries=2
+    timeout=180,
+    max_retries=3
 )
 
 MODEL = config.MODEL_NAME

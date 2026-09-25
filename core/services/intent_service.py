@@ -15,7 +15,7 @@ from .. import config
 client = openai.OpenAI(
     api_key=config.DEEPSEEK_API_KEY,
     base_url=config.DEEPSEEK_BASE_URL,
-    timeout=15,
+    timeout=60,
     max_retries=1
 )
 
