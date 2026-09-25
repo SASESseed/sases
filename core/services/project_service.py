@@ -149,11 +149,11 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
     return count
 
 
-def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None):
-    """检索项目库分片，返回 [{section_path, content, score}, ...]"""
+def retrieve_project_chunks(query, top_k=MAX_CHUNKS_PER_QUERY, threshold=None, user_id=0):
+    """检索项目库分片。user_id=0 时只查系统文档；否则查系统文档 + 该用户私有文档。"""
     rows = []
     with db_cursor() as cur:
-        cur.execute("SELECT id, source_file, section_path, content, embedding, freshness_score, updated_at FROM project_docs WHERE status='active'")
+        cur.execute("SELECT id, source_file, section_path, content, embedding, freshness_score, updated_at FROM project_docs WHERE status='active' AND (user_id=0 OR user_id IS NULL OR user_id=?)", (user_id,))
         for r in cur.fetchall():
             d = dict(r)
             d['_origin'] = 'project'
