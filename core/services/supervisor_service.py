@@ -41,7 +41,7 @@ def import_file_to_kb(file_url, original_name, user_id):
         return {'success': False, 'error': 'empty file'}
     src = original_name or fn
     try:
-        n = project_service.import_document(src, 'v1.0-upload', raw)
+        n = project_service.import_document(src, 'v1.0-upload', raw, user_id=user_id)
     except Exception as e:
         return {'success': False, 'error': 'import failed: ' + str(e)}
     return {'success': True, 'chunks': n, 'file': src}
