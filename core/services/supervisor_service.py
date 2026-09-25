@@ -339,7 +339,7 @@ async def task_summarizer(task):
         desc = (r.get('description') or '')[:50]
         status = r.get('status', '?')
         cmd = r.get('command') or r.get('module_id') or ''
-        out = (r.get('output') or '')[:120]
+        out = (r.get('output') or r.get('answer') or '')[:300]
         steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
     prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步具体命令"}。判断规则：第一，逐条列出原始目标里的每一个要求（编号1/2/3/4），逐一核对是否真的通过 file_patch/file_read/run_python 等工具执行过，没执行过的放入missing。第二，如果执行结果里出现"剩余""请继续""请分批""请再发""下一步""未完成"等字眼，强制 goal_achieved=false。第三，把用户目标拆成子任务逐一核对，不因某一子任务完成就判整体完成。目标含总结/回答/分析/说明，必须有文字产出。目标含改/加/实现/修复，必须有成功 file_patch。目标含读/查看/列出，有 file_read 或 dir 即可。next_hint 必须具体写清工具+文件路径+动作，不许写重新探测。'
     client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)

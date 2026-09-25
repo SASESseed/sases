@@ -153,6 +153,7 @@ REQUIRE_TASK_CONFIRMATION = False
 
 # 草稿模式前缀（全角冒号和半角冒号都可以）
 COMMAND_PREFIX_MAP = {
+    "#5": "clear_lock",
     "#5:": "unlock",
     "#5：": "unlock",
     "#5:": "unlock",
