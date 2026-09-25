@@ -48,10 +48,15 @@ while True:
     except KeyboardInterrupt:
         p.terminate()
         sys.exit(0)
-    p.terminate()
+    # 杀进程树（防止 uvicorn 子进程变孤儿）
     try:
-        p.wait(10)
+        import subprocess as _sp
+        _sp.run(["taskkill", "/F", "/T", "/PID", str(p.pid)], capture_output=True, timeout=10)
     except Exception:
-        p.kill()
+        try:
+            p.terminate()
+            p.wait(5)
+        except Exception:
+            p.kill()
     print("[wrapper] restart", rr, flush=True)
     time.sleep(5)
