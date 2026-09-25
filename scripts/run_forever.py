@@ -5,6 +5,7 @@ BAD_ALLOC_THRESHOLD = 5
 
 while True:
     signal = os.path.join(R, "restart_signal.txt")
+    # restart signal handled
     if os.path.exists(signal):
         try:
             os.remove(signal)
