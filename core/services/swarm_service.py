@@ -821,6 +821,15 @@ def _parse_plan(raw: str) -> Optional[List[Dict[str, Any]]]:
 
 # ========== 主流程 ==========
 
+def clear_conversation_lock(conversation_id):
+    """清理指定会话的锁状态。"""
+    _locks = globals().get('_conversation_locks', None)
+    if isinstance(_locks, dict):
+        _locks.pop(conversation_id, None)
+    return {'ok': True, 'conversation_id': conversation_id}
+
+
+
 async def plan_task(
     user_id: int,
     conversation_id: int,
