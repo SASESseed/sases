@@ -1368,6 +1368,17 @@ async def handle_step_done(
                             pass
                         if _has_core and not _is_resumed_chk:
                             from . import supervisor_service as _sv_pre
+                            try:
+                                _steps_txt = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
+                                _exec_txt = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                                _sv_pre.record_round(
+                                    _run_id,
+                                    plan_summary=_steps_txt,
+                                    exec_summary=_exec_txt,
+                                    review={'goal_achieved': True, 'goal_reason': '改动完成，仅需重启验证', 'missing': [], 'next_hint': ''},
+                                )
+                            except Exception as _e_rec3:
+                                print(f"[supervisor] record_round (pre-restart) 失败: {_e_rec3}")
                             _sv_pre.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
                             _sv_pre.signal_restart(_run_id, 'restart_pending')
@@ -1600,6 +1611,17 @@ async def handle_step_done(
                             pass
                         if _has_core and not _is_resumed_chk:
                             from . import supervisor_service as _sv_pre
+                            try:
+                                _steps_txt = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
+                                _exec_txt = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
+                                _sv_pre.record_round(
+                                    _run_id,
+                                    plan_summary=_steps_txt,
+                                    exec_summary=_exec_txt,
+                                    review={'goal_achieved': True, 'goal_reason': '改动完成，仅需重启验证', 'missing': [], 'next_hint': ''},
+                                )
+                            except Exception as _e_rec3:
+                                print(f"[supervisor] record_round (pre-restart) 失败: {_e_rec3}")
                             _sv_pre.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
                             _sv_pre.signal_restart(_run_id, 'restart_pending')
