@@ -1230,7 +1230,6 @@ async def handle_step_done(
 ) -> Optional[Dict[str, Any]]:
     _is_resumed_chk = False
     task_id = payload.get("task_id")
-    _is_resumed_chk = False
     step_id = payload.get("step")
     if not task_id:
         return None
