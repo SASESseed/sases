@@ -324,6 +324,14 @@ async def task_summarizer(task):
     import asyncio
     from .. import config
     user_text = task.get('user_text', '')
+    _orig_run_id = task.get('supervisor_run_id')
+    if _orig_run_id:
+        try:
+            _orig_run = get_run(_orig_run_id)
+            if _orig_run and _orig_run.get('goal'):
+                user_text = _orig_run['goal']
+        except Exception:
+            pass
     results = task.get('results', [])
     steps = []
     for r in results:
