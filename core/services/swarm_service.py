@@ -347,6 +347,18 @@ def clear_conversation_lock(conversation_id: str) -> bool:
 
 
 
+def clear_conversation_lock(conversation_id):
+    """清除指定会话的锁状态"""
+    try:
+        for _name in ("_conversation_locks", "_pending_locks", "_locks", "_lock_map"):
+            _d = globals().get(_name)
+            if isinstance(_d, dict):
+                _d.pop(conversation_id, None)
+    except Exception:
+        return False
+    return True
+
+
 def _save_pending(task: Dict[str, Any]):
     try:
         with db_cursor(commit=True) as cur:

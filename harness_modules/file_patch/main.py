@@ -312,6 +312,8 @@ def run(params):
                         ok = False
                         err = (_r.stderr or '')[:300]
             except Exception as _e:
+                ok = False
+                err = str(_e)[:300]
                 print('[fp-wrapper] verify fail:', _e)
             if not ok:
                 bak = result.get('backup')
