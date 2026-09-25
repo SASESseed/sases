@@ -709,6 +709,8 @@ def init_db():
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        _ensure_column(cur, "project_docs", "user_id", "INTEGER DEFAULT 0")
+
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_source ON project_docs(source_file)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_hash ON project_docs(content_hash)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pdocs_status ON project_docs(status)")

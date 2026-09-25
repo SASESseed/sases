@@ -397,6 +397,34 @@ async def send_message(
                 is_task = await intent_service.is_task_intent(content)
             print(f"[MSG_DEBUG] is_task={is_task}")
 
+            # 导入知识库意图
+            _IMPORT_KW = ('导入知识库', '加入知识库', '存到项目库', '导入项目库', '存到知识库', '加到知识库')
+            if sender_agent_id and any(_k in content for _k in _IMPORT_KW):
+                try:
+                    with db_cursor() as _ci:
+                        _ci.execute("SELECT content FROM messages WHERE conversation_id=? AND content LIKE '[FILE]:%' ORDER BY id DESC LIMIT 1", (conversation_id,))
+                        _fi = _ci.fetchone()
+                    if not _fi:
+                        _irep = '未找到最近上传的文件，请先上传。'
+                    else:
+                        _fc = _fi['content'] if 'content' in _fi.keys() else ''
+                        _fp = _fc[7:].split('|')
+                        _furl = _fp[0] if len(_fp) > 0 else ''
+                        _fname = _fp[1] if len(_fp) > 1 else ''
+                        from . import supervisor_service as _svi
+                        _ires = _svi.import_file_to_kb(_furl, _fname, user_id)
+                        if _ires.get('success'):
+                            _irep = '已导入《' + _fname + '》，共 ' + str(_ires.get('chunks', 0)) + ' 个分片。'
+                        else:
+                            _irep = '导入失败：' + _ires.get('error', '未知')
+                    with db_cursor(commit=True) as _cwi:
+                        _cwi.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _irep, sender_agent_id))
+                        _cwi.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                    return {'conversation_id': conversation_id, 'user_message': content, 'assistant_reply': _irep, 'agent_id': agent_id, 'sender_agent_id': sender_agent_id, 'mode': mode, 'import_mode': True}
+                except Exception as _ei:
+                    print('[supervisor] 导入失败: ' + str(_ei))
+
+
             # 对话模式（v0.18.0）：非任务、非技术指令、非问候，直接回答
             pass
             if sender_agent_id and not is_task and not _is_operation and not _is_harness_call and not _is_greeting:
