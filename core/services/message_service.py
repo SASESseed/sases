@@ -155,6 +155,8 @@ REQUIRE_TASK_CONFIRMATION = False
 COMMAND_PREFIX_MAP = {
     "#5:": "unlock",
     "#5：": "unlock",
+    "#5:": "unlock",
+    "#5：": "unlock",
     "#1:": "exec", "#1：": "exec",
     "#2:": "task", "#2：": "task",
     "#3:": "draft", "#3：": "draft",
