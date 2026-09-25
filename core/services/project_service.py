@@ -108,6 +108,14 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
             print(f"[project] {source_file} 内容未变，跳过")
             return 0
     
+    # 全局 hash 去重（跨 source_file）
+    with db_cursor() as _cur_h:
+        _cur_h.execute("SELECT id, source_file FROM project_docs WHERE content_hash=? AND status='active' LIMIT 1", (file_hash,))
+        _ex = _cur_h.fetchone()
+    if _ex:
+        print(f"[project] 相同内容已在 {_ex['source_file']} 存在，跳过")
+        return 0
+
     chunks = _split_markdown(raw_text)
     if not chunks:
         print(f"[project] {source_file} 未分片成功")

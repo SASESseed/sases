@@ -228,6 +228,9 @@ async def send_message(
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
     _supervisor_id = sender_agent_id or agent_id
+    # 不切换身份时，若会话默认是 SASES 助手，自动用 agent_id 当发送者
+    if not sender_agent_id and agent_id == 'sases_assistant_2':
+        sender_agent_id = agent_id
 
     # 附件富化：把 [IMAGE]:/[FILE]: 消息内容读进来，放最前面对所有路径生效
     if isinstance(content, str) and (content.startswith('[IMAGE]:') or content.startswith('[FILE]:')):
@@ -417,6 +420,8 @@ async def send_message(
                     _irep_inline = '已导入 ' + str(_n_inline) + ' 个分片（' + _src_inline + '）。'
                 except Exception as _e_inline:
                     _irep_inline = '导入失败：' + str(_e_inline)
+                if not conversation_id:
+                    conversation_id = create_conversation(user_id, agent_id or 'sases_assistant_2', '导入知识库')
                 try:
                     with db_cursor(commit=True) as _cin:
                         _cin.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _irep_inline, sender_agent_id))
@@ -735,8 +740,9 @@ async def send_message(
             model_config = dict(model_row)
             # 项目库检索（v0.17.0）— 仅 SASES 助手
             _is_sases_chat = 'sases' in (model_config.get('name') or '').lower()
+            _is_import_local = (            '导入知识库' in content or '加入知识库' in content or '存到知识库' in content or '存到项目库' in content or '导入项目库' in content or '加到知识库' in content)
             enriched_query = content
-            if _is_sases_chat:
+            if _is_sases_chat and not _is_import_local:
                 try:
                     from . import project_service
                     chunks = project_service.retrieve_project_chunks(content, top_k=3, threshold=0.35, user_id=user_id)
