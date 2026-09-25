@@ -391,7 +391,7 @@ async def send_message(
         mode in ("normal", "free")
         and content
         and content.strip()
-        and not content.startswith("[")
+        and (not content.startswith("[") or content.startswith("[IMAGE]:") or content.startswith("[FILE]:"))
         and not content.startswith("执行：")
     ):
         try:
