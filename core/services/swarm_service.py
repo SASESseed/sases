@@ -132,6 +132,14 @@ Windows CMD 不支持 grep，用 findstr 代替。
 
 具体可用工具清单见下方【当前可用 Harness 工具】（运行时动态注入）。
 
+
+【run_python 安全函数】
+- list_dir(path)：列目录（例：list_dir('core/services')）
+- read_file(path)：读文件（例：read_file('core/config.py')）
+- write_file(path, content)：写文件
+禁止 import os/sys/subprocess/open，需要文件操作用以上函数。
+
+
 - file_patch：修改项目文件（允许目录：static/ / core/ / scripts/ / docs/）。支持两种模式：
 
   【模式 A：锚点模式（强烈推荐，默认用这个）】
@@ -1274,6 +1282,18 @@ async def handle_step_done(
             del _pending[task_id]
             _delete_pending_from_db(task_id)
             _run_id = task.get("supervisor_run_id")
+            # answer tool output => finish directly
+            from . import supervisor_service as _sv_a
+            _has_answer = any(
+                (r.get('module_id') == 'answer' or r.get('command') == 'answer')
+                and r.get('status') == 'success'
+                for r in task['results']
+            )
+            if _has_answer:
+                print('[supervisor] run ' + str(_run_id) + ' completed')
+                _sv_a.finish_run(_run_id, 'completed')
+                return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
                 _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
@@ -1408,6 +1428,18 @@ async def handle_step_done(
             _delete_pending_from_db(task_id)
 
             _run_id = task.get("supervisor_run_id")
+            # answer tool output => finish directly
+            from . import supervisor_service as _sv_a
+            _has_answer = any(
+                (r.get('module_id') == 'answer' or r.get('command') == 'answer')
+                and r.get('status') == 'success'
+                for r in task['results']
+            )
+            if _has_answer:
+                print('[supervisor] run ' + str(_run_id) + ' completed')
+                _sv_a.finish_run(_run_id, 'completed')
+                return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
                 _is_simple = (len(task.get('steps', [])) == 1 and len(task.get('results', [])) == 1 and all(r.get('review') != 'retry' for r in task.get('results', [])))
