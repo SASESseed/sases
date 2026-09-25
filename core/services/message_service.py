@@ -513,6 +513,57 @@ async def send_message(
                         print("[message] 图片导入异常: " + str(_eii))
 
 
+            # *1 统一导入（知识库/项目库）
+            _uni_text = None
+            _uni_target = 'kb'
+            if _is_sases_agent:
+                for _up in ('*1：', '*1:'):
+                    if content.startswith(_up):
+                        _uni_body = content[len(_up):].strip()
+                        if '项目库' in _uni_body.split('\n', 1)[0]:
+                            _uni_target = 'project'
+                        _uni_lines = _uni_body.split('\n', 1)
+                        if len(_uni_lines) > 1:
+                            _uni_text = _uni_lines[1].strip()
+                            for _skip in ('内容如下', '内容：', '内容:'):
+                                if _uni_text.startswith(_skip):
+                                    _uni_text = _uni_text[len(_skip):].strip()
+                                    break
+                        break
+            if _uni_text:
+                try:
+                    from . import project_service as _ps_uni
+                    from .. import auth_service as _auth_uni
+                    if _uni_target == 'project' and not _auth_uni.is_admin(user_id):
+                        _urep = '❌ 仅管理员可导入项目库'
+                    else:
+                        _is_proj = (_uni_target == 'project')
+                        _usrc = ('管理员导入_' if _is_proj else '对话导入_') + datetime.now().strftime('%Y%m%d_%H%M%S') + '.md'
+                        _ps_uni.import_document(_usrc, 'v1.0-admin' if _is_proj else 'v1.0-chat', _uni_text, user_id=0 if _is_proj else user_id, allow_system=_is_proj)
+                        with db_cursor() as _ci_uni:
+                            _ci_uni.execute("SELECT COUNT(*) as c FROM project_docs_meta WHERE source_file LIKE '对话导入_%' OR source_file LIKE '管理员导入_%'")
+                            _un_id = _ci_uni.fetchone()['c']
+                        _urep = ('✅ 已导入项目库 *' if _is_proj else '✅ 已导入知识库 *') + str(_un_id) + chr(10) + '内容摘要：' + _uni_text[:80]
+                except Exception as _e_uni:
+                    _urep = '导入失败：' + str(_e_uni)
+                if not conversation_id:
+                    conversation_id = create_conversation(user_id, agent_id or 'sases_assistant_2', '导入知识库')
+                try:
+                    with db_cursor(commit=True) as _cin_uni:
+                        _cin_uni.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _urep, sender_agent_id))
+                        _cin_uni.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                except Exception as _e2_uni:
+                    print('[message] *1 导入回写失败: ' + str(_e2_uni))
+                return {
+                    'conversation_id': conversation_id,
+                    'user_message': content,
+                    'assistant_reply': _urep,
+                    'agent_id': agent_id,
+                    'sender_agent_id': sender_agent_id,
+                    'mode': mode,
+                    'import_mode': 'star1'
+                }
+
             # 文字导入（"导入知识库：xxx" 格式）
             _INLINE_PREFIXES = ('导入知识库：', '导入知识库:', '加入知识库：', '加入知识库:', '存到知识库：', '存到知识库:')
             _inline_text = None
