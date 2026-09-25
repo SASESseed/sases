@@ -131,9 +131,9 @@ def import_document(source_file, source_version, raw_text, auto_replace=True, us
             cur.execute(
                 "INSERT INTO project_docs "
                 "(source_file, section_title, section_path, section_level, chunk_index, "
-                "content, embedding, content_hash, freshness_score, status, created_at, updated_at) "
-                "VALUES (?, ?, ?, 2, ?, ?, ?, ?, 1.0, 'active', ?, ?)",
-                (source_file, title, path, idx, content, emb_blob, content_hash, now, now)
+                "content, embedding, content_hash, freshness_score, status, created_at, updated_at, user_id) "
+                "VALUES (?, ?, ?, 2, ?, ?, ?, ?, 1.0, 'active', ?, ?, ?)",
+                (source_file, title, path, idx, content, emb_blob, content_hash, now, now, user_id)
             )
             count += 1
     
