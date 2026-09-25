@@ -32,6 +32,23 @@ def list_my_agents(user_id: int):
             "price": row["price"]
         })
 
+    # 确保每个用户都有 sases_assistant 虚拟助手
+    _has_sases_assistant = any(
+        (a.get("agent_id") or "").startswith("sases_assistant") for a in agents
+    )
+    if not _has_sases_assistant:
+        agents.insert(0, {
+            "agent_id": f"sases_assistant_{user_id}",
+            "name": "SASES 助手",
+            "type": "api",
+            "capability": "知识库导入 / 项目管理 / 系统对话",
+            "detail": "系统内置",
+            "is_shared": 0,
+            "visibility": "private",
+            "price": 0,
+            "is_virtual": True
+        })
+
     return agents
 
 def list_friend_agents(user_id: int):
