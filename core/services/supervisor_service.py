@@ -441,13 +441,12 @@ def signal_restart(run_id, reason=''):
     try:
         import time
         content = f"run_id={run_id}|reason={reason}|at={int(time.time())}"
-        import logging as _logging
-        _logging.getLogger(__name__).info('supervisor: writing restart_signal.txt')
-
-        with open('restart_signal.txt', 'w', encoding='utf-8') as f:
-            f.write('restart')
-
+        import os as _os_r
+        _root = _os_r.path.dirname(_os_r.path.dirname(_os_r.path.dirname(_os_r.path.abspath(__file__))))
+        _fp = _os_r.path.join(_root, 'restart_signal.txt')
+        with open(_fp, 'w', encoding='utf-8') as f:
             f.write(content)
+        print('[supervisor] restart signal written to ' + _fp + ' content=' + content)
         return True
     except Exception as e:
         print(f"[supervisor] signal_restart failed: {e}")
