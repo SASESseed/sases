@@ -397,6 +397,38 @@ async def send_message(
                 is_task = await intent_service.is_task_intent(content)
             print(f"[MSG_DEBUG] is_task={is_task}")
 
+            # 文字导入（"导入知识库：xxx" 格式）
+            _INLINE_PREFIXES = ('导入知识库：', '导入知识库:', '加入知识库：', '加入知识库:', '存到知识库：', '存到知识库:')
+            _inline_text = None
+            if sender_agent_id:
+                for _ip in _INLINE_PREFIXES:
+                    if content.startswith(_ip):
+                        _inline_text = content[len(_ip):].strip()
+                        break
+            if _inline_text:
+                try:
+                    from . import project_service as _ps_inline
+                    _src_inline = '对话导入_' + datetime.now().strftime('%Y%m%d_%H%M%S') + '.md'
+                    _n_inline = _ps_inline.import_document(_src_inline, 'v1.0-chat', _inline_text, user_id=user_id)
+                    _irep_inline = '已导入 ' + str(_n_inline) + ' 个分片（' + _src_inline + '）。'
+                except Exception as _e_inline:
+                    _irep_inline = '导入失败：' + str(_e_inline)
+                try:
+                    with db_cursor(commit=True) as _cin:
+                        _cin.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _irep_inline, sender_agent_id))
+                        _cin.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                except Exception as _e2_inline:
+                    print('[supervisor] 文字导入回写失败: ' + str(_e2_inline))
+                return {
+                    'conversation_id': conversation_id,
+                    'user_message': content,
+                    'assistant_reply': _irep_inline,
+                    'agent_id': agent_id,
+                    'sender_agent_id': sender_agent_id,
+                    'mode': mode,
+                    'import_mode': 'inline'
+                }
+
             # 导入知识库意图
             _IMPORT_KW = ('导入知识库', '加入知识库', '存到项目库', '导入项目库', '存到知识库', '加到知识库')
             if sender_agent_id and any(_k in content for _k in _IMPORT_KW):
