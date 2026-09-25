@@ -316,6 +316,37 @@ _review_table_ready = False
 
 # ========== 数据库同步 ==========
 
+def clear_conversation_lock(conversation_id: str) -> bool:
+    cleared = False
+    for task_id in list(_pending.keys()):
+        task = _pending.get(task_id) or {}
+        if task.get("conversation_id") == conversation_id and task.get("status") in ("pending", "running"):
+            task["status"] = "cancelled"
+            del _pending[task_id]
+            cleared = True
+    try:
+        conn = _get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE swarm_pending_tasks SET status='cancelled' WHERE conversation_id=? AND status IN ('pending','running')",
+            (conversation_id,),
+        )
+        if cur.rowcount:
+            cleared = True
+        cur.execute(
+            "UPDATE supervisor_runs SET status='interrupted' WHERE conversation_id=? AND status IN ('running','proposed')",
+            (conversation_id,),
+        )
+        if cur.rowcount:
+            cleared = True
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    return cleared
+
+
+
 def _save_pending(task: Dict[str, Any]):
     try:
         with db_cursor(commit=True) as cur:

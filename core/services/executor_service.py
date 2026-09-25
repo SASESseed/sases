@@ -92,7 +92,31 @@ def smart_decode(raw_bytes: bytes) -> str:
 
 # ========== 命令执行 ==========
 
+def _win_path_fix(cmd):
+    if not cmd:
+        return cmd
+    parts = cmd.split()
+    if not parts:
+        return cmd
+    first = parts[0].lower()
+    win_cmds = (chr(102)+chr(105)+chr(110)+chr(100)+chr(115)+chr(116)+chr(114), chr(116)+chr(121)+chr(112)+chr(101), chr(100)+chr(105)+chr(114), chr(116)+chr(114)+chr(101)+chr(101), chr(119)+chr(104)+chr(101)+chr(114)+chr(101), chr(109)+chr(111)+chr(114)+chr(101), chr(99)+chr(97)+chr(116))
+    if first not in win_cmds:
+        return cmd
+    new_parts = [parts[0]]
+    for p in parts[1:]:
+        if p.startswith(chr(47)) and len(p) <= 3 and p.count(chr(47)) == 1:
+            new_parts.append(p)
+        elif chr(58)+chr(47)+chr(47) in p:
+            new_parts.append(p)
+        elif chr(47) in p:
+            new_parts.append(p.replace(chr(47), chr(92)))
+        else:
+            new_parts.append(p)
+    return chr(32).join(new_parts)
+
+
 def _sync_run_command(cmd: str, timeout: int) -> tuple:
+    cmd = _win_path_fix(cmd)
     start = datetime.datetime.now()
     try:
         result = subprocess.run(
