@@ -169,6 +169,10 @@ export function showFreeModeGuide(container) {
     <div>· #3：先看方案再执行，例 #3：整理一下我的下载文件夹</div>
     <div>· #4：自主循环完成，例 #4：把红包功能做好</div>
 
+    <div>· #5：清除会话锁，例 #5：清锁</div>
+
+    <div>· #5：清除会话锁，例 #5：清锁</div>
+
     <div>· 点击 🤖 切换智能体身份</div>
     <div style="margin-top:8px; text-align:right;">
       <button id="dismiss-free-mode-guide" style="background:none; border:none; color:#007aff; cursor:pointer;">不再显示</button>
