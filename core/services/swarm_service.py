@@ -1339,13 +1339,19 @@ async def handle_step_done(
                 if not _is_hands_on:
                     _is_simple = False
                 # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
+                # 修复：只对成功的 file_patch / run_python 生效，避免误判
                 if _run_id:
                     try:
                         _has_core = False
                         for _r in task['results']:
-                            _cmd = str(_r.get('command') or '')
+                            _r_status = str(_r.get('status') or '')
+                            _r_mod = str(_r.get('module_id') or '')
                             _desc = str(_r.get('description') or '')
                             _params = str(_r.get('params') or '')
+                            if _r_status != 'success':
+                                continue
+                            if _r_mod not in ('file_patch', 'run_python'):
+                                continue
                             if 'core/' in _desc or 'core/' in _params:
                                 _has_core = True
                                 break
@@ -1508,13 +1514,19 @@ async def handle_step_done(
                 if not _is_hands_on:
                     _is_simple = False
                 # 改 core/ 时标记 restart_pending（优先于 _is_simple 直接返回）
+                # 修复：只对成功的 file_patch / run_python 生效，避免误判
                 if _run_id:
                     try:
                         _has_core = False
                         for _r in task['results']:
-                            _cmd = str(_r.get('command') or '')
+                            _r_status = str(_r.get('status') or '')
+                            _r_mod = str(_r.get('module_id') or '')
                             _desc = str(_r.get('description') or '')
                             _params = str(_r.get('params') or '')
+                            if _r_status != 'success':
+                                continue
+                            if _r_mod not in ('file_patch', 'run_python'):
+                                continue
                             if 'core/' in _desc or 'core/' in _params:
                                 _has_core = True
                                 break
