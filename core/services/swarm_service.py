@@ -1395,6 +1395,16 @@ async def handle_step_done(
                     except Exception:
                         pass
                     if _has_core_change and not _is_resumed_chk:
+                        # 先写一条"已完成"的 review，避免 resume 时误判为未完成
+                        try:
+                            supervisor_service.record_round(
+                                _run_id,
+                                plan_summary=_steps_text,
+                                exec_summary=_exec_text,
+                                review={'goal_achieved': True, 'goal_reason': '改动完成，仅需重启验证', 'missing': [], 'next_hint': ''},
+                            )
+                        except Exception as _e_rec2:
+                            print(f"[supervisor] record_round (restart_pending) 失败: {_e_rec2}")
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
@@ -1617,6 +1627,16 @@ async def handle_step_done(
                     except Exception:
                         pass
                     if _has_core_change and not _is_resumed_chk:
+                        # 先写一条"已完成"的 review，避免 resume 时误判为未完成
+                        try:
+                            supervisor_service.record_round(
+                                _run_id,
+                                plan_summary=_steps_text,
+                                exec_summary=_exec_text,
+                                review={'goal_achieved': True, 'goal_reason': '改动完成，仅需重启验证', 'missing': [], 'next_hint': ''},
+                            )
+                        except Exception as _e_rec2:
+                            print(f"[supervisor] record_round (restart_pending) 失败: {_e_rec2}")
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
