@@ -11,6 +11,7 @@ from .services import memory_service
 from .services import debug_service
 from .services import rescue_service
 from .services import swarm_service
+from .services import supervisor_service
 from .services import executor_service
 from .services import cleanup_service
 from .services import pattern_service

@@ -445,29 +445,40 @@ def signal_restart(run_id, reason=''):
 
 async def resume_restart_pending_runs():
     import asyncio
-    import sqlite3
     await asyncio.sleep(10)
     try:
-        from core.services import swarm_service
-        conn = sqlite3.connect('sases.db')
-        cur = conn.cursor()
-        cur.execute("SELECT run_id, conversation_id, user_id, goal FROM supervisor_runs WHERE status='restart_pending' LIMIT 5")
-        rows = cur.fetchall()
-        for run_id, conversation_id, user_id, goal in rows:
-            cur.execute("UPDATE supervisor_runs SET status='running' WHERE run_id=?", (run_id,))
-            conn.commit()
-            cur2 = conn.cursor()
-            cur2.execute("SELECT plan FROM supervisor_history WHERE run_id=? ORDER BY id DESC LIMIT 1", (run_id,))
-            r = cur2.fetchone()
-            last_plan = r[0] if r else ''
-            text = f"继续未完成的任务。原目标：{goal}。上一轮完成：{last_plan}。请继续做剩余部分。"
+        from . import swarm_service
+        with db_cursor() as cur:
+            cur.execute("SELECT id, conversation_id, user_id, goal, supervisor_id, history FROM supervisor_runs WHERE status='restart_pending' ORDER BY id DESC LIMIT 5")
+            rows = [dict(r) for r in cur.fetchall()]
+        if not rows:
+            return
+        for row in rows:
+            _rid = row['id']
+            with db_cursor(commit=True) as cur2:
+                cur2.execute("UPDATE supervisor_runs SET status='running' WHERE id=?", (_rid,))
             try:
-                await swarm_service.plan_task(user_id=user_id, conversation_id=conversation_id, user_input=text)
+                _hist = json.loads(row.get('history') or '[]')
+                _last_plan = ''
+                if _hist:
+                    _last_plan = (_hist[-1].get('plan') or '')[:200]
+            except Exception:
+                _last_plan = ''
+            _goal = (row.get('goal') or '')[:300]
+            _text = '继续未完成的任务。原目标：' + _goal + '。上一轮完成：' + _last_plan + '。请继续做剩余部分。'
+            print('[supervisor] resuming run ' + str(_rid))
+            try:
+                await swarm_service.plan_task(
+                    user_id=row['user_id'],
+                    conversation_id=row['conversation_id'],
+                    user_input=_text,
+                    supervisor_id=row.get('supervisor_id'),
+                    supervisor_run_id=_rid,
+                )
             except Exception as e:
-                print(f"[supervisor] resume failed: {e}")
-        conn.close()
+                print('[supervisor] resume run ' + str(_rid) + ' failed: ' + str(e))
     except Exception as e:
-        print(f"[supervisor] resume_restart_pending_runs failed: {e}")
+        print('[supervisor] resume_restart_pending_runs failed: ' + str(e))
 
 
 
