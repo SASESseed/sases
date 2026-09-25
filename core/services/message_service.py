@@ -459,7 +459,7 @@ async def send_message(
                         conversation_id = create_conversation(user_id, agent_id or "sases_assistant_2", "图片导入")
                     try:
                         from . import image_import_service as _iis
-                        _img_reply = _iis.try_handle_image_import(content, conversation_id, user_id)
+                        _img_reply = _iis.try_handle_image_import(_raw_content, conversation_id, user_id)
                         if _img_reply:
                             try:
                                 with db_cursor(commit=True) as _cwi:
