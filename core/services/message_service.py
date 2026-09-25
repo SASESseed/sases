@@ -293,6 +293,29 @@ async def send_message(
                     print("[supervisor] 已创建 run_id=" + str(_run_id) + " goal=" + content[:50])
                     _force_swarm = True
                     _supervisor_run_id = _run_id
+                    from . import swarm_service
+                    try:
+                        await swarm_service.plan_task(
+                            user_id=user_id,
+                            conversation_id=conversation_id or 0,
+                            user_input=content,
+                            supervisor_id=sender_agent_id or agent_id,
+                            supervisor_run_id=_run_id,
+                        )
+                        print("[supervisor] auto_run 已派单 run_id=" + str(_run_id))
+                    except Exception as _ae:
+                        print("[supervisor] auto_run 派单失败: " + str(_ae))
+                    return {
+                        'conversation_id': conversation_id,
+                        'user_message': content,
+                        'assistant_reply': '',
+                        'agent_id': agent_id,
+                        'sender_agent_id': sender_agent_id,
+                        'mode': mode,
+                        'swarm': True,
+                        'swarm_status': 'auto_run',
+                        'task_id': _run_id,
+                    }
                 except Exception as _e:
                     print("[supervisor] 启动失败: " + str(_e))
                     return {

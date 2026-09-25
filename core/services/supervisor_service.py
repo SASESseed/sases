@@ -304,8 +304,7 @@ async def task_summarizer(task):
         cmd = r.get('command') or r.get('module_id') or ''
         out = (r.get('output') or '')[:120]
         steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
-        '请只输出 JSON：{"goal_achieved": true/false, "goal_reason": "一句话理由", "completed": ["已完成"], "missing": ["未完成"], "next_hint": "下一步做什么（必须具体说明改哪个文件，例如：用 file_patch 在 core/api_routes/group_routes.py 加 POST /group/{id}/leave 路由）"}'
-    prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步用什么工具改哪个文件"}'
+    prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步用什么工具改哪个文件"}。判断标准：只要执行步骤有实质非空输出（file_read 拿到内容、dir_tree 列出文件、grep_code 命中、file_patch 成功），且与目标相关，即视为完成。不要因为缺一段总结文本就判 false。探测输出本身就是产出。'
     client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
     try:
         resp = await asyncio.to_thread(
@@ -342,7 +341,14 @@ async def decide_next_step(run_id):
     for h in history[-5:]:
         history_text += '第 ' + str(h.get('round', '?')) + ' 轮：' + (h.get('plan') or '')[:80] + chr(10)
         history_text += '  结果：' + (h.get('exec') or '')[:300] + chr(10)
-    prompt = '你是 SASES 自主调度者。目标：' + run['goal'] + chr(10) + chr(10) + '已完成：' + chr(10) + (history_text or '(无)') + chr(10) + '可用工具：file_read / dir_tree / grep_code / file_patch / harness_reload / git_ops / web_fetch' + chr(10) + chr(10) + '请判断下一步，只输出 JSON：{"action": "probe" 或 "build_harness" 或 "execute" 或 "done", "task": "一句话描述"}' + chr(10) + 'probe=先读代码；build_harness=缺工具先建；execute=可以改代码；done=目标达成' + chr(10) + '注意：如果最近的执行结果里有 blocked 或 retry，说明上一步失败，不能判定 done，应继续 probe 或 execute 修正。' + chr(10) + '另外：只有确认用户目标的所有子任务都完成，才能判定 done。只改了 1 处不代表全部完成时，应继续 execute 改其他地方。判断标准：回顾原始目标的每一个关键词，逐一确认是否已实现。' + chr(10) + '关键规则：如果用户目标包含实现/打通/改/加/建/修复等动作词，而 history 里从来没有出现过 file_patch 或 harness_reload，说明只做了探测没做实际修改，此时不能 done，必须输出 execute。' + chr(10) + '补充规则：如果 history 里已经读到目标文件的具体行号/代码片段/参数格式，说明探测够了，下一步必须输出 execute，不要再 probe。'
+    try:
+        from .. import harness_runtime as _hr
+        _tools = _hr.harness_runtime.list_tools()
+        _names = ' / '.join([getattr(t, 'module_id', '') for t in _tools if getattr(t, 'module_id', '')])
+        _tool_line = '可用工具：' + _names
+    except Exception:
+        _tool_line = '可用工具：file_read / file_patch'
+    prompt = '你是 SASES 自主调度者。目标：' + run['goal'] + chr(10) + chr(10) + '已完成：' + chr(10) + (history_text or '(无)') + chr(10) + _tool_line + chr(10) + chr(10) + '请判断下一步，只输出 JSON：{"action": "probe" 或 "build_harness" 或 "execute" 或 "done", "task": "一句话描述"}' + chr(10) + 'probe=先读代码；build_harness=缺工具先建；execute=可以改代码；done=目标达成' + chr(10) + '注意：如果最近的执行结果里有 blocked 或 retry，说明上一步失败，不能判定 done，应继续 probe 或 execute 修正。' + chr(10) + '另外：只有确认用户目标的所有子任务都完成，才能判定 done。只改了 1 处不代表全部完成时，应继续 execute 改其他地方。判断标准：回顾原始目标的每一个关键词，逐一确认是否已实现。' + chr(10) + '关键规则：如果用户目标包含实现/打通/改/加/建/修复等动作词，而 history 里从来没有出现过 file_patch 或 harness_reload，说明只做了探测没做实际修改，此时不能 done，必须输出 execute。' + chr(10) + '补充规则：如果 history 里已经读到目标文件的具体行号/代码片段/参数格式，说明探测够了，下一步必须输出 execute，不要再 probe。饱和判定：如果最近 2 轮的 exec 内容高度相似（同一路径、同一文件、同一结果），说明探测饱和，应输出 done。不要因为没总结就继续探测。'
     client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
     try:
         resp = await asyncio.to_thread(
@@ -402,8 +408,9 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
     except Exception as _le:
         print('[supervisor] 死循环检测异常: ' + str(_le))
 
-    # v0.18.2: 连续3轮无实质改动，判定无进展
+    # v0.18.3: no_progress check with plan similarity
     try:
+        import difflib as _dl2
         _hist_check = json.loads(run['history'] or '[]')
         if len(_hist_check) >= 5:
             _recent5 = _hist_check[-5:]
@@ -414,11 +421,20 @@ async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=Non
                     _any_patch = True
                     break
             if not _any_patch:
-                print('[supervisor] 连续3轮无 file_patch/run_python 成功，判定无进展，停止')
-                finish_run(run_id, 'no_progress')
-                return False, None
+                _plans = [(h.get('plan') or '')[:200] for h in _recent5]
+                _similar = False
+                for _i in range(len(_plans) - 1):
+                    if _plans[_i] and _plans[_i+1]:
+                        _sr = _dl2.SequenceMatcher(None, _plans[_i], _plans[_i+1]).ratio()
+                        if _sr >= 0.85:
+                            _similar = True
+                            break
+                if _similar:
+                    print('[supervisor] no_progress stop')
+                    finish_run(run_id, 'no_progress')
+                    return False, None
     except Exception as _pe:
-        print('[supervisor] 无进展检测失败: ' + str(_pe))
+        print('[supervisor] check failed: ' + str(_pe))
 
     record_round(run_id, plan_text or run.get('goal', ''), exec_text or last_summary, review=review)
     run = get_run(run_id)

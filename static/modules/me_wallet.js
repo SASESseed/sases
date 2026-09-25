@@ -183,7 +183,6 @@ cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(!el)retu
 };
 cats.forEach(c=>{const el=document.querySelector('.credit-tab-'+c.k);if(el)el.onclick=()=>applyFilter(c.k);});
 applyFilter('all');
-  if(cwEntry) cwEntry.onclick=()=>{ if(typeof window.openComputeWallet==='function') window.openComputeWallet(()=>openCreditDetail('compute')); };
 }
 
 

@@ -670,6 +670,41 @@ async def _call_llm(prompt: str, system_prompt: str = "", max_tokens: int = None
     return ""
 
 
+def _normalize_steps(steps):
+    """把误写成 command 的 harness 调用自动纠正为 type=harness 格式"""
+    import json as _j_norm
+    out = []
+    for s in (steps or []):
+        if not isinstance(s, dict):
+            continue
+        cmd = s.get('command', '')
+        if not isinstance(cmd, str):
+            out.append(s)
+            continue
+        cmd_stripped = cmd.strip()
+        handled = False
+        # 情况1：command 是 JSON
+        if cmd_stripped.startswith('{') and 'module_id' in cmd_stripped:
+            try:
+                j = _j_norm.loads(cmd_stripped)
+                if isinstance(j, dict) and j.get('module_id'):
+                    out.append({  'step': s.get('step'), 'type': 'harness', 'module_id': j['module_id'], 'params': j.get('params', {}), 'description': s.get('description', '') })
+                    print('[_normalize] JSON command 转 harness: ' + j['module_id'])
+                    handled = True
+            except Exception:
+                pass
+        # 情况2：command 是 harness:xxx 或 harness xxx
+        if not handled and ('harness:' in cmd_stripped or cmd_stripped.startswith('harness ')):
+            body = cmd_stripped.replace('harness:', '', 1).replace('harness ', '', 1).strip()
+            mid = body.split(' ')[0].split(':')[0].strip()
+            if mid:
+                out.append({  'step': s.get('step'), 'type': 'harness', 'module_id': mid, 'params': {}, 'description': s.get('description', '') })
+                print('[_normalize] harness 前缀转 module_id: ' + mid)
+                handled = True
+        if not handled:
+            out.append(s)
+    return out
+
 def _parse_plan(raw: str) -> Optional[List[Dict[str, Any]]]:
     if not raw:
         return None
@@ -1292,6 +1327,7 @@ async def handle_step_done(
                             print(f"[supervisor] run {_run_id} 已完成（调度者判定）")
                         elif _decision and _decision.get("task"):
                             print(f"[supervisor] run {_run_id} 继续下一轮（blocked）：{_decision.get('action')}")
+                            _insert_message(conversation_id, '[SUPERVISOR_PROGRESS]:🧠 第 ' + str((task.get('current_round') or 0) + 1) + ' 轮', sender_agent_id=_summary_sender(task))
                             _next_result = await plan_task(
                                 user_id=task["user_id"],
                                 conversation_id=conversation_id,

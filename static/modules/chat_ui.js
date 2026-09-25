@@ -96,6 +96,12 @@ export function createMessageElement(role, content, senderName, messageId, timeI
     return empty;
   }
   content = stripSummaryPrefix(content);
+  if (typeof content === 'string' && content.startsWith('[SUPERVISOR_PROGRESS]:')) {
+    const _pd = document.createElement('div');
+    _pd.style.cssText = 'text-align:center;font-size:12px;color:#888;margin:6px 12px;';
+    _pd.textContent = content.substring(22);
+    return _pd;
+  }
     if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) { return renderRedPacketBubble(content); }
   if (typeof content === 'string' && content.startsWith('[IMAGE]:')) { return renderImageBubble(content, role, senderName); }
   if (typeof content === 'string' && content.startsWith('[FILE]:')) { return renderFileBubble(content, role, senderName); }
