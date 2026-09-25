@@ -1,4 +1,4 @@
-# Python
+# ========== Python ==========
 __pycache__/
 *.py[cod]
 *.pyo
@@ -18,7 +18,7 @@ dist/
 .coverage
 htmlcov/
 
-# 密钥与配置
+# ========== 密钥与配置 ==========
 secret_key.bin
 api_key_encryption.key
 .env
@@ -30,11 +30,12 @@ users.db
 *.db-wal
 *.db-shm
 
-# 日志与临时文件
+# ========== 日志与临时文件 ==========
 *.log
 *.tmp
 *.swp
 *.bak
+*.backup.*
 .DS_Store
 Thumbs.db
 apollo_weather.log
@@ -44,60 +45,78 @@ shared_pollinate_log.jsonl
 seed_tasks_new.jsonl.bak
 seed_tasks_new_backup.jsonl
 
-# 编辑器
+# ========== 编辑器 ==========
 .vscode/
 .idea/
 
-# Node / 前端
+# ========== Node / 前端 ==========
 node_modules/
 
-# ChromaDB
+# ========== ChromaDB ==========
 kb/
 *.sqlite3
 
-# 数据库备份
+# ========== 数据库备份 ==========
 backups/
+backup/
+.backups/
+snapshots/
+pre-cleanup/
 
-# 本地 Embedding 模型（体积大，通过脚本下载）
+# ========== 本地 Embedding 模型 ==========
 bge-small-zh-onnx/
 
-# 模型适配器（体积大）
+# ========== 模型适配器 ==========
 lora_adapter/
+lora/
 hf_upload/
 
-# Harness 模块：忽略自动生成的和缓存，保留手写的
+# ========== Harness 模块 ==========
 harness_modules/auto_*/
 harness_modules/*/__pycache__/
 
-# Evaluation artifacts
+# ========== Evaluation artifacts ==========
 evaluation/sases_milestone_1.zip
 evaluation/upload_pack/
+/eval_benchmark_v2.jsonl
 
-# Local backups and adapters
-backup/
-lora/
-upload_pack/
+# ========== Training ==========
+finetune_*.jsonl
+test_manifest_output/
+training_data/
+
+# ========== 项目整理后的分类目录 ==========
+logs/
+seeds/
+archive/
+archive_v1/
+
+# ========== 用户上传（含隐私） ==========
+uploads/
 upload_pack.zip
 
-# Training manifest test output
-test_manifest_output/
+# ========== Wrapper 信号与临时文件 ==========
+restart_signal.txt
+_restart_flag.txt
+wrapper.lock
+server.log
+nohup.out
+*.out
 
-# Training data (regenerable from success_kb.json)
-finetune_*.jsonl
-
-# Temp / local scripts
+# ========== 诊断与临时脚本 ==========
 新建 Python Script.py
 setup.bat
 setup.sh
+diagnose_*.py
+_diag_*.py
+_test_*.md
+clean_last.py
+query_last_msgs.py
+tmp_*.py
+*.tmp.txt
 
-# Root-level benchmark (copy kept in evaluation/)
-/eval_benchmark_v2.jsonl
-
-# Test artifacts
-test_reviews_api.zip
-
-# Archived scripts (not tracked)
-archive_v1/
-
-# Script output
+# ========== Script 输出 ==========
 scripts/*/output/
+
+# ========== 测试 artifacts ==========
+test_reviews_api.zip
