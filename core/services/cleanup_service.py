@@ -178,6 +178,8 @@ def cleanup_all() -> dict:
         "old_execution_notes": 0,
         "patterns_deleted": 0,
         "patterns_archived": 0,
+        "test_marks_found": 0,
+        "test_marks_detail": [],
     }
     try:
         result["expired_memory"] = cleanup_expired_memory()
@@ -225,6 +227,16 @@ def cleanup_all() -> dict:
         print('[cleanup] pattern 清理失败: ' + str(e))
 
 
+    try:
+        _tm = scan_test_marks(dry_run=True)
+        result['test_marks_found'] = _tm['count']
+        result['test_marks_detail'] = _tm['findings'][:10]
+        if _tm['count'] > 0:
+            print('[cleanup] 测试标记扫描: 发现 ' + str(_tm['count']) + ' 处')
+            for _item in _tm['findings'][:10]:
+                print('  - ' + _item['file'] + ':' + str(_item['line']) + ': ' + _item['text'])
+    except Exception as e:
+        print('[cleanup] 测试标记扫描失败: ' + str(e))
     print(f"[cleanup] 清理完成: {result}")
     return result
 
