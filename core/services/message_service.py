@@ -270,6 +270,7 @@ async def send_message(
 ):
     print(f"[MSG_DEBUG] content={content!r} | mode={mode!r} | agent_id={agent_id!r}")
     _supervisor_id = sender_agent_id or agent_id
+    _raw_content = content if isinstance(content, str) else ''
     # 不切换身份时，若会话默认是 SASES 助手，自动用 agent_id 当发送者
     if not sender_agent_id and agent_id == 'sases_assistant_2':
         sender_agent_id = agent_id

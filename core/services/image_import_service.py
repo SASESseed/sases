@@ -69,7 +69,7 @@ def try_handle_image_import(content, conversation_id, user_id):
     irep = ''
     try:
         with db_cursor() as cur:
-            cur.execute('SELECT content FROM messages WHERE conversation_id=? AND content LIKE '[IMAGE]:%' ORDER BY id DESC LIMIT 1', (conversation_id,))
+            cur.execute(            "SELECT content FROM messages WHERE conversation_id=? AND content LIKE '[IMAGE]:%' ORDER BY id DESC LIMIT 1", (conversation_id,))
             fi = cur.fetchone()
         if not fi:
             irep = '未找到最近的图片，请先发一张图。'
