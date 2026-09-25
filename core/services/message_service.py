@@ -454,7 +454,7 @@ async def send_message(
             # 图片导入知识库
             if _is_sases_agent:
                 _img_kw = ("图片导入知识库", "图片存入知识库", "这张图导入知识库", "把图存入知识库")
-                if any(_k in content for _k in _img_kw):
+                if any(_k in _raw_content for _k in _img_kw):
                     if not conversation_id:
                         conversation_id = create_conversation(user_id, agent_id or "sases_assistant_2", "图片导入")
                     try:
