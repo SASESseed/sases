@@ -366,7 +366,7 @@ async def send_message(
                 pass
             if not _is_operation and not _numbered_prefix_matched and not _is_greeting and _is_sases_agent:
                 try:
-                    _chunks = project_service.retrieve_project_chunks(content, top_k=3)
+                    _chunks = project_service.retrieve_project_chunks(content, top_k=3, user_id=user_id)
                     if _chunks and _chunks[0].get('score', 0) > 0.55:
                         _ctx = project_service.format_chunks_for_prompt(_chunks)
                         from . import context_service
