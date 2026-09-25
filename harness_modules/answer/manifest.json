@@ -1,0 +1,10 @@
+{
+  "id": "answer",
+  "name": "输出最终答案",
+  "description": "直接输出文本答案给用户。当任务目标是总结、分析、回答、说明时使用此工具作为最后一步。参数 content（必填）是最终答案文本。",
+  "version": "1.0.0",
+  "capabilities": ["answer"],
+  "permissions": ["restricted_file_write"],
+  "entrypoint": "main.py",
+  "node_type": "harness"
+}
