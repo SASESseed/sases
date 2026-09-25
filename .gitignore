@@ -120,3 +120,6 @@ scripts/*/output/
 
 # ========== 测试 artifacts ==========
 test_reviews_api.zip
+
+# ========== 状态快照（含账号信息，不上传） ==========
+docs/SASES_STATE.md
