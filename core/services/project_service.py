@@ -96,8 +96,15 @@ def _split_markdown(text):
     return chunks
 
 
-def import_document(source_file, source_version, raw_text, auto_replace=True, user_id=0):
-    """导入一份文档。auto_replace=True 时先删除同 source_file 的旧分片"""
+def import_document(source_file, source_version, raw_text, auto_replace=True, user_id=0, allow_system=False):
+    if user_id == 0 and not allow_system:
+        raise PermissionError("拒绝执行: user_id=0 为系统调用，需显式传入 allow_system=True")
+
+    """导入一份文档。auto_replace=True 时先删除同 source_file 的旧分片。
+    user_id=0 表示系统文档，需 allow_system=True 才能写入（默认只允许脚本/管理员）。"""
+    if user_id == 0 and not allow_system:
+        print('[project] 拒绝写入系统文档（需 allow_system=True）')
+        return 0
     now = datetime.now().isoformat()
     file_hash = _compute_hash(raw_text)
     

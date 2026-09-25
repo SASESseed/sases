@@ -28,7 +28,7 @@ def main():
         raw = f.read()
 
     source_file = os.path.basename(file_path)
-    n = project_service.import_document(source_file, version, raw)
+    n = project_service.import_document(source_file, version, raw, allow_system=True)
     print(f"[完成] 导入 {n} 个分片")
     return 0
 
