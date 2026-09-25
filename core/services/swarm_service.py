@@ -859,7 +859,7 @@ async def plan_task(
     project_text = ""
     try:
         from . import project_service
-        chunks = project_service.retrieve_project_chunks(user_input, top_k=3)
+        chunks = project_service.retrieve_project_chunks(user_input, top_k=3, user_id=user_id)
         if chunks:
             project_text = project_service.format_chunks_for_prompt(chunks)
             print(f"[swarm] 检索到 {len(chunks)} 条项目资料")
