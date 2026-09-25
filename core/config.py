@@ -117,6 +117,6 @@ HYBRID_LOW_THRESHOLD = float(os.environ.get("HYBRID_LOW_THRESHOLD", "0.35"))
 HYBRID_HIGH_THRESHOLD = float(os.environ.get("HYBRID_HIGH_THRESHOLD", "0.88"))
 
 # ========== 指挥官/审核员 LLM 参数 ==========
-COMMANDER_MAX_TOKENS = int(os.environ.get("COMMANDER_MAX_TOKENS", "8000"))
-REPLAN_MAX_TOKENS = int(os.environ.get("REPLAN_MAX_TOKENS", "8000"))
+COMMANDER_MAX_TOKENS = int(os.environ.get("COMMANDER_MAX_TOKENS", "16000"))
+REPLAN_MAX_TOKENS = int(os.environ.get("REPLAN_MAX_TOKENS", "16000"))
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "1000"))
