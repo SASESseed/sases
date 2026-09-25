@@ -7,7 +7,13 @@ SKIP_EXT = ('.pyc', '.zip', '.safetensors', '.onnx', '.db', '.bin', '.key', '.pn
 
 
 def _iter_files(root, rel_base, file_ext):
-    for dirpath, dirnames, filenames in os.walk(os.path.join(root, rel_base)):
+    _full_base = os.path.join(root, rel_base)
+    if os.path.isfile(_full_base):
+        _ext = os.path.splitext(_full_base)[1].lower()
+        if _ext not in SKIP_EXT and (not file_ext or _ext == file_ext):
+            yield _full_base, rel_base
+        return
+    for dirpath, dirnames, filenames in os.walk(_full_base):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fn in filenames:
             ext = os.path.splitext(fn)[1].lower()
