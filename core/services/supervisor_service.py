@@ -341,8 +341,14 @@ async def task_summarizer(task):
         cmd = r.get('command') or r.get('module_id') or ''
         out = (r.get('output') or r.get('answer') or '')[:300]
         steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
-    # 代码级规则：命中未完成/待续字眼，直接判 false，不依赖 LLM
-    _all_text = (user_text or '') + ' | ' + ' | '.join(steps)
+    # 代码级规则：只扫 answer 输出 + 回滚标记，不扫 next_hint/goal_reason/missing
+    _all_text = ''
+    for _r in results:
+        _ans = _r.get('answer') or _r.get('output') or ''
+        if _ans:
+            _all_text += _ans + ' | '
+        if _r.get('rolled_back') or _r.get('syntax_ok') is False:
+            _all_text += 'rolled_back | '
     _suspicious_kws = ['剩余', '请继续', '请分批', '请再发', '下一步', '未完成', '待完成',
                        'rolled_back', 'verify fail', '已回滚', '请回复',
                        '请确认', '请检查', '未做', '待做', '请用户', '需要用户', '请先', '请提供']
