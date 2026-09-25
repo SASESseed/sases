@@ -96,7 +96,7 @@ def _split_markdown(text):
     return chunks
 
 
-def import_document(source_file, source_version, raw_text, auto_replace=True):
+def import_document(source_file, source_version, raw_text, auto_replace=True, user_id=0):
     """导入一份文档。auto_replace=True 时先删除同 source_file 的旧分片"""
     now = datetime.now().isoformat()
     file_hash = _compute_hash(raw_text)
