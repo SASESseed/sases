@@ -364,7 +364,11 @@ async def send_message(
                     _is_sases_agent = True
             except Exception:
                 pass
-            if not _is_operation and not _numbered_prefix_matched and not _is_greeting and _is_sases_agent:
+            _is_import_intent = (
+                any(content.startswith(p) for p in ('导入知识库：','导入知识库:','加入知识库：','加入知识库:','存到知识库：','存到知识库:'))
+                or any(_k in content for _k in ('导入知识库','加入知识库','存到知识库','存到项目库','导入项目库','加到知识库'))
+            )
+            if not _is_operation and not _numbered_prefix_matched and not _is_greeting and _is_sases_agent and not _is_import_intent:
                 try:
                     _chunks = project_service.retrieve_project_chunks(content, top_k=3, user_id=user_id)
                     if _chunks and _chunks[0].get('score', 0) > 0.55:
