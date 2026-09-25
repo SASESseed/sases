@@ -114,7 +114,7 @@ def build_context(user_id, conversation_id, query, mode='execute', supervisor_id
         if _allow_project:
             try:
                 from . import project_service
-                _chunks = project_service.retrieve_project_chunks(query, top_k=3)
+                _chunks = project_service.retrieve_project_chunks(query, top_k=3, user_id=user_id)
                 if _chunks:
                     _pctx = project_service.format_chunks_for_prompt(_chunks)
                     if _pctx:
