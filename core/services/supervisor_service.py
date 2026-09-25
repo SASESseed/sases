@@ -312,7 +312,7 @@ async def task_summarizer(task):
             model=config.MODEL_NAME,
             messages=[{'role': 'user', 'content': prompt}],
             temperature=0.2,
-            max_tokens=400
+            max_tokens=3000
         )
         raw = resp.choices[0].message.content.strip()
         i = raw.find('{')
