@@ -157,6 +157,7 @@ async def periodic_rescue_maintenance():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    asyncio.create_task(supervisor_service.resume_restart_pending_runs())
     init_db()
 
     # 启动时清理中断的 run 和任务（v0.18.0）

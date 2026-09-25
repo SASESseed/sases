@@ -431,6 +431,46 @@ async def decide_next_step(run_id):
 # (重复的 build_context 已删除，用第 12 行的版本)
 
 
+def signal_restart(run_id, reason=''):
+    try:
+        import time
+        content = f"run_id={run_id}|reason={reason}|at={int(time.time())}"
+        with open('restart_signal.txt', 'w', encoding='utf-8') as f:
+            f.write(content)
+        return True
+    except Exception as e:
+        print(f"[supervisor] signal_restart failed: {e}")
+        return False
+
+
+async def resume_restart_pending_runs():
+    import asyncio
+    import sqlite3
+    await asyncio.sleep(10)
+    try:
+        from core.services import swarm_service
+        conn = sqlite3.connect('sases.db')
+        cur = conn.cursor()
+        cur.execute("SELECT run_id, conversation_id, user_id, goal FROM supervisor_runs WHERE status='restart_pending' LIMIT 5")
+        rows = cur.fetchall()
+        for run_id, conversation_id, user_id, goal in rows:
+            cur.execute("UPDATE supervisor_runs SET status='running' WHERE run_id=?", (run_id,))
+            conn.commit()
+            cur2 = conn.cursor()
+            cur2.execute("SELECT plan FROM supervisor_history WHERE run_id=? ORDER BY id DESC LIMIT 1", (run_id,))
+            r = cur2.fetchone()
+            last_plan = r[0] if r else ''
+            text = f"继续未完成的任务。原目标：{goal}。上一轮完成：{last_plan}。请继续做剩余部分。"
+            try:
+                await swarm_service.plan_task(user_id=user_id, conversation_id=conversation_id, user_input=text)
+            except Exception as e:
+                print(f"[supervisor] resume failed: {e}")
+        conn.close()
+    except Exception as e:
+        print(f"[supervisor] resume_restart_pending_runs failed: {e}")
+
+
+
 async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=None, review=None):
     import openai
     from .. import config
