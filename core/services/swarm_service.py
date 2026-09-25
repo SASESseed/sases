@@ -1393,7 +1393,7 @@ async def handle_step_done(
                                 break
                     except Exception:
                         pass
-                    if _has_core_change:
+                    if _has_core_change and not _is_resumed_chk:
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")
@@ -1578,7 +1578,7 @@ async def handle_step_done(
                                 break
                     except Exception:
                         pass
-                    if _has_core_change:
+                    if _has_core_change and not _is_resumed_chk:
                         try:
                             supervisor_service.finish_run(_run_id, 'restart_pending')
                             print(f"[supervisor] run {_run_id} 标记 restart_pending（改了 core/，需重启验证）")

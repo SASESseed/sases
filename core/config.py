@@ -17,7 +17,7 @@ EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "deepseek-embedding")
 
 # ========== 视觉/多模态模型配置 ==========
 VISION_MODEL_NAME = os.environ.get("VISION_MODEL_NAME", "deepseek-v4-flash-vision-exp")
-# [file_patch 权限测试] 这行由三者插入
+
 VISION_MODEL_BY_PROVIDER = {
     "deepseek": {"model": "deepseek-v4-flash-vision-exp", "supports_image": True},
     "openai": {"model": "gpt-4o-mini", "supports_image": True},

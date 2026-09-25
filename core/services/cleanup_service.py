@@ -154,6 +154,8 @@ def scan_test_marks(dry_run: bool = True) -> dict:
             for _f in _files:
                 if not _f.endswith(('.py', '.js', '.css', '.html')):
                     continue
+                if _f == 'cleanup_service.py':
+                    continue
                 _fp = _os.path.join(_root, _f)
                 try:
                     with open(_fp, 'r', encoding='utf-8', errors='ignore') as _fh:
