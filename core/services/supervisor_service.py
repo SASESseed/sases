@@ -304,7 +304,7 @@ async def task_summarizer(task):
         cmd = r.get('command') or r.get('module_id') or ''
         out = (r.get('output') or '')[:120]
         steps.append(str(step) + '.[' + str(status) + '] ' + desc + ' | ' + str(cmd)[:50] + ' | ' + out)
-    prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步用什么工具改哪个文件"}。判断标准：只要执行步骤有实质非空输出（file_read 拿到内容、dir_tree 列出文件、grep_code 命中、file_patch 成功），且与目标相关，即视为完成。不要因为缺一段总结文本就判 false。探测输出本身就是产出。'
+    prompt = '你是任务完成度评估器。用户目标：' + user_text + '。执行步骤：' + chr(10).join(steps) + '。请只输出 JSON：{"goal_achieved": true 或 false, "goal_reason": "理由", "missing": ["未完成项"], "next_hint": "下一步具体命令"}。判断规则：把用户目标拆成子任务逐一核对。目标含总结/回答/分析/说明，必须有文字产出。目标含改/加/实现/修复，必须有成功 file_patch。目标含读/查看/列出，有 file_read 或 dir 即可。next_hint 必须具体写清工具+文件路径+动作，不许写重新探测。'
     client = openai.OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_BASE_URL, timeout=30)
     try:
         resp = await asyncio.to_thread(
