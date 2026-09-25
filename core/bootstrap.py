@@ -192,6 +192,24 @@ async def lifespan(app: FastAPI):
     git_push_task = asyncio.create_task(periodic_git_push())
     syntax_check_task = asyncio.create_task(periodic_syntax_check())
 
+
+    async def _periodic_restart_watch():
+        import os as _os_w
+        _root = _os_w.path.dirname(_os_w.path.dirname(_os_w.path.abspath(__file__)))
+        _fp = _os_w.path.join(_root, 'restart_signal.txt')
+        await asyncio.sleep(5)
+        while True:
+            try:
+                if _os_w.path.exists(_fp):
+                    print('[bootstrap] restart_signal detected, exiting for wrapper to restart')
+                    _os_w._exit(0)
+            except Exception as _e_w:
+                print('[bootstrap] restart watch err: ' + str(_e_w))
+            await asyncio.sleep(3)
+
+    _restart_watch_task = asyncio.create_task(_periodic_restart_watch())
+
+
     yield
 
     summary_task.cancel()
