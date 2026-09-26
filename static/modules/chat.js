@@ -111,27 +111,35 @@ async function sendTransfer(receiver_id, amount, message, conversation_id) {
 async function sendMessage() {
   const input = document.getElementById('chat-input');
 
-  // 若有待发送附件，先上传再拼接
+  // 附件：每个独立发一条消息（参考微信）
   if (chatState.pendingAttachments && chatState.pendingAttachments.length) {
-    const atts = chatState.pendingAttachments;
-    let prefix = '';
-    try {
-      for (const att of atts) {
-        if (att.type === 'image') {
-          const res = await api.uploadImage(att.file);
-          if (res && res.url) prefix += '[IMAGE]:' + res.url + ' ';
-        } else {
-          const res = await api.uploadFile(att.file);
-          if (res && res.url) prefix += '[FILE]:' + res.url + '|' + att.name + '|' + att.size + ' ';
-        }
-      }
-    } catch (e) {
-      alert('上传失败: ' + (e.message || ''));
-      return;
-    }
+    const atts = [...chatState.pendingAttachments];
     chatState.pendingAttachments = [];
     if (typeof window.__sasesClearAttachment === 'function') window.__sasesClearAttachment();
-    input.value = prefix + (input.value || '');
+    for (const att of atts) {
+      try {
+        let content = '';
+        if (att.type === 'image') {
+          const res = await api.uploadImage(att.file);
+          if (res && res.url) content = '[IMAGE]:' + res.url;
+        } else {
+          const res = await api.uploadFile(att.file);
+          if (res && res.url) content = '[FILE]:' + res.url + '|' + att.name + '|' + att.size;
+        }
+        if (content) {
+          appendMessage('user', content, chatState.senderAgentId ? '智能体' : '我', null, new Date().toISOString(), false, chatState);
+          await api.sendMessage({
+            conversation_id: chatState.conversationId,
+            agent_id: chatState.agentId,
+            content: content,
+            sender_agent_id: chatState.senderAgentId,
+            mode: chatState.mode
+          });
+        }
+      } catch (e) {
+        alert('上传失败: ' + (e.message || ''));
+      }
+    }
   }
 
   let text = input.value.trim();
