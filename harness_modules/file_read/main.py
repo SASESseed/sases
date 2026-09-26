@@ -1,6 +1,5 @@
 import os
 import re as _re
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKSLASH = chr(92)
 FORBIDDEN_PARTS = ('.env', 'users.db', 'secret_key', 'api_key_encryption')
@@ -15,14 +14,36 @@ def _is_external(p):
     return m.group(1).upper() != 'C'
 
 
+_EXTERNAL_RE = _re.compile(r'^([A-Za-z]):/')
+
+
+def _is_external(p):
+    m = _EXTERNAL_RE.match(p)
+    if not m:
+        return False
+    return m.group(1).upper() != 'C'
+
+
+
+_EXTERNAL_RE = _re.compile(r'^([A-Za-z]):/')
+
+
+def _is_external(p):
+    m = _EXTERNAL_RE.match(p)
+    if not m:
+        return False
+    return m.group(1).upper() != 'C'
+
+
+
 def _safe_path(p):
     if not p:
         return None
     p = p.replace(BACKSLASH, '/').strip()
     if not _is_external(p):
-        if p.startswith('/') or (len(p) > 1 and p[1] == ':'):
+        if not _is_external(p) and (p.startswith('/') or (len(p) > 1 and p[1] == ':')):
             return None
-        if '..' in p.split('/'):
+        if not _is_external(p) and ('..' in p.split('/')):
             return None
     lower = p.lower()
     for part in FORBIDDEN_PARTS:

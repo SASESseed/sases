@@ -10,12 +10,22 @@ BACKUP_DIR = '.backups'
 UI_PREFIXES = ('render', 'open', 'show', 'hide', 'update', 'toggle', 'close')
 
 
+import re as _re2
+_EXTERNAL_RE2 = _re2.compile(r'^([A-Za-z]):/')
+
+
+def _is_external_safe(p):
+    m = _EXTERNAL_RE2.match(p)
+    if not m:
+        return False
+    return m.group(1).upper() != 'C'
+
+
 def _check(p):
     if not isinstance(p, str):
         raise ValueError('path must be str')
     p = p.replace(chr(92), '/').strip()
-    _is_d_drive = p.startswith('D:/') or p.startswith('d:/')
-    if not _is_d_drive:
+    if not _is_external_safe(p):
         if p.startswith('/') or (len(p) > 1 and p[1] == ':'):
             raise ValueError('absolute path forbidden')
         if '..' in p.split('/'):
@@ -24,7 +34,7 @@ def _check(p):
     for part in FORBIDDEN:
         if part in lower:
             raise ValueError('forbidden path')
-    if not _is_d_drive and not any(p.startswith(d) for d in ALLOWED_DIRS):
+    if not _is_external_safe(p) and not any(p.startswith(d) for d in ALLOWED_DIRS):
         raise ValueError('outside allowed dirs')
     return p
 
