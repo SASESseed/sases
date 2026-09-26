@@ -718,6 +718,29 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
   if (input) {
     input.style.display = 'block';
     input.value = '';
+    if (!input._sasesPasteBound) {
+      input._sasesPasteBound = true;
+      input.addEventListener('paste', (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        let hasFile = false;
+        for (const item of items) {
+          if (item.kind === 'file') {
+            const f = item.getAsFile();
+            if (f && f.type && f.type.indexOf('image/') === 0) {
+              hasFile = true;
+              window.chatState = window.chatState || {};
+              window.chatState.pendingAttachments = window.chatState.pendingAttachments || [];
+              window.chatState.pendingAttachments.push({ type: 'image', file: f, name: f.name || ('paste-' + Date.now() + '.png'), size: f.size });
+            }
+          }
+        }
+        if (hasFile) {
+          e.preventDefault();
+          import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachments));
+        }
+      });
+    }
   }
   const toggleBtn = document.getElementById('toggle-voice-btn');
   if (toggleBtn) toggleBtn.textContent = '🎤';
