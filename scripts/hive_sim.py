@@ -34,6 +34,7 @@ def init_db():
     cur.execute('CREATE TABLE IF NOT EXISTS accounts (user_id INTEGER PRIMARY KEY, username TEXT, credits INTEGER DEFAULT 0, updated_at TEXT)')
     cur.execute('CREATE TABLE IF NOT EXISTS transfers (id INTEGER PRIMARY KEY AUTOINCREMENT, from_user INTEGER, to_user INTEGER, amount INTEGER, created_at TEXT)')
     cur.execute('CREATE TABLE IF NOT EXISTS anchors (id INTEGER PRIMARY KEY AUTOINCREMENT, node_id TEXT, anchor_at TEXT, credits_hash TEXT, account_count INTEGER)')
+    cur.execute('CREATE TABLE IF NOT EXISTS suspected_peers (id INTEGER PRIMARY KEY AUTOINCREMENT, peer_url TEXT, peer_hash TEXT, majority_hash TEXT, detected_at TEXT, UNIQUE(peer_url))')
     cur.execute('SELECT COUNT(*) as c FROM accounts')
     if cur.fetchone()['c'] == 0:
         now = datetime.now().isoformat()
@@ -101,6 +102,16 @@ def list_anchors():
     return {'anchors': rows}
 
 
+@app.get('/suspects')
+def list_suspects():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT peer_url, peer_hash, majority_hash, detected_at FROM suspected_peers ORDER BY detected_at DESC')
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return {'node_id': NODE_ID, 'suspects': rows}
+
+
 def write_anchor():
     h = compute_hash()
     conn = get_conn()
@@ -151,10 +162,47 @@ async def heartbeat_check(interval_seconds: int = 15):
         await asyncio.sleep(interval_seconds)
 
 
+async def majority_vote_check(interval_seconds: int = 20):
+    from collections import Counter
+    await asyncio.sleep(15)
+    while True:
+        try:
+            hashes = [(NODE_ID, compute_hash())]
+            for peer in PEERS:
+                try:
+                    async with httpx.AsyncClient(timeout=3) as client:
+                        r = await client.get(f'{peer}/hash')
+                        hashes.append((peer, r.json().get('hash')))
+                except Exception:
+                    pass
+            if len(hashes) < 3:
+                await asyncio.sleep(interval_seconds)
+                continue
+            cnt = Counter(h for _, h in hashes)
+            majority_hash, majority_count = cnt.most_common(1)[0]
+            if majority_count >= (len(hashes) * 2 // 3):
+                conn = get_conn()
+                cur = conn.cursor()
+                for node, h in hashes:
+                    if node == NODE_ID:
+                        continue
+                    if h != majority_hash:
+                        cur.execute('INSERT OR REPLACE INTO suspected_peers (peer_url, peer_hash, majority_hash, detected_at) VALUES (?, ?, ?, ?)', (node, h, majority_hash, datetime.now().isoformat()))
+                        print(f'[{NODE_ID}] SUSPECT: {node} hash={h[:16]} vs majority={majority_hash[:16]}')
+                    else:
+                        cur.execute('DELETE FROM suspected_peers WHERE peer_url=?', (node,))
+                conn.commit()
+                conn.close()
+        except Exception as e:
+            print(f'[{NODE_ID}] majority_vote failed: {e}')
+        await asyncio.sleep(interval_seconds)
+
+
 @app.on_event('startup')
 async def startup():
     asyncio.create_task(periodic_anchor(30))
     asyncio.create_task(heartbeat_check(15))
+    asyncio.create_task(majority_vote_check(20))
 
 
 if __name__ == '__main__':
