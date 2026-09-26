@@ -1495,10 +1495,11 @@ async def handle_step_done(
                 pass
             if _core_before_replan and not _is_resumed_chk:
                 # 先写一条"已完成"的 review，避免 resume 时误判为未完成
+                from . import supervisor_service as _sv_replan
                 try:
                     _steps_txt_re = ' | '.join([str(r.get('step')) + '.' + str(r.get('description', ''))[:40] for r in task['results']])
                     _exec_txt_re = chr(10).join([str(r.get('step')) + '.[' + str(r.get('status', '?')) + '] ' + str(r.get('command') or r.get('module_id') or '')[:80] for r in task['results']])
-                    supervisor_service.record_round(
+                    _sv_replan.record_round(
                         _run_id,
                         plan_summary=_steps_txt_re,
                         exec_summary=_exec_txt_re,

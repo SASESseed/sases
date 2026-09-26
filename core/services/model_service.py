@@ -24,10 +24,12 @@ def create_api_key_model(user_id: int, name: str, provider: str, api_key: str, p
     encrypted = encrypt_api_key(api_key)
     model_id = generate_model_id("sases_api")
     with db_cursor(commit=True) as cur:
+        _pkey = (provider or '').lower().strip()
+        _caps = json.dumps(PROVIDER_CAPABILITIES.get(_pkey, DEFAULT_CAPABILITIES.copy()), ensure_ascii=False)
         cur.execute("""
-            INSERT INTO model_configs (id, user_id, model_type, name, provider, api_key_encrypted)
-            VALUES (?, ?, 'api', ?, ?, ?)
-        """, (model_id, user_id, name, provider, encrypted))
+            INSERT INTO model_configs (id, user_id, model_type, name, provider, api_key_encrypted, capabilities)
+            VALUES (?, ?, 'api', ?, ?, ?, ?)
+        """, (model_id, user_id, name, provider, encrypted, _caps))
     return model_id
 
 def create_local_model(user_id: int, name: str, node_url: str, model_name: str, capabilities: str = None):
@@ -67,3 +69,18 @@ def delete_model(user_id: int, model_id: str):
     with db_cursor(commit=True) as cur:
         cur.execute("DELETE FROM model_configs WHERE id=? AND user_id=?", (model_id, user_id))
     return True
+
+def parse_capabilities(model_config) -> dict:
+    """解析 model_config 的 capabilities 字段，返回 dict"""
+    if not isinstance(model_config, dict):
+        return DEFAULT_CAPABILITIES.copy()
+    caps = model_config.get('capabilities')
+    if not caps:
+        return DEFAULT_CAPABILITIES.copy()
+    try:
+        result = json.loads(caps)
+        for k, v in DEFAULT_CAPABILITIES.items():
+            result.setdefault(k, v)
+        return result
+    except Exception:
+        return DEFAULT_CAPABILITIES.copy()
