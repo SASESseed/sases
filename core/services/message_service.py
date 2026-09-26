@@ -443,7 +443,7 @@ async def send_message(
                 # 判定用"切换后的身份"，不切换时才用会话默认
                 _check_id = sender_agent_id if sender_agent_id else agent_id
                 # 只有系统默认助手 sases_assistant_2 才走项目库快答
-                if _check_id and (_check_id.startswith('sases_assistant') or _check_id.startswith('sases_api_')):
+                if _check_id and _check_id.startswith('sases_assistant'):
                     _is_sases_agent = True
             except Exception:
                 pass
