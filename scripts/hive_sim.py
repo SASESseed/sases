@@ -124,6 +124,7 @@ async def periodic_anchor(interval_seconds: int = 30):
 
 
 async def heartbeat_check(interval_seconds: int = 15):
+    _last_alert_state = {}
     await asyncio.sleep(10)
     while True:
         try:
@@ -134,10 +135,15 @@ async def heartbeat_check(interval_seconds: int = 15):
                         r = await client.get(f'{peer}/hash')
                         peer_hash = r.json().get('hash')
                         if peer_hash != my_hash:
-                            msg = f'[{datetime.now().isoformat()}] HASH MISMATCH: {NODE_ID}={my_hash[:16]} vs {peer}={peer_hash[:16]}'
-                            print(msg)
-                            with open(f'{HIVE_DIR}/alerts.log', 'a', encoding='utf-8') as f:
-                                f.write(msg + chr(10))
+                            cur_state = (my_hash, peer_hash)
+                            if _last_alert_state.get(peer) != cur_state:
+                                msg = f'[{datetime.now().isoformat()}] HASH MISMATCH: {NODE_ID}={my_hash[:16]} vs {peer}={peer_hash[:16]}'
+                                print(msg)
+                                with open(f'{HIVE_DIR}/alerts.log', 'a', encoding='utf-8') as f:
+                                    f.write(msg + chr(10))
+                                _last_alert_state[peer] = cur_state
+                        else:
+                            _last_alert_state.pop(peer, None)
                 except Exception:
                     pass
         except Exception as e:
