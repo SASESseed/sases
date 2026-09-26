@@ -1,106 +1,172 @@
-"""蜂群（Hive）模拟器
-模拟蜜蜂群体在蜂巢中的协作采集与生产行为。
-用法: python scripts/hive_sim.py --population 30 --days 30
+"""SASES 积分节点模拟 - 单机多节点验证
+用法:
+    python scripts/hive_sim.py --node-id node-A --db D:/sases-hive/node-A.db --port 9001 --peers http://127.0.0.1:9002,http://127.0.0.1:9003
 """
-
 import argparse
-import random
-import sys
-from collections import defaultdict
+import asyncio
+import hashlib
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+
+import httpx
+import uvicorn
+from fastapi import FastAPI
+
+NODE_ID = None
+DB_PATH = None
+PEERS = []
+HIVE_DIR = 'D:/sases-hive'
+
+app = FastAPI()
 
 
-class Bee:
-    """单个蜜蜂个体。"""
-
-    def __init__(self, bee_id: int, role: str = "worker") -> None:
-        self.bee_id = bee_id
-        self.role = role
-        self.energy = 100.0
-        self.carrying = 0.0
-
-    @property
-    def alive(self) -> bool:
-        return self.energy > 0.0
-
-    def act(self, nectar_field: float) -> float:
-        """执行一次采集或生产动作，返回本次采集量。"""
-        if self.role == "queen":
-            self.energy = min(100.0, self.energy + 5.0)
-            return 0.0
-        if self.role == "drone":
-            self.energy -= 1.0
-            return 0.0
-        gathered = min(nectar_field, random.uniform(0.5, 2.0))
-        self.carrying += gathered
-        self.energy -= 2.0
-        return gathered
-
-    def deposit(self) -> float:
-        amount = self.carrying
-        self.carrying = 0.0
-        return amount
-
-    def __repr__(self) -> str:
-        return "Bee(id=%d, role=%s, energy=%.1f)" % (self.bee_id, self.role, self.energy)
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-class Hive:
-    """蜂巢，管理整个蜂群的演化。"""
-
-    def __init__(self, population: int = 30) -> None:
-        self.population = population
-        self.warehouse = 0.0
-        self.day = 0
-        self.bees = []
-        self._spawn()
-
-    def _spawn(self) -> None:
-        for i in range(self.population):
-            if i == 0:
-                role = "queen"
-            elif i % 7 == 0:
-                role = "drone"
-            else:
-                role = "worker"
-            self.bees.append(Bee(i, role))
-
-    def step(self) -> None:
-        self.day += 1
-        nectar_field = max(0.0, 50.0 - 0.5 * self.day)
-        for bee in self.bees:
-            if bee.alive:
-                bee.act(nectar_field)
-        for bee in self.bees:
-            self.warehouse += bee.deposit()
-        self.bees = [b for b in self.bees if b.alive]
-        if self.day % 10 == 0:
-            self.bees.append(Bee(len(self.bees), "worker"))
-
-    def report(self) -> dict:
-        roles = defaultdict(int)
-        for bee in self.bees:
-            roles[bee.role] += 1
-        return {
-            "day": self.day,
-            "alive": len(self.bees),
-            "warehouse": round(self.warehouse, 2),
-            "roles": dict(roles),
-        }
+def init_db():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('CREATE TABLE IF NOT EXISTS accounts (user_id INTEGER PRIMARY KEY, username TEXT, credits INTEGER DEFAULT 0, updated_at TEXT)')
+    cur.execute('CREATE TABLE IF NOT EXISTS transfers (id INTEGER PRIMARY KEY AUTOINCREMENT, from_user INTEGER, to_user INTEGER, amount INTEGER, created_at TEXT)')
+    cur.execute('CREATE TABLE IF NOT EXISTS anchors (id INTEGER PRIMARY KEY AUTOINCREMENT, node_id TEXT, anchor_at TEXT, credits_hash TEXT, account_count INTEGER)')
+    cur.execute('SELECT COUNT(*) as c FROM accounts')
+    if cur.fetchone()['c'] == 0:
+        now = datetime.now().isoformat()
+        for uid, name in [(1, 'alice'), (2, 'bob'), (3, 'carol')]:
+            cur.execute('INSERT INTO accounts (user_id, username, credits, updated_at) VALUES (?, ?, ?, ?)', (uid, name, 1000, now))
+    conn.commit()
+    conn.close()
 
 
-def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="蜂群模拟器")
-    parser.add_argument("--population", type=int, default=30)
-    parser.add_argument("--days", type=int, default=30)
-    parser.add_argument("--seed", type=int, default=42)
-    args = parser.parse_args(argv)
-    random.seed(args.seed)
-    hive = Hive(args.population)
-    for _ in range(args.days):
-        hive.step()
-    print("最终:", hive.report())
-    return 0
+def compute_hash():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT user_id, credits FROM accounts ORDER BY user_id')
+    rows = cur.fetchall()
+    conn.close()
+    raw = json.dumps([(r['user_id'], r['credits']) for r in rows], sort_keys=True)
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+@app.get('/info')
+def info():
+    return {'node_id': NODE_ID, 'db': str(DB_PATH)}
+
+
+@app.get('/balance/{user_id}')
+def balance(user_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT credits FROM accounts WHERE user_id=?', (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return {'user_id': user_id, 'credits': row['credits'] if row else 0}
+
+
+@app.post('/transfer')
+def transfer(from_user: int, to_user: int, amount: int):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT credits FROM accounts WHERE user_id=?', (from_user,))
+    row = cur.fetchone()
+    if not row or row['credits'] < amount:
+        conn.close()
+        return {'ok': False, 'error': 'insufficient balance'}
+    now = datetime.now().isoformat()
+    cur.execute('UPDATE accounts SET credits=credits-?, updated_at=? WHERE user_id=?', (amount, now, from_user))
+    cur.execute('UPDATE accounts SET credits=credits+?, updated_at=? WHERE user_id=?', (amount, now, to_user))
+    cur.execute('INSERT INTO transfers (from_user, to_user, amount, created_at) VALUES (?,?,?,?)', (from_user, to_user, amount, now))
+    conn.commit()
+    conn.close()
+    return {'ok': True, 'hash_after': compute_hash()[:16]}
+
+
+@app.get('/hash')
+def hash_endpoint():
+    return {'node_id': NODE_ID, 'hash': compute_hash(), 'at': datetime.now().isoformat()}
+
+
+@app.get('/anchors')
+def list_anchors():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM anchors ORDER BY id DESC LIMIT 20')
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return {'anchors': rows}
+
+
+def write_anchor():
+    h = compute_hash()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(*) as c FROM accounts')
+    cnt = cur.fetchone()['c']
+    cur.execute('INSERT INTO anchors (node_id, anchor_at, credits_hash, account_count) VALUES (?,?,?,?)', (NODE_ID, datetime.now().isoformat(), h, cnt))
+    conn.commit()
+    conn.close()
+    print(f'[{NODE_ID}] anchor: {h[:16]}... ({cnt} accounts)')
+
+
+async def periodic_anchor(interval_seconds: int = 30):
+    await asyncio.sleep(5)
+    while True:
+        try:
+            write_anchor()
+        except Exception as e:
+            print(f'[{NODE_ID}] anchor failed: {e}')
+        await asyncio.sleep(interval_seconds)
+
+
+async def heartbeat_check(interval_seconds: int = 15):
+    await asyncio.sleep(10)
+    while True:
+        try:
+            my_hash = compute_hash()
+            for peer in PEERS:
+                try:
+                    async with httpx.AsyncClient(timeout=3) as client:
+                        r = await client.get(f'{peer}/hash')
+                        peer_hash = r.json().get('hash')
+                        if peer_hash != my_hash:
+                            msg = f'[{datetime.now().isoformat()}] HASH MISMATCH: {NODE_ID}={my_hash[:16]} vs {peer}={peer_hash[:16]}'
+                            print(msg)
+                            with open(f'{HIVE_DIR}/alerts.log', 'a', encoding='utf-8') as f:
+                                f.write(msg + chr(10))
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f'[{NODE_ID}] heartbeat failed: {e}')
+        await asyncio.sleep(interval_seconds)
+
+
+@app.on_event('startup')
+async def startup():
+    asyncio.create_task(periodic_anchor(30))
+    asyncio.create_task(heartbeat_check(15))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--node-id', required=True)
+    parser.add_argument('--db', required=True)
+    parser.add_argument('--port', type=int, required=True)
+    parser.add_argument('--peers', default='')
+    args = parser.parse_args()
+
+    NODE_ID = args.node_id
+    DB_PATH = Path(args.db)
+    PEERS = [p.strip() for p in args.peers.split(',') if p.strip()]
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    Path(HIVE_DIR).mkdir(parents=True, exist_ok=True)
+
+    init_db()
+    print(f'[{NODE_ID}] starting, DB={DB_PATH}, port={args.port}, peers={PEERS}')
+
+    uvicorn.run(app, host='127.0.0.1', port=args.port, log_level='warning')
