@@ -325,10 +325,36 @@ export function renderAttachmentPreview(att) {
     el.innerHTML = '';
     return;
   }
-  el.style.display = 'block';
-  const icon = att.type === 'image' ? '🖼' : '📎';
-  const sizeKb = att.size ? (att.size / 1024).toFixed(1) : '?';
-  el.innerHTML = '<span>' + icon + ' ' + att.name + ' (' + sizeKb + ' KB)</span><button onclick="window.__sasesClearAttachment&&window.__sasesClearAttachment()" style="margin-left:12px;border:none;background:none;color:#ff3b30;cursor:pointer;font-size:14px;">✕</button>';
+  const list = Array.isArray(att) ? att : [att];
+  if (list.length === 0) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'flex';
+  el.style.flexWrap = 'wrap';
+  el.style.gap = '6px';
+  el.style.alignItems = 'center';
+  el.innerHTML = '';
+  list.forEach(function (a, idx) {
+    const chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fff;border:1px solid #ddd;border-radius:4px;font-size:12px;';
+    const icon = a.type === 'image' ? '🖼' : '📎';
+    const sizeKb = a.size ? (a.size / 1024).toFixed(1) : '?';
+    chip.textContent = icon + ' ' + a.name + ' (' + sizeKb + 'KB)';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '✕';
+    btn.style.cssText = 'border:none;background:none;color:#ff3b30;cursor:pointer;font-size:14px;padding:0 2px;';
+    btn.onclick = function () {
+      if (window.chatState && Array.isArray(window.chatState.pendingAttachments)) {
+        window.chatState.pendingAttachments.splice(idx, 1);
+        renderAttachmentPreview(window.chatState.pendingAttachments);
+      }
+    };
+    chip.appendChild(btn);
+    el.appendChild(chip);
+  });
 }
 
 
