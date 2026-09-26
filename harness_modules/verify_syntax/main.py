@@ -123,7 +123,8 @@ def run(params):
         safe = _check(fp)
     except Exception as e:
         return {'success': False, 'error': str(e)}
-    abs_p = os.path.join(REPO_ROOT, safe)
+    _is_d_drive_safe = safe.startswith('D:/') or safe.startswith('d:/')
+    abs_p = safe if _is_d_drive_safe else os.path.join(REPO_ROOT, safe)
     if not os.path.exists(abs_p):
         return {'success': False, 'error': 'not found: ' + safe}
     ext = os.path.splitext(safe)[1].lower()
