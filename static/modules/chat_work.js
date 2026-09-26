@@ -151,7 +151,7 @@ function appendCommanderHint(text) {
 }
 
 // ========== 首次进入引导卡片 ==========
-export function showFreeModeGuide(container) {
+export function showFreeModeGuide(container, isSases = false) {
   if (!container) return;
   const guide = document.createElement('div');
   guide.style.background = '#f7f9fc';
