@@ -121,3 +121,16 @@ HYBRID_HIGH_THRESHOLD = float(os.environ.get("HYBRID_HIGH_THRESHOLD", "0.88"))
 COMMANDER_MAX_TOKENS = int(os.environ.get("COMMANDER_MAX_TOKENS", "16000"))
 REPLAN_MAX_TOKENS = int(os.environ.get("REPLAN_MAX_TOKENS", "16000"))
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "1000"))
+
+# ========== 蜂群模式（防篡改） ==========
+# off: 关闭（单用户，默认）
+# alert: 只告警（联邦早期，多信任方）
+# enforce: 强制（积分挂钩真实价值时）
+HIVE_MODE = os.environ.get("SASES_HIVE_MODE", "off").lower().strip()
+if HIVE_MODE not in ("off", "alert", "enforce"):
+    HIVE_MODE = "off"
+
+HIVE_PEERS = [x.strip() for x in os.environ.get("SASES_HIVE_PEERS", "").split(",") if x.strip()]
+HIVE_NODE_ID = os.environ.get("SASES_HIVE_NODE_ID", "")
+HIVE_ANCHOR_INTERVAL = int(os.environ.get("SASES_HIVE_ANCHOR_INTERVAL", "3600"))
+HIVE_HEARTBEAT_INTERVAL = int(os.environ.get("SASES_HIVE_HEARTBEAT_INTERVAL", "300"))

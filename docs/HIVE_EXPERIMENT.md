@@ -57,5 +57,92 @@ Each node has an independent DB with 4 tables:
 
 ### 3.1 Launch 10 Nodes
 
-```cmd
-python scripts/hive_batch.py --count 10 --port-base 9001
+    python scripts/hive_batch.py --count 10 --port-base 9001
+
+Result: All 10 nodes started, each using ~68MB memory.
+
+### 3.2 Initial Consistency Check
+
+All 10 nodes start with identical hash (25019b74caf6176a).
+
+### 3.3 Tamper Test
+
+Transfer 100 credits on node-A. Result: node-A hash becomes b98341b4d3207844, other 9 nodes remain at 25019b74caf6176a.
+
+### 3.4 Alert Deduplication Verification
+
+Before fix: 360 alerts in 3 minutes.
+After fix: 18 alerts in 2 minutes, still 18 after 5 minutes.
+Conclusion: Deduplication works.
+
+### 3.5 Majority Vote Verification
+
+After tampering node-A:
+- Node 9001 (A): suspects = 0
+- Nodes 9002-9010: suspects = 1 (each marks A)
+
+Key: All 9 nodes record identical majority_hash, achieving consensus.
+
+---
+
+## 4. Key Findings
+
+### 4.1 Single Machine Can Host Multiple Virtual Nodes
+10 nodes: 680MB. Predicted 100 nodes: ~6.8GB.
+
+### 4.2 Hash Anchoring is Precise
+Any credit change is immediately reflected. SHA256 guarantees no collisions.
+
+### 4.3 Deduplication is Essential
+Without it: dozens of alerts per minute. With it: one per state change.
+
+### 4.4 Isolation Effect of Majority Vote
+The abnormal node does NOT know. Matches collective consensus.
+
+---
+
+## 5. Limitations
+
+### 5.1 Single Machine Equals Single Trust Boundary
+10 processes still controlled by one person. Not true decentralization.
+
+### 5.2 Unimplemented
+Cross-node transfers, automatic lockout, network partition tolerance, Ed25519 identity.
+
+### 5.3 Edge Cases
+Startup time differences, concurrent log writes, heartbeat overhead.
+
+---
+
+## 6. Recommendations
+
+### 6.1 Short-term
+Integrate into SASES (expose /hive/hash), add external anchoring, add node identity.
+
+### 6.2 Mid-term
+Verify on 3 real machines, add majority-vote lockout, two-phase commit.
+
+### 6.3 Long-term
+DHT discovery, lightweight chain, decentralized identity.
+
+---
+
+## 7. File Inventory
+
+- scripts/hive_sim.py: Single-node service
+- scripts/hive_batch.py: Batch launcher
+- D:/sases-hive/node-*.db: Independent DBs per node
+- D:/sases-hive/alerts.log: Hash mismatch alerts
+
+---
+
+## 8. Conclusion
+
+Single-machine hive is fully feasible. Hash anchoring plus majority vote detects inconsistency and achieves consensus.
+
+Full tamper-proofing requires multiple independent machines. Single-machine validates mechanism feasibility only.
+
+---
+
+Experiment by: SASES Team
+Date: 2026-09-26
