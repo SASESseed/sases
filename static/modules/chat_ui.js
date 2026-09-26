@@ -312,7 +312,7 @@ export function renderAttachmentPreview(att) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'attachment-preview';
-    el.style.cssText = 'display:none;padding:6px 12px;background:#f5f5f5;border-top:1px solid #ddd;font-size:13px;';
+    el.className = 'attachment-preview';
     const inputArea = document.getElementById('chat-input');
     if (inputArea && inputArea.parentNode) {
       inputArea.parentNode.insertBefore(el, inputArea);
@@ -331,29 +331,39 @@ export function renderAttachmentPreview(att) {
     el.innerHTML = '';
     return;
   }
-  el.style.display = 'flex';
-  el.style.flexWrap = 'wrap';
-  el.style.gap = '6px';
-  el.style.alignItems = 'center';
+  el.classList.add('active');
   el.innerHTML = '';
   list.forEach(function (a, idx) {
-    const chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fff;border:1px solid #ddd;border-radius:4px;font-size:12px;';
-    const icon = a.type === 'image' ? '🖼' : '📎';
-    const sizeKb = a.size ? (a.size / 1024).toFixed(1) : '?';
-    chip.textContent = icon + ' ' + a.name + ' (' + sizeKb + 'KB)';
+    const item = document.createElement('div');
+    item.className = 'attachment-item';
+    if (a.type === 'image') {
+      const img = document.createElement('img');
+      img.className = 'attachment-thumb';
+      img.src = URL.createObjectURL(a.file);
+      img.alt = a.name || 'image';
+      item.appendChild(img);
+    } else {
+      const icon = document.createElement('div');
+      icon.className = 'attachment-file-icon';
+      icon.textContent = '📎';
+      item.appendChild(icon);
+      const name = document.createElement('div');
+      name.className = 'attachment-file-name';
+      name.textContent = a.name || 'file';
+      item.appendChild(name);
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
+    btn.className = 'attachment-remove';
     btn.textContent = '✕';
-    btn.style.cssText = 'border:none;background:none;color:#ff3b30;cursor:pointer;font-size:14px;padding:0 2px;';
     btn.onclick = function () {
       if (window.chatState && Array.isArray(window.chatState.pendingAttachments)) {
         window.chatState.pendingAttachments.splice(idx, 1);
         renderAttachmentPreview(window.chatState.pendingAttachments);
       }
     };
-    chip.appendChild(btn);
-    el.appendChild(chip);
+    item.appendChild(btn);
+    el.appendChild(item);
   });
 }
 
