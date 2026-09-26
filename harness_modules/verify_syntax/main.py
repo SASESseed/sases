@@ -21,6 +21,17 @@ def _is_external_safe(p):
     return m.group(1).upper() != 'C'
 
 
+import re as _re2
+_EXTERNAL_RE2 = _re2.compile(r'^([A-Za-z]):/')
+
+
+def _is_external_safe(p):
+    m = _EXTERNAL_RE2.match(p)
+    if not m:
+        return False
+    return m.group(1).upper() != 'C'
+
+
 def _check(p):
     if not isinstance(p, str):
         raise ValueError('path must be str')
