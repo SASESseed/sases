@@ -12,8 +12,9 @@
   参数: file_path, new_content, create_if_missing=true
   行为: 文件不存在或为空时，直接写入 new_content
 
-【v2.1.0 权限】
-  - 允许目录：static/ / core/ / scripts/ / docs/
+【v2.3.0 权限】
+  - 项目内允许目录：static/ / core/ / scripts/ / docs/ / harness_modules/
+  - 外部允许目录：D:/ 全盘（用于多实例测试）
   - 禁止文件：users.db / .env / *.key / *.bin / *.pem / *.crt
   - 自我保护：file_patch 自身、executor_service.py
   - 自动备份到 .backups/
@@ -33,18 +34,33 @@ SELF_PROTECTED_FILES = {
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKUP_DIR = ".backups"
 
+# D 盘全盘放开（用于多实例测试）
+EXTERNAL_ALLOWED_PREFIXES = ("D:/", "d:/")
+
+
+def _is_external_allowed(p: str) -> bool:
+    """检查是否在外部白名单（D 盘）"""
+    return any(p.startswith(prefix) for prefix in EXTERNAL_ALLOWED_PREFIXES)
+
 
 def _validate_path(file_path: str) -> str:
     if not file_path or not isinstance(file_path, str):
         raise ValueError("缺少 file_path 参数")
     p = file_path.replace("\\", "/").strip()
-    if p.startswith("/") or (len(p) > 1 and p[1] == ":"):
-        raise ValueError(f"禁止绝对路径: {file_path}")
-    if ".." in p.split("/"):
-        raise ValueError(f"禁止路径穿越: {file_path}")
-    if not any(p.startswith(d) for d in ALLOWED_DIRS):
-        allowed = " / ".join(ALLOWED_DIRS)
-        raise ValueError(f"只允许修改以下目录：{allowed}，收到: {file_path}")
+
+    _is_external = _is_external_allowed(p)
+
+    # 项目内检查（外部白名单跳过）
+    if not _is_external:
+        if p.startswith("/") or (len(p) > 1 and p[1] == ":"):
+            raise ValueError(f"禁止绝对路径: {file_path}")
+        if ".." in p.split("/"):
+            raise ValueError(f"禁止路径穿越: {file_path}")
+        if not any(p.startswith(d) for d in ALLOWED_DIRS):
+            allowed = " / ".join(ALLOWED_DIRS)
+            raise ValueError(f"只允许修改以下目录：{allowed}，收到: {file_path}")
+
+    # 敏感文件检查（对内外都生效）
     lower = p.lower()
     for part in FORBIDDEN_PARTS:
         if part in lower:
@@ -52,8 +68,11 @@ def _validate_path(file_path: str) -> str:
     ext = os.path.splitext(p)[1].lower()
     if ext in FORBIDDEN_EXT:
         raise ValueError(f"禁止修改 {ext} 类型文件")
-    if p in SELF_PROTECTED_FILES:
+
+    # 自我保护（只对项目内文件生效）
+    if not _is_external and p in SELF_PROTECTED_FILES:
         raise ValueError(f"禁止修改受保护文件: {file_path}")
+
     return p
 
 
@@ -61,10 +80,14 @@ def _backup_before_write(abs_path, safe_path):
     try:
         if not os.path.exists(abs_path):
             return None
-        os.makedirs(BACKUP_DIR, exist_ok=True)
+        # D 盘的备份放到 D 盘的同级 .backups
+        _backup_dir = BACKUP_DIR
+        if _is_external_allowed(safe_path.replace("\\", "/")):
+            _backup_dir = os.path.join(os.path.dirname(abs_path), ".backups")
+        os.makedirs(_backup_dir, exist_ok=True)
         safe_name = safe_path.replace("/", "__").replace("\\", "__")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        backup_path = os.path.join(BACKUP_DIR, f"{safe_name}.{timestamp}.bak")
+        backup_path = os.path.join(_backup_dir, f"{safe_name}.{timestamp}.bak")
         with open(abs_path, "r", encoding="utf-8") as src:
             content = src.read()
         with open(backup_path, "w", encoding="utf-8") as dst:
