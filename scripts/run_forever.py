@@ -1,6 +1,7 @@
 import subprocess, sys, time, os
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-C = [sys.executable, "-m", "uvicorn", "app_full:app", "--port", "8001"]
+_PORT = os.environ.get("SASES_PORT", "8001")
+C = [sys.executable, "-m", "uvicorn", "app_full:app", "--port", _PORT]
 BAD_ALLOC_THRESHOLD = 5
 
 while True:
