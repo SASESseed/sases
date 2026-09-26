@@ -34,13 +34,17 @@ SELF_PROTECTED_FILES = {
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKUP_DIR = ".backups"
 
-# D 盘全盘放开（用于多实例测试）
-EXTERNAL_ALLOWED_PREFIXES = ("D:/", "d:/")
+# 非 C 盘全盘放开（C 盘受项目白名单限制）
+import re as _re
+_EXTERNAL_RE = _re.compile(r'^([A-Za-z]):/')
 
 
 def _is_external_allowed(p: str) -> bool:
-    """检查是否在外部白名单（D 盘）"""
-    return any(p.startswith(prefix) for prefix in EXTERNAL_ALLOWED_PREFIXES)
+    """非 C 盘一律放行"""
+    m = _EXTERNAL_RE.match(p)
+    if not m:
+        return False
+    return m.group(1).upper() != 'C'
 
 
 def _validate_path(file_path: str) -> str:
