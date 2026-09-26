@@ -731,7 +731,9 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
   if (messagesContainer) {
     messagesContainer.innerHTML = '';
     if (!localStorage.getItem('sases_free_mode_guide_dismissed')) {
-      showFreeModeGuide(messagesContainer);
+      const _agentId = chatState.agentId || '';
+      const _isSases = _agentId.startsWith('sases_assistant') || _agentId.startsWith('sases_api_');
+      showFreeModeGuide(messagesContainer, _isSases);
     }
   }
 
