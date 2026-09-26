@@ -1,8 +1,19 @@
 # core/services/model_service.py
+import json
 import secrets
 import string
 from ..db import db_cursor
 from ..security import encrypt_api_key
+
+PROVIDER_CAPABILITIES = {
+    'deepseek': {'supports_vision': True, 'supports_image_edit': False, 'supports_video': False},
+    'openai':   {'supports_vision': True, 'supports_image_edit': True,  'supports_video': False},
+    'moonshot': {'supports_vision': False, 'supports_image_edit': False, 'supports_video': False},
+    'zhipu':    {'supports_vision': True, 'supports_image_edit': True,  'supports_video': True},
+    'qwen':     {'supports_vision': True, 'supports_image_edit': False, 'supports_video': False},
+}
+
+DEFAULT_CAPABILITIES = {'supports_vision': False, 'supports_image_edit': False, 'supports_video': False}
 
 def generate_model_id(prefix: str) -> str:
     alphabet = string.ascii_lowercase + string.digits
