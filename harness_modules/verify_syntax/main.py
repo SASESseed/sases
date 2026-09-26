@@ -14,15 +14,17 @@ def _check(p):
     if not isinstance(p, str):
         raise ValueError('path must be str')
     p = p.replace(chr(92), '/').strip()
-    if p.startswith('/') or (len(p) > 1 and p[1] == ':'):
-        raise ValueError('absolute path forbidden')
-    if '..' in p.split('/'):
-        raise ValueError('path traversal forbidden')
+    _is_d_drive = p.startswith('D:/') or p.startswith('d:/')
+    if not _is_d_drive:
+        if p.startswith('/') or (len(p) > 1 and p[1] == ':'):
+            raise ValueError('absolute path forbidden')
+        if '..' in p.split('/'):
+            raise ValueError('path traversal forbidden')
     lower = p.lower()
     for part in FORBIDDEN:
         if part in lower:
             raise ValueError('forbidden path')
-    if not any(p.startswith(d) for d in ALLOWED_DIRS):
+    if not _is_d_drive and not any(p.startswith(d) for d in ALLOWED_DIRS):
         raise ValueError('outside allowed dirs')
     return p
 
