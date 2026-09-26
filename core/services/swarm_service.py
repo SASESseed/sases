@@ -1508,10 +1508,10 @@ async def handle_step_done(
                 except Exception as _e_rec4:
                     print(f"[supervisor] record_round (replan) 失败: {_e_rec4}")
                 try:
-                    supervisor_service.finish_run(_run_id, 'restart_pending')
+                    _sv_replan.finish_run(_run_id, 'restart_pending')
                     print(f"[supervisor] run {_run_id} 重拆前发现 core/ 改动，优先触发 restart_pending")
                     try:
-                        supervisor_service.signal_restart(_run_id, 'restart_pending')
+                        _sv_replan.signal_restart(_run_id, 'restart_pending')
                     except Exception as _se:
                         print(f"[supervisor] signal_restart 失败: {_se}")
                 except Exception as _e:
