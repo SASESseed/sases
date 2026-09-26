@@ -308,15 +308,6 @@ async def send_message(
     if not sender_agent_id and agent_id == 'sases_assistant_2':
         sender_agent_id = agent_id
 
-    # 附件富化：把 [IMAGE]:/[FILE]: 消息内容读进来，放最前面对所有路径生效
-    _IMG_IMP_E = ('图片导入知识库', '图片存入知识库', '这张图导入知识库', '把图存入知识库')
-    _skip_e = any(_k in content for _k in _IMG_IMP_E) if isinstance(content, str) else False
-    if isinstance(content, str) and (content.startswith('[IMAGE]:') or content.startswith('[FILE]:')) and not _skip_e:
-        try:
-            content = _enrich_attachment(content)
-        except Exception as _ee:
-            print('[message] _enrich 失败: ' + str(_ee))
-
     print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
     # 附件消息（[IMAGE]: / [FILE]:）直接入库，不调模型
