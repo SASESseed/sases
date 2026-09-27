@@ -118,23 +118,38 @@ def sync_member_remove(body: dict):
 
 @router.post("/sync/group")
 def sync_group(body: dict):
-    """接收 peer 的群创建通知，写本地影子群"""
+    """接收 peer 的群创建通知，写本地影子群 + 写群主为成员"""
     from ..db import db_cursor
     _gid = body.get('global_group_id')
     _origin = body.get('origin_node')
     _name = body.get('name') or '未命名群'
+    _owner_sases = body.get('owner_sases_id')
     if not _gid:
         return {'ok': False, 'error': 'missing global_group_id'}
     with db_cursor() as cur:
         cur.execute("SELECT id FROM groups WHERE global_group_id=?", (_gid,))
         if cur.fetchone():
             return {'ok': True, 'skipped': True}
+    _owner_uid = None
+    if _owner_sases:
+        with db_cursor() as cur2:
+            cur2.execute("SELECT id FROM users WHERE sases_id=?", (_owner_sases,))
+            _u = cur2.fetchone()
+            if _u:
+                _owner_uid = _u['id']
     try:
-        with db_cursor(commit=True) as cur:
-            cur.execute(
-                "INSERT INTO groups (name, owner_id, mode, global_group_id, origin_node) VALUES (?, 1, 'normal', ?, ?)",
-                (_name, _gid, _origin)
+        with db_cursor(commit=True) as cur3:
+            _oid = _owner_uid if _owner_uid else 1
+            cur3.execute(
+                "INSERT INTO groups (name, owner_id, mode, global_group_id, origin_node) VALUES (?, ?, 'normal', ?, ?)",
+                (_name, _oid, _gid, _origin)
             )
-        return {'ok': True, 'created': True, 'global_group_id': _gid}
+            _local_gid = cur3.lastrowid
+            if _owner_uid:
+                cur3.execute(
+                    "INSERT INTO group_members (group_id, user_id, role, origin_node, user_sases_id) VALUES (?, ?, 'owner', ?, ?)",
+                    (_local_gid, _owner_uid, _origin, _owner_sases)
+                )
+        return {'ok': True, 'created': True, 'global_group_id': _gid, 'owner_added': _owner_uid is not None}
     except Exception as e:
         return {'ok': False, 'error': str(e)}
