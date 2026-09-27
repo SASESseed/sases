@@ -629,6 +629,8 @@ def init_db():
         # ========== 蜂群审核日志表（v0.15.0 从 swarm_service 收编） ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS swarm_reviews (
+                step_type TEXT,  -- v0.17.0 区分 command / harness
+
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id TEXT NOT NULL,
                 conversation_id INTEGER,
