@@ -1,0 +1,5 @@
+=== node-A ===
+   id=13 uid=2 name=666666
+   id=15 uid=3 name=88888888
+=== node-B ===
+=== node-C ===

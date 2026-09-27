@@ -16,7 +16,6 @@ def create_group(name: str, owner_id: int):
             (name, owner_id, _global_gid, _origin_node)
         )
         group_id = cur.lastrowid
-        cur.execute("INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, 'owner')", (group_id, owner_id))
         _owner_sases_id = None
         try:
             cur.execute("SELECT sases_id FROM users WHERE id=?", (owner_id,))
@@ -25,6 +24,8 @@ def create_group(name: str, owner_id: int):
                 _owner_sases_id = _r['sases_id']
         except Exception:
             pass
+        cur.execute("INSERT INTO group_members (group_id, user_id, role, origin_node, user_sases_id) VALUES (?, ?, 'owner', ?, ?)",
+                    (group_id, owner_id, _origin_node, _owner_sases_id))
     if _global_gid and _cfg.HIVE_MODE != 'off' and _cfg.HIVE_PEERS:
         try:
             import httpx as _httpx
