@@ -220,6 +220,8 @@ def init_db():
         """)
         _ensure_column(cur, "group_members", "agent_id", "TEXT")
         _ensure_column(cur, "group_members", "last_read_at", "TEXT")
+        _ensure_column(cur, "group_members", "origin_node", "TEXT")
+        _ensure_column(cur, "group_members", "user_sases_id", "TEXT")
 
         # ========== 群消息表 ==========
         cur.execute("""
@@ -235,6 +237,8 @@ def init_db():
             )
         """)
         _ensure_column(cur, "group_messages", "sender_agent_id", "TEXT")
+        _ensure_column(cur, "group_messages", "global_msg_id", "TEXT")
+        _ensure_column(cur, "group_messages", "origin_node", "TEXT")
 
         # ========== 市场订单表 ==========
         cur.execute("""
