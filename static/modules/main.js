@@ -151,6 +151,7 @@ function enterMainApp() {
   document.getElementById('view-login').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   activateMainView('messages');
+  import('./ws_client.js').then(m => m.connectUserWs()).catch(() => {});
 }
 
 function activateMainView(viewName) {

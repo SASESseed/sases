@@ -7,6 +7,16 @@ import { t } from './i18n.js';
 
 let initialized = false;
 
+if (!window._sasesMsgListenerBound) {
+  window._sasesMsgListenerBound = true;
+  window.addEventListener('sases_new_message', () => {
+    const container = document.getElementById('messages-list');
+    if (container && document.getElementById('view-messages').classList.contains('active')) {
+      loadConversations(container);
+    }
+  });
+}
+
 export async function initMessages() {
   const container = document.getElementById('messages-list');
   if (!container) return;
