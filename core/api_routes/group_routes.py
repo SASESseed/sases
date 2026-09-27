@@ -95,6 +95,21 @@ async def send_group_message(group_id: int, body: GroupMessageRequest, user_id: 
     success, msg = group_service.send_group_message(group_id, user_id, body.content, body.agent_id)
     if not success:
         raise HTTPException(status_code=400, detail=msg)
+    try:
+        from .ws_routes import broadcast_to_group
+        from ..db import db_cursor
+        with db_cursor() as cur:
+            cur.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+            _r = cur.fetchone()
+        if _r and _r['global_group_id']:
+            await broadcast_to_group(_r['global_group_id'], {
+                'type': 'message',
+                'content': body.content,
+                'sender_id': user_id,
+                'sender_agent_id': body.agent_id,
+            })
+    except Exception as _e:
+        print('[ws] push failed:', _e)
     return {"status": "sent"}
 
 

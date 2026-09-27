@@ -21,7 +21,7 @@ def hive_ping():
 
 
 @router.post("/sync/message")
-def sync_message(body: dict):
+async def sync_message(body: dict):
     """接收 peer 的群消息，写本地影子群消息。global_msg_id 去重。"""
     from ..db import db_cursor
     _gid = body.get('global_group_id')
@@ -53,9 +53,20 @@ def sync_message(body: dict):
                 "INSERT INTO group_messages (group_id, sender_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?, ?)",
                 (_local_gid, _sender_uid, _sender_agent, _content, _msg_id, _origin)
             )
-        return {'ok': True, 'created': True}
     except Exception as e:
         return {'ok': False, 'error': str(e)}
+    try:
+        from .ws_routes import broadcast_to_group
+        await broadcast_to_group(_gid, {
+            'type': 'message',
+            'content': _content,
+            'sender_sases_id': _sender_sases,
+            'sender_agent_id': _sender_agent,
+            'origin_node': _origin,
+        })
+    except Exception as _e:
+        print('[ws] sync push failed:', _e)
+    return {'ok': True, 'created': True}
 
 
 @router.post("/sync/member")
