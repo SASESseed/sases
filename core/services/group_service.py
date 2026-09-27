@@ -52,15 +52,27 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
         if not cur.fetchone():
             return False, "邀请者不是群成员"
 
+        from .. import config as _cfg_i
+        _origin = _cfg_i.HIVE_NODE_ID if _cfg_i.HIVE_MODE != 'off' else None
+
         cur.execute("SELECT id FROM users WHERE username=? OR sases_id=?", (invitee, invitee))
         user = cur.fetchone()
         if user:
             target_user_id = user["id"]
+            _target_sases = None
+            cur.execute("SELECT sases_id FROM users WHERE id=?", (target_user_id,))
+            _ru = cur.fetchone()
+            if _ru:
+                _target_sases = _ru['sases_id']
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, target_user_id))
             if cur.fetchone():
                 return False, "用户已在群中"
             with db_cursor(commit=True) as cur2:
-                cur2.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (group_id, target_user_id))
+                cur2.execute("INSERT INTO group_members (group_id, user_id, origin_node, user_sases_id) VALUES (?, ?, ?, ?)", (group_id, target_user_id, _origin, _target_sases))
+                cur2.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+                _gg = cur2.fetchone()
+            if _gg and _gg['global_group_id']:
+                _broadcast_member(_gg['global_group_id'], _target_sases, 'member')
             return True, "邀请用户成功"
 
         cur.execute("""
@@ -74,7 +86,7 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
             if cur.fetchone():
                 return False, "智能体已在群中"
             with db_cursor(commit=True) as cur2:
-                cur2.execute("INSERT INTO group_members (group_id, agent_id, role) VALUES (?, ?, 'agent')", (group_id, agent_id))
+                cur2.execute("INSERT INTO group_members (group_id, agent_id, role, origin_node) VALUES (?, ?, 'agent', ?)", (group_id, agent_id, _origin))
             return True, "邀请智能体成功"
 
         return False, "找不到该用户或智能体，或智能体不属于你"
