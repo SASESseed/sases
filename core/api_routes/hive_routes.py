@@ -89,6 +89,33 @@ def sync_member(body: dict):
         return {'ok': False, 'error': str(e)}
 
 
+@router.post("/sync/member-remove")
+def sync_member_remove(body: dict):
+    """接收 peer 的成员移除通知"""
+    from ..db import db_cursor
+    _gid = body.get('global_group_id')
+    _sases_id = body.get('member_sases_id')
+    if not _gid or not _sases_id:
+        return {'ok': False, 'error': 'missing params'}
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM groups WHERE global_group_id=?", (_gid,))
+        _g = cur.fetchone()
+        if not _g:
+            return {'ok': False, 'error': 'group not found'}
+        _local_gid = _g['id']
+        cur.execute("SELECT id FROM users WHERE sases_id=?", (_sases_id,))
+        _u = cur.fetchone()
+        if not _u:
+            return {'ok': True, 'skipped': True}
+        _uid = _u['id']
+    try:
+        with db_cursor(commit=True) as cur2:
+            cur2.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (_local_gid, _uid))
+        return {'ok': True, 'removed': True}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
 @router.post("/sync/group")
 def sync_group(body: dict):
     """接收 peer 的群创建通知，写本地影子群"""
