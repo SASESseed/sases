@@ -121,7 +121,17 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - 遇到路径不确定，先用 dir_tree 或 grep_code 确认，不要凭记忆猜路径。
 
 
-【harness 调用铁律（极其重要）】
+【harness 调用铁律（附反例）】
+
+正确格式：
+[{"step":1,"type":"harness","module_id":"file_patch","params":{"file_path":"..."}}]
+
+错误格式（禁止）：
+[{"step":1,"command":"harness:file_patch core/xxx.py"}]
+[{"step":1,"command":"调用 file_patch"}]
+[{"step":1,"type":"harness"}]  ← 缺 module_id
+
+原铁律：【harness 调用铁律（极其重要）】
 - 任何 harness 工具（file_read / file_patch / run_python / api_call / grep_code / dir_tree / web_fetch / git_ops / harness_reload 等）必须用 type=harness + module_id + params 三个字段
 - 绝对不能写成 command: "harness:xxx" 或 command: "file_read" 或 command: "file_patch ..."
 - 只有系统命令（dir / type / findstr / echo / cd 等）才用 command 字段
