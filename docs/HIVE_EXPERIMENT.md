@@ -136,6 +136,30 @@ DHT discovery, lightweight chain, decentralized identity.
 
 ---
 
+## 7.5 Cross-Instance Group Chat (Stage 2)
+
+### Implemented
+
+- Group creation sync: `POST /hive/sync/group` + auto-broadcast
+- Member invite sync: `POST /hive/sync/member` + auto-broadcast
+- Message sync: `POST /hive/sync/message` + auto-broadcast
+- Dedup by `global_msg_id` (messages) and `global_group_id` (groups)
+
+### Tested
+
+3 instances (node-A/B/C) on the same machine:
+- Group created on node-A → visible on node-B/C in 3 seconds
+- Member invited on node-A → appears on node-B/C
+- Message sent on node-A → appears on node-B/C with same global_msg_id
+
+### Known Limitations
+
+- Member removal not broadcasted (TODO)
+- Leave group not broadcasted (TODO)
+- No WebSocket push (needs manual refresh)
+- Old messages before deploy are not retroactively synced
+
+
 ## 8. Conclusion
 
 Single-machine hive is fully feasible. Hash anchoring plus majority vote detects inconsistency and achieves consensus.
