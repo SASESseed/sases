@@ -287,7 +287,7 @@ def review_step(step: Dict[str, Any], status: str, output: str) -> Tuple[str, st
             return "retry", "目标文件不存在，路径可能有误"
         return "pass", "查询无结果（正常）"
 
-    if status in ("failed", "timeout", "error"):
+    if status in ("failed", "timeout", "error", "format_error"):
         detail = (output or "").strip()[:200]
         return "retry", f"命令状态: {status} | {detail}"
 
