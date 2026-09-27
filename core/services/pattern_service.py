@@ -184,6 +184,11 @@ def _upsert_pattern(domain, pattern_key, pattern_type, context_signature, role, 
             candidates = cur.fetchall()
         query_vec = np.asarray(emb, dtype=np.float32).flatten()
         for c in candidates:
+            c_key = c["pattern_key"] if "pattern_key" in c.keys() else ""
+            if c_key and c_key != pattern_key:
+                _compatible = (c_key.startswith(pattern_key) or pattern_key.startswith(c_key))
+                if not _compatible:
+                    continue
             c_emb = _get_embedder().get_embedding(c["evidence"])
             if _cosine_sim(query_vec, np.asarray(c_emb, dtype=np.float32).flatten()) >= DEDUP_SIMILARITY_THRESHOLD:
                 with db_cursor(commit=True) as cur2:
