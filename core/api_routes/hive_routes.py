@@ -20,6 +20,75 @@ def hive_ping():
     return {"ok": True}
 
 
+@router.post("/sync/message")
+def sync_message(body: dict):
+    """接收 peer 的群消息，写本地影子群消息。global_msg_id 去重。"""
+    from ..db import db_cursor
+    _gid = body.get('global_group_id')
+    _msg_id = body.get('global_msg_id')
+    _content = body.get('content')
+    _sender_sases = body.get('sender_sases_id')
+    _sender_agent = body.get('sender_agent_id')
+    _origin = body.get('origin_node')
+    if not _gid or not _msg_id or _content is None:
+        return {'ok': False, 'error': 'missing params'}
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM group_messages WHERE global_msg_id=?", (_msg_id,))
+        if cur.fetchone():
+            return {'ok': True, 'skipped': True}
+        cur.execute("SELECT id FROM groups WHERE global_group_id=?", (_gid,))
+        _g = cur.fetchone()
+        if not _g:
+            return {'ok': False, 'error': 'group not found'}
+        _local_gid = _g['id']
+        _sender_uid = None
+        if _sender_sases:
+            cur.execute("SELECT id FROM users WHERE sases_id=?", (_sender_sases,))
+            _u = cur.fetchone()
+            if _u:
+                _sender_uid = _u['id']
+    try:
+        with db_cursor(commit=True) as cur2:
+            cur2.execute(
+                "INSERT INTO group_messages (group_id, sender_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?, ?)",
+                (_local_gid, _sender_uid, _sender_agent, _content, _msg_id, _origin)
+            )
+        return {'ok': True, 'created': True}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
+@router.post("/sync/member")
+def sync_member(body: dict):
+    """接收 peer 的成员邀请通知，写本地影子群成员"""
+    from ..db import db_cursor
+    _gid = body.get('global_group_id')
+    _sases_id = body.get('member_sases_id')
+    _role = body.get('role') or 'member'
+    if not _gid or not _sases_id:
+        return {'ok': False, 'error': 'missing params'}
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM groups WHERE global_group_id=?", (_gid,))
+        _g = cur.fetchone()
+        if not _g:
+            return {'ok': False, 'error': 'group not found locally'}
+        _local_gid = _g['id']
+        cur.execute("SELECT id FROM users WHERE sases_id=?", (_sases_id,))
+        _u = cur.fetchone()
+        if not _u:
+            return {'ok': False, 'error': 'user not found locally'}
+        _uid = _u['id']
+        cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (_local_gid, _uid))
+        if cur.fetchone():
+            return {'ok': True, 'skipped': True}
+    try:
+        with db_cursor(commit=True) as cur2:
+            cur2.execute("INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)", (_local_gid, _uid, _role))
+        return {'ok': True, 'created': True}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
 @router.post("/sync/group")
 def sync_group(body: dict):
     """接收 peer 的群创建通知，写本地影子群"""
