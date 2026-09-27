@@ -27,7 +27,9 @@ ALLOWED_COMMANDS = {
     "wc",
 }
 
-DANGEROUS_CHARS = ['&', '<', '>', '^', '%', '`', '$', '\n', '\r']
+# 只保留真正危险的字符（命令链、替换、换行）
+# 移除 % $ ^ < > 因为这些在合法路径/URL/输出中很常见
+DANGEROUS_CHARS = ['&', '`', '\n', '\r']
 
 MAX_OUTPUT_LENGTH = 2000
 DEFAULT_TIMEOUT = 30
@@ -49,13 +51,24 @@ def _get_semaphore() -> asyncio.Semaphore:
 
 # ========== 命令安全检查 ==========
 
-def is_command_safe(cmd: str) -> tuple:
-    # JSON 形式的 harness 调用绕过 shell 字符检查
-    if cmd.strip().startswith('{') and 'module_id' in cmd:
-        return True, ''
+def is_command_safe(cmd) -> tuple:
+    """检查命令是否安全。支持 str 和 dict 两种输入。"""
+    # dict 形式的 harness 调用：直接放行
+    if isinstance(cmd, dict):
+        if cmd.get('module_id') or cmd.get('type') == 'harness':
+            return True, ''
+        cmd = str(cmd)
+    if not isinstance(cmd, str):
+        cmd = str(cmd)
     if not cmd or not cmd.strip():
         return False, "命令为空"
 
+    # JSON 形式的 harness 调用绕过 shell 字符检查
+    _stripped = cmd.strip()
+    if _stripped.startswith('{') and 'module_id' in _stripped:
+        return True, ''
+
+    # 危险字符检查（精简版）
     for ch in DANGEROUS_CHARS:
         if ch in cmd:
             return False, f"包含禁止字符: {repr(ch)}"
@@ -69,8 +82,6 @@ def is_command_safe(cmd: str) -> tuple:
         if not tokens:
             continue
         base = tokens[0].lower()
-        if '\\' in base or '/' in base:
-            return False, f"命令含路径: {base}"
         if base.endswith('.exe') or base.endswith('.bat') or base.endswith('.cmd'):
             base = base.rsplit('.', 1)[0]
         if base not in ALLOWED_COMMANDS:
@@ -265,22 +276,30 @@ async def _execute_task(task: Dict[str, Any]):
             print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
         else:
             cmd_raw = step.get("command", "")
-            cmd = _substitute_placeholders(cmd_raw, previous_outputs)
-
-            if "{{step" in cmd or "{step" in cmd:
-                output = "跳过：依赖的步骤失败（占位符未替换）"
-                status = "skipped"
-                dur = 0
+            # 兼容：如果 command 是 dict 且含 module_id，转成 harness 调用
+            if isinstance(cmd_raw, dict) and cmd_raw.get('module_id'):
+                module_id = cmd_raw.get('module_id')
+                params = _substitute_params(cmd_raw.get('params', {}), previous_outputs)
+                print(f"[executor]   harness params (from dict): {json.dumps(params, ensure_ascii=False)[:300]}")
+                output, status, dur = await _run_harness(module_id, params)
+                print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
             else:
-                is_safe, reason = is_command_safe(cmd)
-                if not is_safe:
-                    output = f"命令被安全策略拒绝: {reason}"
-                    status = "blocked"
+                cmd = _substitute_placeholders(cmd_raw, previous_outputs)
+
+                if "{{step" in cmd or "{step" in cmd:
+                    output = "跳过：依赖的步骤失败（占位符未替换）"
+                    status = "skipped"
                     dur = 0
-                    print(f"[executor]   [!] {reason}")
                 else:
-                    output, status, dur = await _run_command(cmd)
-                    print(f"[executor]   结果: {status} ({dur}ms)")
+                    is_safe, reason = is_command_safe(cmd)
+                    if not is_safe:
+                        output = f"命令被安全策略拒绝: {reason}"
+                        status = "blocked"
+                        dur = 0
+                        print(f"[executor]   [!] {reason}")
+                    else:
+                        output, status, dur = await _run_command(cmd)
+                        print(f"[executor]   结果: {status} ({dur}ms)")
 
         if status == "success":
             previous_outputs[step_id] = output

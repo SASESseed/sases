@@ -44,9 +44,6 @@ export function openGroupChat(groupId, groupName) {
   if (modeText) modeText.textContent = '普通聊天';
 
   const messagesContainer = document.getElementById('chat-messages');
-  messagesContainer.innerHTML = '';
-  loadGroupMessages();
-
   // 建立 WebSocket 连接
   try {
     if (window._groupWs) {
@@ -73,6 +70,8 @@ export function openGroupChat(groupId, groupName) {
   } catch (e) {
     console.warn('[ws] setup failed:', e);
   }
+  messagesContainer.innerHTML = '';
+  loadGroupMessages();
 }
 
 export function closeGroupChat() {

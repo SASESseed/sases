@@ -39,3 +39,41 @@ async def ws_group(websocket: WebSocket, global_group_id: str):
     finally:
         _connections.get(global_group_id, set()).discard(websocket)
         print(f"[ws] client disconnected from group {global_group_id}")
+
+
+# ========== 用户级 WS（单聊 + 通知） ==========
+_user_connections: Dict[int, Set[WebSocket]] = {}
+
+
+async def broadcast_to_user(user_id: int, message: dict):
+    """给指定用户的所有 WS 连接推送消息"""
+    conns = _user_connections.get(user_id, set())
+    dead = []
+    for ws in list(conns):
+        try:
+            await ws.send_json(message)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        conns.discard(ws)
+
+
+@router.websocket("/ws/user/{user_id}")
+async def ws_user(websocket: WebSocket, user_id: int):
+    await websocket.accept()
+    if user_id not in _user_connections:
+        _user_connections[user_id] = set()
+    _user_connections[user_id].add(websocket)
+    print(f"[ws] user {user_id} connected, total={len(_user_connections[user_id])}")
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        _user_connections.get(user_id, set()).discard(websocket)
+        print(f"[ws] user {user_id} disconnected")
