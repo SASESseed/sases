@@ -902,6 +902,12 @@ async function handleScroll() {
   }
 }
 
+window.addEventListener('sases:ws-message', (e) => {
+  const m = e.detail || {};
+  if (m.conversation_id !== chatState.conversationId) return;
+  if (typeof appendMessage === 'function') appendMessage(m);
+});
+
 export function initChat() {
   const sendBtn = document.getElementById('send-btn');
   const input = document.getElementById('chat-input');
