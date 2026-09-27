@@ -308,8 +308,13 @@ def remove_member_from_group(group_id: int, remover_id: int, member_identifier: 
             FROM group_members gm
             LEFT JOIN users u ON gm.user_id = u.id
             WHERE gm.group_id=?
-              AND (CAST(gm.user_id AS TEXT)=? OR gm.agent_id=? OR gm.user_id IN (SELECT id FROM users WHERE username=?))
-        """, (group_id, member_identifier, member_identifier, member_identifier))
+              AND (CAST(gm.user_id AS TEXT)=?
+                   OR gm.agent_id=?
+                   OR u.sases_id=?
+                   OR gm.user_sases_id=?
+                   OR gm.user_id IN (SELECT id FROM users WHERE username=?)
+                   OR gm.agent_id IN (SELECT id FROM model_configs WHERE name=?))
+        """, (group_id, member_identifier, member_identifier, member_identifier, member_identifier, member_identifier, member_identifier))
         member = cur.fetchone()
         if not member:
             return False, "成员不存在"
