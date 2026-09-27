@@ -80,6 +80,22 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
         return False, "找不到该用户或智能体，或智能体不属于你"
 
 
+def _broadcast_member(global_group_id, member_sases_id, role='member'):
+    from .. import config as _cfg
+    if _cfg.HIVE_MODE == 'off' or not _cfg.HIVE_PEERS or not global_group_id:
+        return
+    try:
+        import httpx as _httpx
+        _payload = {'global_group_id': global_group_id, 'member_sases_id': member_sases_id, 'role': role, 'origin_node': _cfg.HIVE_NODE_ID}
+        for _peer in _cfg.HIVE_PEERS:
+            try:
+                _httpx.post(_peer.rstrip('/') + '/hive/sync/member', json=_payload, timeout=3)
+            except Exception as _pe:
+                print('[group] member broadcast failed: ' + str(_pe))
+    except Exception as _e:
+        print('[group] member broadcast error: ' + str(_e))
+
+
 def list_user_groups(user_id: int):
     """获取用户所在的群聊列表"""
     with db_cursor() as cur:
@@ -174,23 +190,59 @@ def get_group_messages(group_id: int, user_id: int):
 
 
 def send_group_message(group_id: int, sender_id: int, content: str, sender_agent_id: str = None):
-    """发送群聊消息，可为用户或智能体。蜂群模式下普通消息暂不处理。"""
+    """发送群聊消息，可为用户或智能体。HIVE_MODE 启用时广播给 peers。"""
+    import secrets as _sec
+    from .. import config as _cfg
     mode = get_group_mode(group_id)
     if mode == 'swarm':
         return False, "蜂群模式暂未开放任务功能，请切换为普通聊天模式"
+
+    _global_gid = None
+    _global_msg_id = None
+    _sender_sases_id = None
+    with db_cursor() as _cur_g:
+        _cur_g.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+        _rg = _cur_g.fetchone()
+        if _rg:
+            _global_gid = _rg['global_group_id']
+    if _cfg.HIVE_MODE != 'off' and _global_gid:
+        _global_msg_id = (_cfg.HIVE_NODE_ID or 'unknown') + ':m-' + _sec.token_hex(8)
 
     with db_cursor(commit=True) as cur:
         if sender_agent_id:
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND agent_id=?", (group_id, sender_agent_id))
             if not cur.fetchone():
                 return False, "智能体不在群中"
-            cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content) VALUES (?, ?, ?)", (group_id, sender_agent_id, content))
+            cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?)", (group_id, sender_agent_id, content, _global_msg_id, _cfg.HIVE_NODE_ID if _global_msg_id else None))
         else:
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, sender_id))
             if not cur.fetchone():
                 return False, "用户不在群中"
-            cur.execute("INSERT INTO group_messages (group_id, sender_id, content) VALUES (?, ?, ?)", (group_id, sender_id, content))
-        return True, "发送成功"
+            cur.execute("SELECT sases_id FROM users WHERE id=?", (sender_id,))
+            _ru = cur.fetchone()
+            if _ru:
+                _sender_sases_id = _ru['sases_id']
+            cur.execute("INSERT INTO group_messages (group_id, sender_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?)", (group_id, sender_id, content, _global_msg_id, _cfg.HIVE_NODE_ID if _global_msg_id else None))
+
+    if _global_msg_id and _global_gid and _cfg.HIVE_PEERS:
+        try:
+            import httpx as _httpx
+            _payload = {
+                'global_group_id': _global_gid,
+                'global_msg_id': _global_msg_id,
+                'sender_sases_id': _sender_sases_id,
+                'sender_agent_id': sender_agent_id,
+                'content': content,
+                'origin_node': _cfg.HIVE_NODE_ID,
+            }
+            for _peer in _cfg.HIVE_PEERS:
+                try:
+                    _httpx.post(_peer.rstrip('/') + '/hive/sync/message', json=_payload, timeout=3)
+                except Exception as _pe:
+                    print('[group] msg broadcast failed: ' + str(_pe))
+        except Exception as _e:
+            print('[group] msg broadcast error: ' + str(_e))
+    return True, "发送成功"
 
 
 def list_group_members(group_id: int):
