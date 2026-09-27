@@ -216,12 +216,7 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - 【跨盘路径规则（重要）】用户给的绝对路径（如 D:/sases1/scripts/run_forever.py）必须原样传给 file_path 参数，不要转换成相对路径、不要改写、不要简化。C 盘受项目白名单限制，非 C 盘（D/E/F/...）完全开放，工具会自动判断。示例：
   正确：file_path = "D:/sases1/scripts/run_forever.py"
   错误：file_path = "scripts/run_forever.py"
-
-- 【重要】若用户输入以 [MODIFY] 开头，说明之前已经探测过但没动手。此时禁止再生成纯探测步骤（grep_code / file_read / dir_tree 最多 1 步），剩余步骤必须包含至少 1 个 file_patch。如果信息不足，用最多 1 步 file_read 确认，然后立刻 file_patch，不要重复探测。
-- 【重要】若任务明显需要多次修改，优先一次完成最关键的一处，不要把 5 步全用来探测。
-- 【跨盘路径规则（重要）】用户给的绝对路径（如 D:/sases1/scripts/run_forever.py）必须原样传给 file_path 参数，不要转换成相对路径、不要改写、不要简化。C 盘受项目白名单限制，非 C 盘（D/E/F/...）完全开放，工具会自动判断。示例：
-  正确：file_path = "D:/sases1/scripts/run_forever.py"
-  错误：file_path = "scripts/run_forever.py"
+- 【重启说明（重要）】改了 core/ 下的文件后，系统会自动触发 restart_pending，不需要你手动调任何 API。不要尝试调用 /api/harness/restart_pending 或类似端点。你只需完成 file_patch + verify_syntax，然后结束。
 - 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
 """
 
