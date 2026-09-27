@@ -178,7 +178,7 @@ def _upsert_pattern(domain, pattern_key, pattern_type, context_signature, role, 
         emb = _get_embedder().get_embedding(evidence)
         with db_cursor() as cur:
             cur.execute(
-                "SELECT id, evidence FROM interaction_patterns WHERE domain=? AND role=? AND evidence IS NOT NULL LIMIT ?",
+                "SELECT id, pattern_key, evidence FROM interaction_patterns WHERE domain=? AND role=? AND evidence IS NOT NULL LIMIT ?",
                 (domain, role, MAX_CANDIDATES)
             )
             candidates = cur.fetchall()
