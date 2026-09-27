@@ -75,6 +75,18 @@ async def send_message(body: SendMessageRequest, user_id: int = Depends(get_curr
         sender_agent_id=body.sender_agent_id,
         mode=body.mode
     )
+    try:
+        from .ws_routes import broadcast_to_user
+        await broadcast_to_user(user_id, {
+            'type': 'new_message',
+            'conversation_id': result.get('conversation_id'),
+            'user_message': result.get('user_message'),
+            'assistant_reply': result.get('assistant_reply'),
+            'agent_id': result.get('agent_id'),
+            'sender_agent_id': result.get('sender_agent_id'),
+        })
+    except Exception as _e:
+        print('[ws] send push failed:', _e)
     return result
 
 
