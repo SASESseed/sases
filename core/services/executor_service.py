@@ -51,6 +51,15 @@ def _get_semaphore() -> asyncio.Semaphore:
 
 # ========== 命令安全检查 ==========
 
+def _looks_like_harness_prefix(cmd) -> bool:
+    """检测 command 字段里误写的 harness 调用前缀。
+    支持半角冒号 'harness:' 和全角冒号 'harness：'。"""
+    if not isinstance(cmd, str):
+        return False
+    s = cmd.strip().lower()
+    return s.startswith("harness:") or s.startswith("harness：")
+
+
 def is_command_safe(cmd) -> tuple:
     """检查命令是否安全。支持 str 和 dict 两种输入。"""
     # dict 形式的 harness 调用：直接放行
@@ -276,13 +285,26 @@ async def _execute_task(task: Dict[str, Any]):
             print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
         else:
             cmd_raw = step.get("command", "")
-            # 兼容：如果 command 是 dict 且含 module_id，转成 harness 调用
+
+            # 兼容 1：command 是 dict 且含 module_id → 转成 harness 调用
             if isinstance(cmd_raw, dict) and cmd_raw.get('module_id'):
                 module_id = cmd_raw.get('module_id')
                 params = _substitute_params(cmd_raw.get('params', {}), previous_outputs)
                 print(f"[executor]   harness params (from dict): {json.dumps(params, ensure_ascii=False)[:300]}")
                 output, status, dur = await _run_harness(module_id, params)
                 print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
+
+            # 兼容 2：command 是字符串但以 harness: 开头 → 格式错误（指挥员拆解错了）
+            elif _looks_like_harness_prefix(cmd_raw):
+                output = (
+                    f"step 格式错误：harness 调用不能写在 command 字段。"
+                    f"正确写法必须使用 type=harness + module_id + params。"
+                    f"当前内容: {str(cmd_raw)[:150]}"
+                )
+                status = "format_error"
+                dur = 0
+                print(f"[executor]   [!] format_error: {str(cmd_raw)[:100]}")
+
             else:
                 cmd = _substitute_placeholders(cmd_raw, previous_outputs)
 

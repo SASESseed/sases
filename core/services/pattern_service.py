@@ -86,7 +86,9 @@ def _build_context_signature(role, action, file_type=None, task_kind=None):
 def _classify_pattern_type(status, review_result, step_count):
     """判断 pattern 类型"""
     if status == "blocked":
-        return "syntax"
+        return "blocked"
+    if status == "format_error":
+        return "format"
     if review_result == "retry":
         return "failure"
     if step_count > 1:
