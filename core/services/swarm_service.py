@@ -1249,6 +1249,7 @@ async def handle_step_done(
             return None
 
     task = _pending[task_id]
+    _run_id = task.get("supervisor_run_id")
 
     if task.get("cancelled"):
         del _pending[task_id]
