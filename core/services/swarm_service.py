@@ -552,20 +552,20 @@ def _ensure_review_table():
 
 
 def _log_review(task_id, conversation_id, step_id, command, exec_status,
-                review_result, review_reason, output):
+                review_result, review_reason, output, step_type=None):
     _ensure_review_table()
     with db_cursor(commit=True) as cur:
         cur.execute(
             """
             INSERT INTO swarm_reviews
-            (task_id, conversation_id, step_id, command, exec_status, review_result, review_reason, output_preview, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (task_id, conversation_id, step_id, command, exec_status, review_result, review_reason, output_preview, step_type, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task_id, conversation_id, step_id,
                 (command or "")[:500], exec_status,
                 review_result, review_reason,
-                (output or "")[:200], datetime.now().isoformat()
+                (output or "")[:200], step_type, datetime.now().isoformat()
             )
         )
 
