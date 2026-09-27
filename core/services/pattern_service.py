@@ -97,7 +97,7 @@ def _classify_pattern_type(status, review_result, step_count):
 
 
 def _extract_pattern_key(step, status, review_result):
-    """从单个步骤生成 pattern_key"""
+    # 从单个步骤生成 pattern_key（细分版）
     cmd = (step.get("command") or step.get("module_id") or "unknown").strip()
     if not cmd:
         return "unknown"
@@ -106,9 +106,33 @@ def _extract_pattern_key(step, status, review_result):
     else:
         first_word = cmd.split()[0].lower() if cmd.split() else "unknown"
         base = f"cmd_{first_word}"
+    reason_text = ""
+    for key in ("reason", "output", "error", "review_reason", "detail"):
+        v = step.get(key)
+        if v:
+            reason_text += " " + str(v)
+    reason_lower = reason_text.lower()
     if status == "blocked":
+        if "白名单" in reason_lower or "whitelist" in reason_lower:
+            return f"{base}_blocked_whitelist"
+        if "受保护" in reason_lower or "protected" in reason_lower:
+            return f"{base}_blocked_protected"
+        if "禁止字符" in reason_lower or "dangerous" in reason_lower:
+            return f"{base}_blocked_dangerous_char"
+        if "权限" in reason_lower or "permission" in reason_lower:
+            return f"{base}_blocked_permission"
         return f"{base}_blocked"
+    if status == "format_error":
+        return f"{base}_format_error"
     if review_result == "retry":
+        if "未找到" in reason_lower or "not found" in reason_lower:
+            return f"{base}_retry_not_found"
+        if "出现" in reason_lower and "次" in reason_lower:
+            return f"{base}_retry_ambiguous"
+        if "缺少" in reason_lower or "missing" in reason_lower:
+            return f"{base}_retry_missing_param"
+        if "不存在" in reason_lower:
+            return f"{base}_retry_not_exist"
         return f"{base}_retry"
     return f"{base}_ok"
 
