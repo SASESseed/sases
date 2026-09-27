@@ -165,9 +165,9 @@ def toggle_group_pin(group_id: int, user_id: int, pinned: bool):
 
 
 def get_group_info(group_id: int):
-    """获取群基本信息，包括模式"""
+    """获取群基本信息，包括模式和 global_group_id"""
     with db_cursor() as cur:
-        cur.execute("SELECT id, name, owner_id, mode FROM groups WHERE id=?", (group_id,))
+        cur.execute("SELECT id, name, owner_id, mode, global_group_id, origin_node FROM groups WHERE id=?", (group_id,))
         row = cur.fetchone()
         if row:
             return dict(row)

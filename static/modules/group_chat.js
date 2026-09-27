@@ -46,6 +46,33 @@ export function openGroupChat(groupId, groupName) {
   const messagesContainer = document.getElementById('chat-messages');
   messagesContainer.innerHTML = '';
   loadGroupMessages();
+
+  // 建立 WebSocket 连接
+  try {
+    if (window._groupWs) {
+      window._groupWs.close();
+      window._groupWs = null;
+    }
+    api.getGroupInfo(groupId).then(info => {
+      const ggid = info && info.global_group_id;
+      if (!ggid) return;
+      const wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/group/' + encodeURIComponent(ggid);
+      const ws = new WebSocket(wsUrl);
+      ws.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          if (d && d.type === 'message') {
+            loadGroupMessages();
+          }
+        } catch (err) {}
+      };
+      ws.onopen = () => console.log('[ws] connected to', ggid);
+      ws.onclose = () => console.log('[ws] disconnected');
+      window._groupWs = ws;
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('[ws] setup failed:', e);
+  }
 }
 
 export function closeGroupChat() {
