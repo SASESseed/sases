@@ -820,6 +820,22 @@ def _parse_plan(raw: str) -> Optional[List[Dict[str, Any]]]:
     return None
 
 
+def _validate_steps_format(steps):
+    """检查 steps 格式。返回 (valid, errors)"""
+    errors = []
+    valid = []
+    for s in steps:
+        cmd = s.get("command", "")
+        if isinstance(cmd, str) and cmd.strip().lower().startswith("harness:"):
+            errors.append(f"step {s.get('step')}: harness 调用写成了 command: {cmd[:50]}")
+            continue
+        if s.get("type") == "harness" and not s.get("module_id"):
+            errors.append(f"step {s.get('step')}: type=harness 但缺 module_id")
+            continue
+        valid.append(s)
+    return valid, errors
+
+
 # ========== 主流程 ==========
 
 async def plan_task(
@@ -977,6 +993,11 @@ async def plan_task(
         return {"status": "error", "message": "LLM empty response"}
 
     steps = _parse_plan(raw)
+    if steps:
+        steps, _fmt_errors = _validate_steps_format(steps)
+        if _fmt_errors:
+            print(f"[swarm] step 格式错误: {_fmt_errors}")
+            return None
     if not steps:
         if raw.strip() == "[DONE]":
             print("[swarm] 指挥官判定任务完成")
@@ -1214,6 +1235,11 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
         return None
 
     steps = _parse_plan(raw)
+    if steps:
+        steps, _fmt_errors = _validate_steps_format(steps)
+        if _fmt_errors:
+            print(f"[swarm] step 格式错误: {_fmt_errors}")
+            return None
     if not steps:
         print(f"[swarm] 重拆 JSON 解析失败，原始输出: {raw[:500]!r}")
         return None
