@@ -200,6 +200,8 @@ def init_db():
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )
         """)
+        _ensure_column(cur, "groups", "global_group_id", "TEXT")
+        _ensure_column(cur, "groups", "origin_node", "TEXT")
         _ensure_column(cur, "groups", "mode", "TEXT DEFAULT 'normal'")
         _ensure_column(cur, "groups", "is_pinned", "INTEGER DEFAULT 0")
 
