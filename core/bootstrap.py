@@ -34,6 +34,7 @@ from .api_routes import (
     knowledge_routes,
     stats_routes,
     search_routes,
+    hive_routes,
     ai_circle_routes,
     export_routes,
     market_routes,
@@ -275,6 +276,7 @@ def create_app() -> FastAPI:
     app.include_router(swarm_routes.router)
     app.include_router(upload_routes.router)
     app.include_router(supervisor_routes.router)
+    app.include_router(hive_routes.router)
 
     @app.get("/static/index.html", response_class=HTMLResponse)
     async def serve_index():
