@@ -92,6 +92,22 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
         return False, "找不到该用户或智能体，或智能体不属于你"
 
 
+def _broadcast_member_remove(global_group_id, member_sases_id):
+    from .. import config as _cfg
+    if _cfg.HIVE_MODE == 'off' or not _cfg.HIVE_PEERS or not global_group_id:
+        return
+    try:
+        import httpx as _httpx
+        _payload = {'global_group_id': global_group_id, 'member_sases_id': member_sases_id, 'origin_node': _cfg.HIVE_NODE_ID}
+        for _peer in _cfg.HIVE_PEERS:
+            try:
+                _httpx.post(_peer.rstrip('/') + '/hive/sync/member-remove', json=_payload, timeout=3)
+            except Exception as _pe:
+                print('[group] member-remove broadcast failed: ' + str(_pe))
+    except Exception as _e:
+        print('[group] member-remove broadcast error: ' + str(_e))
+
+
 def _broadcast_member(global_group_id, member_sases_id, role='member'):
     from .. import config as _cfg
     if _cfg.HIVE_MODE == 'off' or not _cfg.HIVE_PEERS or not global_group_id:
@@ -287,24 +303,44 @@ def remove_member_from_group(group_id: int, remover_id: int, member_identifier: 
             return False, "只有群主可以移除成员"
 
         cur.execute("""
-            SELECT id FROM group_members
-            WHERE group_id=?
-              AND (CAST(user_id AS TEXT)=? OR agent_id=? OR user_id IN (SELECT id FROM users WHERE username=?))
+            SELECT gm.id, gm.user_id, u.sases_id
+            FROM group_members gm
+            LEFT JOIN users u ON gm.user_id = u.id
+            WHERE gm.group_id=?
+              AND (CAST(gm.user_id AS TEXT)=? OR gm.agent_id=? OR gm.user_id IN (SELECT id FROM users WHERE username=?))
         """, (group_id, member_identifier, member_identifier, member_identifier))
         member = cur.fetchone()
         if not member:
             return False, "成员不存在"
 
+        _member_sases = member['sases_id'] if member else None
         with db_cursor(commit=True) as cur2:
             cur2.execute("DELETE FROM group_members WHERE id=?", (member["id"],))
+            cur2.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+            _gg = cur2.fetchone()
+        if _member_sases and _gg and _gg['global_group_id']:
+            _broadcast_member_remove(_gg['global_group_id'], _member_sases)
         return True, "移除成功"
 
 
 def leave_group(group_id: int, user_id: int):
     """成员退出群聊"""
+    _sases = None
+    _gg = None
+    with db_cursor() as cur:
+        cur.execute("SELECT sases_id FROM users WHERE id=?", (user_id,))
+        _r = cur.fetchone()
+        if _r:
+            _sases = _r['sases_id']
+        cur.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+        _g = cur.fetchone()
+        if _g:
+            _gg = _g['global_group_id']
     with db_cursor(commit=True) as cur:
         cur.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        return {"ok": True}
+    if _sases and _gg:
+        _broadcast_member_remove(_gg, _sases)
+    return {"ok": True}
 
 
 def dismiss_group(group_id: int):
