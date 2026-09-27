@@ -3,16 +3,46 @@ from ..db import db_cursor
 
 
 def create_group(name: str, owner_id: int):
-
-    def exit_group(self, group_id, user_id):
-        return self.repo.remove_member(group_id, user_id)
-
-    """创建群聊，返回群 ID"""
+    """创建群聊，返回群 ID。HIVE_MODE 启用时生成 global_group_id 并广播给 peers。"""
+    import secrets as _sec
+    from .. import config as _cfg
+    _global_gid = None
+    _origin_node = _cfg.HIVE_NODE_ID or None
+    if _cfg.HIVE_MODE != 'off' and _cfg.HIVE_NODE_ID:
+        _global_gid = _cfg.HIVE_NODE_ID + ':g-' + _sec.token_hex(6)
     with db_cursor(commit=True) as cur:
-        cur.execute("INSERT INTO groups (name, owner_id, mode) VALUES (?, ?, 'normal')", (name, owner_id))
+        cur.execute(
+            "INSERT INTO groups (name, owner_id, mode, global_group_id, origin_node) VALUES (?, ?, 'normal', ?, ?)",
+            (name, owner_id, _global_gid, _origin_node)
+        )
         group_id = cur.lastrowid
         cur.execute("INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, 'owner')", (group_id, owner_id))
-        return group_id
+        _owner_sases_id = None
+        try:
+            cur.execute("SELECT sases_id FROM users WHERE id=?", (owner_id,))
+            _r = cur.fetchone()
+            if _r:
+                _owner_sases_id = _r['sases_id']
+        except Exception:
+            pass
+    if _global_gid and _cfg.HIVE_MODE != 'off' and _cfg.HIVE_PEERS:
+        try:
+            import httpx as _httpx
+            _payload = {
+                'global_group_id': _global_gid,
+                'origin_node': _origin_node,
+                'name': name,
+                'owner_sases_id': _owner_sases_id,
+                'mode': 'normal',
+            }
+            for _peer in _cfg.HIVE_PEERS:
+                try:
+                    _httpx.post(_peer.rstrip('/') + '/hive/sync/group', json=_payload, timeout=3)
+                except Exception as _pe:
+                    print('[group] hive broadcast failed: ' + str(_pe))
+        except Exception as _e:
+            print('[group] hive broadcast error: ' + str(_e))
+    return group_id
 
 
 def invite_to_group(group_id: int, inviter_id: int, invitee: str):
