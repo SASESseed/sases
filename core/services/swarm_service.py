@@ -1302,6 +1302,7 @@ async def handle_step_done(
             conversation_id=conversation_id,
             step_id=step_id,
             command=original_step.get("command", "") or original_step.get("module_id", ""),
+                step_type="command" if original_step.get("command") else "harness",
             exec_status=status,
             review_result=review_result,
             review_reason=review_reason,
