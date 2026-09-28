@@ -58,7 +58,8 @@ def run(params):
         try:
             with open(full, 'r', encoding='utf-8', errors='ignore') as f:
                 for ln, line in enumerate(f, 1):
-                    if pattern in line:
+                    _matched = (_regex.search(line) is not None) if _regex else (pattern in line)
+                    if _matched:
                         matches.append({'file': rel, 'line': ln, 'text': line.rstrip()[:200]})
                         if len(matches) >= max_results:
                             break
