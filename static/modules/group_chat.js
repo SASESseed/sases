@@ -14,12 +14,13 @@ export async function openGroupChat(groupId, groupName) {
   currentGroupMode = 'normal';
   window.currentGroupChat = true;
 
-  // 获取当前用户ID，用于消息左右布局判断
-  api.getMe().then(data => {
-    currentUserId = data.user_id;
-  }).catch(() => {
+  // 获取当前用户ID（await 保证 loadGroupMessages 前就绪）
+  try {
+    const _me = await api.getMe();
+    currentUserId = _me.user_id;
+  } catch (_e) {
     currentUserId = null;
-  });
+  }
 
   document.getElementById('chat-window-title').textContent = groupName;
   document.getElementById('view-chat-window').style.display = 'flex';
