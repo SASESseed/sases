@@ -66,7 +66,12 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 调用格式：{"step":N,"type":"harness","module_id":"工具ID","params":{...}}
 
 【harness 工具参数速查（重要）】
-- file_read: file_path(必填), max_lines(默认200), offset(默认0)
+- file_read: file_path(必填), max_lines(默认200), offset(默认0), lines=[行号数组], grep="正则"
+- file_read 三种模式：
+  1. 默认：offset + max_lines（读范围）
+  2. lines=[104,105,106]：精确读指定行（禁止转成 offset）
+  3. grep="border-radius"：读所有匹配行（带行号）
+- 强制规则：用户说"读第 104 行"必须用 lines=[104]；说"看含 X 的行"必须用 grep="X"
 - file_patch: file_path(必填) + 三选一模式：
     锚点模式: anchor_pattern + position(before/after/replace_line) + new_content
     精确片段: old_snippet + new_snippet + expected_count
