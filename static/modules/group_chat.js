@@ -7,7 +7,7 @@ let currentAgentId = null; // 当前使用的智能体身份，null 表示用户
 let currentGroupMode = 'normal'; // normal 或 swarm
 let currentUserId = null; // 当前登录用户ID
 
-export function openGroupChat(groupId, groupName) {
+export async function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
   currentGroupName = groupName;
   currentAgentId = null;
