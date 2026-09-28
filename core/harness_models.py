@@ -12,6 +12,7 @@ class ModuleManifest(BaseModel):
     entrypoint: str = "main.py"           # 入口文件，默认 main.py
     icon: Optional[str] = None            # 节点图标（可选）
     node_type: str = "harness"            # 节点类型，默认为 harness
+    aliases: List[str] = []               # 别名列表（可选，用于兼容旧名）
 
 class ToolDefinition(BaseModel):
     """工具定义，用于返回给调用方"""
