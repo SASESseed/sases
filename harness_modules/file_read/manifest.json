@@ -1,5 +1,6 @@
 {
   "id": "file_read",
+  "aliases": ["read_file"],
   "name": "读取文件",
   "description": "读取项目内文件内容",
   "version": "1.0.0",
