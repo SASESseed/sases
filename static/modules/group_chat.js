@@ -128,13 +128,11 @@ function appendGroupMessage(senderName, content, isSelf = false) {
 
   if (!isSelf) {
     bubble.innerHTML = `<span class="group-msg-sender">${senderName}:</span> ${content}`;
-    wrapper.appendChild(avatar);
-    wrapper.appendChild(bubble);
   } else {
     bubble.textContent = content;
-    wrapper.appendChild(bubble);
-    wrapper.appendChild(avatar);
   }
+  wrapper.appendChild(avatar);
+  wrapper.appendChild(bubble);
 
   messages.appendChild(wrapper);
   messages.scrollTop = messages.scrollHeight;
