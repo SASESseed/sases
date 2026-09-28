@@ -45,6 +45,10 @@ def run(params):
     max_results = int(params.get('max_results', 30))
     if max_results < 1 or max_results > 100:
         max_results = 30
+    try:
+        _regex = re.compile(pattern)
+    except re.error:
+        _regex = None
     matches = []
     scanned = 0
     for full, rel in _iter_files(REPO_ROOT, safe, file_ext):
