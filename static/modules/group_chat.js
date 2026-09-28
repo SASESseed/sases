@@ -6,6 +6,7 @@ let currentGroupName = '';
 let currentAgentId = null; // 当前使用的智能体身份，null 表示用户本人
 let currentGroupMode = 'normal'; // normal 或 swarm
 let currentUserId = null; // 当前登录用户ID
+window._gcDebug = { getUserId: () => currentUserId, getAgentId: () => currentAgentId, getGroupId: () => currentGroupId };
 
 export async function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
