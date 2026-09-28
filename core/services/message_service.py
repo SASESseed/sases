@@ -507,7 +507,7 @@ async def send_message(
             # *1 统一导入（知识库/项目库）
             _uni_text = None
             _uni_target = 'kb'
-            if _is_sases_agent:
+            if True:  # v0.18: 所有用户都能 *1 投喂个人知识库
                 for _up in ('*1：', '*1:'):
                     if content.startswith(_up):
                         _uni_body = content[len(_up):].strip()

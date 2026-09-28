@@ -199,6 +199,28 @@ async function openPersonalInfo() {
 
 // ==================== 知识库 ====================
 async function openKnowledgeBase() {
+
+  let myDocsHtml = '';
+  try {
+    const token = localStorage.getItem('sases_token');
+    const _r = await fetch('/knowledge/my-docs', { headers: { 'Authorization': 'Bearer ' + token } });
+    const _d = await _r.json();
+    const _docs = _d.documents || [];
+    if (_docs.length === 0) {
+      myDocsHtml = '<div class="subpage-placeholder">暂无个人文档。在会话里发 *1：标题：内容如下\\n正文 即可投喂。</div>';
+    } else {
+      myDocsHtml = '<div class="me-menu">';
+      _docs.forEach(function(d) {
+        myDocsHtml += '<div class="me-menu-item"><span class="menu-icon">📄</span><div class="menu-text"><div class="menu-title">' + (d.source_file || '未命名') + '</div><div class="menu-desc">' + (d.chunk_count || 0) + ' 个分片</div></div></div>';
+      });
+      myDocsHtml += '</div>';
+    }
+  } catch (_e) {
+    myDocsHtml = '<div class="subpage-placeholder">加载失败</div>';
+  }
+  window.openSubpage('个人知识库', myDocsHtml);
+  return;
+
   let knowledgeHtml = '';
   try {
     const data = await api.listKnowledge();
