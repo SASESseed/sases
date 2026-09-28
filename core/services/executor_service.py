@@ -251,6 +251,12 @@ async def _execute_task(task: Dict[str, Any]):
     # 找未完成的步骤
     pending_steps = [s for s in steps if s.get("step") not in done_set]
     if not pending_steps:
+        try:
+            with db_cursor(commit=True) as _cur:
+                _cur.execute("UPDATE swarm_pending_tasks SET status='completed' WHERE task_id=?", (task_id,))
+            print(f"[executor] 任务 {task_id} 无待处理步骤，标记完成")
+        except Exception as _e:
+            print(f"[executor] 标记完成失败: {_e}")
         return
 
     # 从已有结果提取前序输出

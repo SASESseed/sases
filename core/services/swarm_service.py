@@ -1649,6 +1649,22 @@ async def handle_step_done(
                 except Exception as e:
                     print(f"[swarm] 写成功记忆失败: {e}")
 
+                # v0.18.2: 任务成功自动授粉
+                try:
+                    from . import pollination_service as _poll_auto
+                    _steps_text = chr(10).join(
+                        str(r.get('output', ''))[:200] for r in task.get('results', [])
+                    )
+                    _poll_auto.submit_pollination(
+                        user_id=task['user_id'],
+                        task_description=task['user_text'],
+                        solution=_steps_text[:500] or 'success',
+                        source='auto'
+                    )
+                    print('[swarm] 自动授粉完成')
+                except Exception as _poll_e:
+                    print(f'[swarm] 自动授粉失败: {_poll_e}')
+
             summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
             _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
             del _pending[task_id]

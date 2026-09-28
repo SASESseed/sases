@@ -210,10 +210,11 @@ async function openKnowledgeBase() {
       myDocsHtml = '<div class="subpage-placeholder">暂无个人文档。在会话里发 *1：标题：内容如下\\n正文 即可投喂。</div>';
     } else {
       myDocsHtml = '<div class="me-menu">';
-      _docs.forEach(function(d) {
-        myDocsHtml += '<div class="me-menu-item"><span class="menu-icon">📄</span><div class="menu-text"><div class="menu-title">' + (d.source_file || '未命名') + '</div><div class="menu-desc">' + (d.chunk_count || 0) + ' 个分片</div></div></div>';
+      _docs.forEach(function(d, idx) {
+        myDocsHtml += '<div class="me-menu-item" data-doc-index="' + idx + '" style="cursor:pointer;"><span class="menu-icon">📄</span><div class="menu-text"><div class="menu-title">' + (d.source_file || '未命名') + '</div><div class="menu-desc">' + (d.chunk_count || 0) + ' 个分片</div></div><span class="menu-arrow">›</span></div>';
       });
       myDocsHtml += '</div>';
+      window._myDocsCache = _docs;
     }
   } catch (_e) {
     myDocsHtml = '<div class="subpage-placeholder">加载失败</div>';
@@ -237,6 +238,23 @@ async function openKnowledgeBase() {
   } catch (e) { knowledgeHtml = `<div class="subpage-placeholder">${t('loading_failed')}</div>`; }
   window.openSubpage(t('knowledge_base'), knowledgeHtml);
 }
+
+async function openMyDoc(sourceFile) {
+  try {
+    const token = localStorage.getItem('sases_token');
+    const url = '/knowledge/my-docs/' + encodeURIComponent(sourceFile);
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const content = d.content || '(空)';
+    const html = '<div style="padding:12px;"><div style="font-size:13px;color:#888;margin-bottom:12px;">' + (d.source_file || '') + ' · ' + (d.chunk_count || 0) + ' 分片</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;font-family:inherit;">' + content.replace(/</g, '&lt;') + '</pre></div>';
+    window.openSubpage(sourceFile, html);
+  } catch (e) {
+    alert('打开失败：' + e.message);
+  }
+}
+
+
 
 // ==================== 我的贡献 ====================
 async function openContributions() {
