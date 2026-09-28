@@ -1,5 +1,5 @@
 # core/services/pollination_service.py
-from datetime import datetime
+from datetime import datetime, timedelta
 from ..db import db_cursor
 from .. import safety_scan
 from . import credit_service
@@ -39,6 +39,72 @@ def get_today_falsify_points(user_id: int) -> int:
         return row["total"] if row else 0
 
 
+CHAT_ONLY = {'你好', '在吗', '嗯', '哦', '好', '谢谢', '哈哈', '测试'}
+
+
+def grade_input(text):
+    t = (text or '').strip()
+    if len(t) < 5 or t in CHAT_ONLY:
+        return 0
+    if all(c in '。，！？,.!? ' for c in t):
+        return 0
+    score = 1
+    TASK_WORDS = ('任务', '帮我', '请帮', '麻烦', '#4', '执行', '查一下', '改一下', '写一个', '做一个')
+    if any(w in t for w in TASK_WORDS):
+        score += 1
+    MULTI_WORDS = ('步骤', '首先', '然后', '接着', '最后', '多个', '全部')
+    if len(t) > 100 or any(w in t for w in MULTI_WORDS):
+        score += 1
+    return min(score, 3)
+
+
+def try_pollinate_from_input(user_id, conversation_id, content):
+    text = (content or '').strip()
+    for p in ('[TASK]:', '[STEP_DONE]:', '[IMAGE]:', '[FILE]:', '[RED_PACKET]:',
+              '[TRANSFER]:', '[SUMMARY]:', '[RETRY_TASK]:', '[TASK_DRAFT]:',
+              '[SUPERVISOR_PROGRESS]:'):
+        if text.startswith(p):
+            return {'reward': 0, 'reason': 'protocol'}
+    reward = grade_input(text)
+    if reward <= 0:
+        return {'reward': 0, 'reason': 'low_value'}
+    five_min_ago = (datetime.now() - timedelta(minutes=5)).isoformat()
+    with db_cursor() as cur:
+        cur.execute("""
+            SELECT id FROM contribution_log
+            WHERE user_id=? AND event_type='input_pollination'
+              AND detail LIKE ? AND created_at > ?
+            LIMIT 1
+        """, (user_id, f'%conversation_id={conversation_id}%', five_min_ago))
+        if cur.fetchone():
+            return {'reward': 0, 'reason': 'cooldown'}
+    import hashlib
+    h = hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]
+    day_ago = (datetime.now() - timedelta(hours=24)).isoformat()
+    with db_cursor() as cur:
+        cur.execute("""
+            SELECT id FROM contribution_log
+            WHERE user_id=? AND event_type='input_pollination'
+              AND detail LIKE ? AND created_at > ?
+            LIMIT 1
+        """, (user_id, f'%hash={h}%', day_ago))
+        if cur.fetchone():
+            return {'reward': 0, 'reason': 'duplicate'}
+    today_points = get_today_pollination_points(user_id)
+    if today_points + reward > POLLINATION_DAILY_LIMIT:
+        reward = max(0, POLLINATION_DAILY_LIMIT - today_points)
+        if reward == 0:
+            return {'reward': 0, 'reason': 'daily_limit'}
+    credit_service.add_credit(
+        user_id, reward,
+        action='用户输入投粉',
+        detail=f'conversation_id={conversation_id} | hash={h} | {text[:60]}',
+        event_type='input_pollination'
+    )
+    return {'reward': reward, 'reason': 'ok'}
+
+
+
 def submit_pollination(user_id: int, task_description: str, solution: str, source: str = "manual") -> dict:
     """
     用户提交授粉回流数据。
@@ -58,13 +124,6 @@ def submit_pollination(user_id: int, task_description: str, solution: str, sourc
     reward = POLLINATION_REWARD_BASIC
 
     # 3. 简单去重（示例：不真正入库，只返回积分）
-    # 实际应写入知识库，此处以日志记录代替
-    with db_cursor(commit=True) as cur:
-        cur.execute("""
-            INSERT INTO contribution_log (user_id, action, event_type, points, detail)
-            VALUES (?, ?, 'pollination', ?, ?)
-        """, (user_id, ("自动授粉" if source == "auto" else "授粉回流"), reward, f"任务：{task_description}"))
-
     # 4. 发放积分
     today_points = get_today_pollination_points(user_id) + reward
     if today_points > POLLINATION_DAILY_LIMIT:
@@ -73,7 +132,7 @@ def submit_pollination(user_id: int, task_description: str, solution: str, sourc
         if reward <= 0:
             return {"accepted": True, "message": "今日授粉积分已达上限", "reward": 0}
 
-    credit_service.add_credit(user_id, reward, "授粉回流", f"任务：{task_description}", "pollination")
+    credit_service.add_credit(user_id, reward, ("自动授粉" if source == "auto" else "授粉回流"), f"任务：{task_description}", "pollination")
 
     return {"accepted": True, "message": "授粉成功", "reward": reward}
 
