@@ -50,9 +50,15 @@ def load_harness_modules(modules_dir: str = HARNESS_MODULES_DIR) -> Dict[str, di
         except Exception as e:
             print(f"Failed to load module {module_id}: {e}")
             continue
-        modules[manifest.id] = {
+        entry = {
             "manifest": manifest,
             "dir": module_dir,
             "run_fn": run_fn
         }
+        modules[manifest.id] = entry
+        # v0.19: 注册别名
+        _aliases = getattr(manifest, 'aliases', None) or []
+        for _alias in _aliases:
+            if isinstance(_alias, str) and _alias and _alias not in modules:
+                modules[_alias] = entry
     return modules
