@@ -44,14 +44,7 @@ export function initSideDrawer() {
       window.openSubpage(t('mini_apps'), `<div class="subpage-placeholder">${t('coming_soon')}</div>`);
     });
   }
-  if (pollinationToggle) {
-    const savedState = localStorage.getItem('sases_pollination_enabled');
-    if (savedState !== null) pollinationToggle.checked = savedState === 'true';
-    pollinationToggle.addEventListener('change', () => {
-      localStorage.setItem('sases_pollination_enabled', pollinationToggle.checked);
-      alert(t('pollination_switch') + (pollinationToggle.checked ? t('on') : t('off')));
-    });
-  }
+  // v0.18.2: 授粉已自动化，移除手动开关
 
   // 初始更新文本
   updateSidebarTexts();

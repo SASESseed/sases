@@ -63,7 +63,7 @@ def submit_pollination(user_id: int, task_description: str, solution: str, sourc
         cur.execute("""
             INSERT INTO contribution_log (user_id, action, event_type, points, detail)
             VALUES (?, ?, 'pollination', ?, ?)
-        """, (user_id, "授粉回流", reward, f"任务：{task_description}"))
+        """, (user_id, ("自动授粉" if source == "auto" else "授粉回流"), reward, f"任务：{task_description}"))
 
     # 4. 发放积分
     today_points = get_today_pollination_points(user_id) + reward
