@@ -45,6 +45,21 @@ export async function openGroupChat(groupId, groupName) {
   const modeText = document.getElementById('chat-mode-text');
   if (modeText) modeText.textContent = '普通聊天';
 
+  const _plusBtn = document.getElementById('input-plus-btn');
+  if (_plusBtn) {
+    _plusBtn.onclick = () => {
+      import('./chat_menu.js').then(m => m.toggleChatPlusPanel());
+    };
+  }
+  const _chatInput = document.getElementById('chat-input');
+  if (_chatInput) {
+    _chatInput.oninput = () => {
+      if (window.updateSendButtonVisibility) window.updateSendButtonVisibility();
+    };
+  }
+  const _sendBtn = document.getElementById('send-btn');
+  if (_sendBtn) _sendBtn.onclick = sendGroupMessage;
+
   const messagesContainer = document.getElementById('chat-messages');
   // 建立 WebSocket 连接
   try {
@@ -126,10 +141,32 @@ function appendGroupMessage(senderName, content, isSelf = false) {
   const bubble = document.createElement('div');
   bubble.className = `message ${isSelf ? 'user' : 'assistant'}`;
 
-  if (!isSelf) {
-    bubble.innerHTML = `<span class="group-msg-sender">${senderName}:</span> ${content}`;
-  } else {
-    bubble.textContent = content;
+  let _rendered = false;
+  if (typeof content === 'string' && content.startsWith('[IMAGE]:')) {
+    import('./chat_ui.js').then(m => {
+      if (typeof m.renderImageBubble === 'function') {
+        const node = m.renderImageBubble(content, isSelf ? 'user' : 'assistant', senderName);
+        if (node && node.nodeType) messages.appendChild(node);
+      }
+    });
+    bubble.style.display = 'none';
+    _rendered = true;
+  } else if (typeof content === 'string' && content.startsWith('[FILE]:')) {
+    import('./chat_ui.js').then(m => {
+      if (typeof m.renderFileBubble === 'function') {
+        const node = m.renderFileBubble(content, isSelf ? 'user' : 'assistant', senderName);
+        if (node && node.nodeType) messages.appendChild(node);
+      }
+    });
+    bubble.style.display = 'none';
+    _rendered = true;
+  }
+  if (!_rendered) {
+    if (!isSelf) {
+      bubble.innerHTML = `<span class="group-msg-sender">${senderName}:</span> ${content}`;
+    } else {
+      bubble.textContent = content;
+    }
   }
   wrapper.appendChild(avatar);
   wrapper.appendChild(bubble);
@@ -141,13 +178,32 @@ function appendGroupMessage(senderName, content, isSelf = false) {
 export async function sendGroupMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text || !currentGroupId) return;
+  const atts = (window.chatState && Array.isArray(window.chatState.pendingAttachments)) ? [...window.chatState.pendingAttachments] : [];
+  if (!text && atts.length === 0) return;
+  if (!currentGroupId) return;
   try {
-    await api.sendGroupMessage(currentGroupId, text, currentAgentId);
+    for (const att of atts) {
+      let content = '';
+      if (att.type === 'image') {
+        const res = await api.uploadImage(att.file);
+        if (res && res.url) content = '[IMAGE]:' + res.url;
+      } else {
+        const res = await api.uploadFile(att.file);
+        if (res && res.url) content = '[FILE]:' + res.url + '|' + att.name + '|' + att.size;
+      }
+      if (content) {
+        await api.sendGroupMessage(currentGroupId, content, currentAgentId);
+      }
+    }
+    if (text) {
+      await api.sendGroupMessage(currentGroupId, text, currentAgentId);
+    }
+    if (window.chatState) window.chatState.pendingAttachments = [];
+    if (window.__sasesClearAttachment) window.__sasesClearAttachment();
     input.value = '';
     loadGroupMessages();
   } catch (e) {
-    alert('发送失败：' + e.message);
+    alert('发送失败：' + (e.message || '未知错误'));
   }
 }
 

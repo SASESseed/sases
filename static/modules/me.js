@@ -43,12 +43,7 @@ export function initMe() {
     <div class="me-menu">
       <div class="me-menu-item" id="menu-knowledge">
         <span class="menu-icon">📚</span>
-        <span class="menu-label">${t('knowledge_base')}</span>
-        <span class="menu-arrow">›</span>
-      </div>
-      <div class="me-menu-item" id="menu-contributions">
-        <span class="menu-icon">🌱</span>
-        <span class="menu-label">${t('my_contributions')}</span>
+        <span class="menu-label">个人知识库</span>
         <span class="menu-arrow">›</span>
       </div>
     </div>
@@ -91,7 +86,6 @@ export function initMe() {
     if (typeof window.openSettings === 'function') window.openSettings();
     else alert(t('settings') + ' - ' + t('coming_soon'));
   });
-
   api.getBalance().then(data => {
     localStorage.setItem('sases_credits_cache', data.balance);
     const creditEl = document.querySelector('.me-credits');

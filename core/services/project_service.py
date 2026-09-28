@@ -279,6 +279,52 @@ def import_execution_note(task_id, user_id, user_input, summary, steps_digest, o
 
 
 
+def list_user_documents(user_id):
+    with db_cursor() as cur:
+        cur.execute("""
+            SELECT source_file, COUNT(*) as chunk_count, MAX(updated_at) as updated_at,
+                   (SELECT section_title FROM project_docs p2
+                    WHERE p2.source_file = p1.source_file AND p2.user_id = p1.user_id
+                    ORDER BY chunk_index ASC LIMIT 1) as first_title
+            FROM project_docs p1
+            WHERE user_id=? AND status='active'
+            GROUP BY source_file
+            ORDER BY MAX(updated_at) DESC
+        """, (user_id,))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_user_document(user_id, source_file):
+    with db_cursor() as cur:
+        cur.execute("""
+            SELECT section_title, section_path, content, chunk_index
+            FROM project_docs
+            WHERE user_id=? AND source_file=? AND status='active'
+            ORDER BY chunk_index ASC
+        """, (user_id, source_file))
+        chunks = cur.fetchall()
+    if not chunks:
+        return None
+    parts = []
+    for c in chunks:
+        if c["section_title"]:
+            parts.append("## " + c["section_title"] + chr(10) + chr(10) + c["content"])
+        else:
+            parts.append(c["content"])
+    return {"source_file": source_file, "content": (chr(10) + chr(10)).join(parts), "chunk_count": len(chunks)}
+
+
+def delete_user_document(user_id, source_file):
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM project_docs WHERE user_id=? AND source_file=?", (user_id, source_file))
+        deleted = cur.rowcount
+        cur.execute("SELECT COUNT(*) as c FROM project_docs WHERE source_file=?", (source_file,))
+        if cur.fetchone()["c"] == 0:
+            cur.execute("DELETE FROM project_docs_meta WHERE source_file=?", (source_file,))
+        return deleted
+
+
+
 def get_project_stats():
     """返回项目库统计"""
     with db_cursor() as cur:

@@ -72,7 +72,8 @@ function handleSend() {
 
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text) return;
+  const hasAttach = window.chatState && Array.isArray(window.chatState.pendingAttachments) && window.chatState.pendingAttachments.length > 0;
+  if (!text && !hasAttach) return;
 
   if (chatState.mode === 'free') {
     const execMatch = text.match(/^(?:执行|#1)[：:]\s*(.+)$/);
@@ -143,7 +144,10 @@ async function sendMessage() {
   }
 
   let text = input.value.trim();
-  if (!text) return;
+  if (!text) {
+    updateSendButtonVisibility();
+    return;
+  }
 
   const tempId = 'temp-' + Date.now();
   appendMessage('user', text, chatState.senderAgentId ? '智能体' : '我', tempId, new Date().toISOString(), true, chatState);
@@ -582,18 +586,14 @@ function handleBack() {
 }
 
 function updateSendButtonVisibility() {
-  const input = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('send-btn');
-  const plusBtn = document.getElementById('input-plus-btn');
-  if (!input || !sendBtn || !plusBtn) return;
-
-  if (input.value.trim().length > 0) {
-    sendBtn.style.display = 'block';
-    plusBtn.style.display = 'none';
-  } else {
-    sendBtn.style.display = 'none';
-    plusBtn.style.display = 'block';
-  }
+  const input=document.getElementById('chat-input');
+  const sendBtn=document.getElementById('send-btn');
+  const plusBtn=document.getElementById('input-plus-btn');
+  if(!input||!sendBtn||!plusBtn) return;
+  const hasText=input.value.trim().length>0;
+  const hasAttach=window.chatState&&Array.isArray(window.chatState.pendingAttachments)&&window.chatState.pendingAttachments.length>0;
+  if(hasText||hasAttach){sendBtn.style.display='block';plusBtn.style.display='none';}
+  else{sendBtn.style.display='none';plusBtn.style.display='block';}
 }
 
 window.updateSendButtonVisibility = updateSendButtonVisibility;
@@ -604,8 +604,8 @@ window.__sasesClearAttachment = function() {
   if (window.chatState) window.chatState.pendingAttachments = [];
   const el = document.getElementById('attachment-preview');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  if (window.updateSendButtonVisibility) window.updateSendButtonVisibility();
 };
-window.sendTransfer = sendTransfer;
 
 
 window.__sasesUploadFile = async (file) => {
@@ -854,6 +854,7 @@ async function loadMessages(conversationId) {
   chatState.hasMore = true;
   const container = document.getElementById('chat-messages');
   if (!container) return;
+  container.style.visibility = 'hidden';
   container.innerHTML = '';
   try {
     const data = await api.getConversationMessages(conversationId, PAGE_SIZE, 0);
@@ -861,14 +862,25 @@ async function loadMessages(conversationId) {
     if (messages.length < PAGE_SIZE) {
       chatState.hasMore = false;
     }
-    // (历史 proposed 卡片暂不自动渲染，避免重复)
-
+    chatState._bulkLoading = true;
     messages.forEach(msg => {
       appendMessage(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at, false, chatState);
     });
+    chatState._bulkLoading = false;
     chatState.offset = messages.length;
     container.scrollTop = container.scrollHeight;
+    const _imgs = container.querySelectorAll('img');
+    const _done = () => { container.scrollTop = container.scrollHeight; container.style.visibility = 'visible'; };
+    if (_imgs.length === 0) {
+      requestAnimationFrame(_done);
+    } else {
+      let _pending = _imgs.length;
+      const _tick = () => { if (--_pending <= 0) _done(); };
+      _imgs.forEach(img => { if (img.complete) _tick(); else { img.addEventListener('load', _tick); img.addEventListener('error', _tick); } });
+      setTimeout(_done, 400);
+    }
   } catch (err) {
+    container.style.visibility = 'visible';
     appendMessage('assistant', `加载历史消息失败：${err.message}`, 'AI', null, new Date().toISOString(), false, chatState);
   }
 }
@@ -902,10 +914,12 @@ async function handleScroll() {
   }
 }
 
-window.addEventListener('sases:ws-message', (e) => {
-  const m = e.detail || {};
-  if (m.conversation_id !== chatState.conversationId) return;
-  if (typeof appendMessage === 'function') appendMessage(m);
+window.addEventListener('sases_new_message', (e) => {
+  const d = e.detail || {};
+  const m = d.message || d;
+  const _cid = m.conversation_id || d.conversation_id;
+  if (_cid && _cid !== chatState.conversationId) return;
+  if (typeof appendMessage === 'function' && m && (m.content || m.role)) appendMessage(m);
 });
 
 export function initChat() {
@@ -935,7 +949,7 @@ export function initChat() {
   infoBtn.addEventListener('click', () => openChatInfo(chatState));
   toggleVoiceBtn.addEventListener('click', toggleVoiceMode);
   identityBtn.addEventListener('click', () => openIdentitySwitch(chatState, api));
-  inputPlusBtn.addEventListener('click', toggleChatPlusPanel);
+  inputPlusBtn.onclick = toggleChatPlusPanel;
 
   if (messagesContainer) {
     messagesContainer.addEventListener('scroll', handleScroll);

@@ -193,7 +193,7 @@ export function appendMessage(role, content, senderName = null, messageId = null
 
   const wrapper = createMessageElement(role, content, senderName, messageId, timeIso, isPending, false, chatState);
   messages.appendChild(wrapper);
-  messages.scrollTop = messages.scrollHeight;
+  if (!chatState || !chatState._bulkLoading) messages.scrollTop = messages.scrollHeight;
 
   if (role === 'assistant' && typeof window.attachLongPress === 'function') {
     window.attachLongPress(wrapper, chatState);
@@ -313,13 +313,14 @@ export function renderAttachmentPreview(att) {
     el = document.createElement('div');
     el.id = 'attachment-preview';
     el.className = 'attachment-preview';
-    const inputArea = document.getElementById('chat-input');
+    const inputArea = document.querySelector('.chat-input-area');
     if (inputArea && inputArea.parentNode) {
       inputArea.parentNode.insertBefore(el, inputArea);
     } else {
       document.body.appendChild(el);
     }
   }
+  if (window.updateSendButtonVisibility) window.updateSendButtonVisibility();
   if (!att) {
     el.style.display = 'none';
     el.innerHTML = '';
@@ -332,14 +333,16 @@ export function renderAttachmentPreview(att) {
     return;
   }
   el.classList.add('active');
+  el.style.display = 'block';
+  el.innerHTML = '';
   el.innerHTML = '';
   list.forEach(function (a, idx) {
     const item = document.createElement('div');
     item.className = 'attachment-item';
-    if (a.type === 'image') {
+    if (a.type === 'image' && a.file) {
       const img = document.createElement('img');
       img.className = 'attachment-thumb';
-      img.src = URL.createObjectURL(a.file);
+      try { img.src = URL.createObjectURL(a.file); } catch (_e) { img.src = ''; }
       img.alt = a.name || 'image';
       item.appendChild(img);
     } else {
