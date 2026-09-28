@@ -310,6 +310,12 @@ async def send_message(
 
     print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
+    # v0.18.3: 用户输入自动授粉
+    try:
+        from . import pollination_service as _poll_in
+        _poll_in.try_pollinate_from_input(user_id, conversation_id or 0, content)
+    except Exception as _pe:
+        print(f'[message] 输入授粉失败: {_pe}')
     # 附件消息（[IMAGE]: / [FILE]:）直接入库，不调模型
     _IMG_IMP_E = ('图片导入知识库', '图片存入知识库', '这张图导入知识库', '把图存入知识库')
     _skip_e = any(_k in content for _k in _IMG_IMP_E) if isinstance(content, str) else False

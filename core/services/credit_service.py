@@ -1,5 +1,7 @@
 # core/services/credit_service.py
 from ..db import db_cursor
+from datetime import datetime
+from datetime import datetime
 
 
 def get_balance(user_id: int):
@@ -29,9 +31,9 @@ def add_credit(user_id: int, amount: float, action: str = "手动调整", detail
     with db_cursor(commit=True) as cur:
         cur.execute("UPDATE users SET credits = credits + ? WHERE id=?", (amount, user_id))
         cur.execute("""
-            INSERT INTO contribution_log (user_id, action, event_type, points, detail)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, action, event_type, amount, detail))
+            INSERT INTO contribution_log (user_id, action, event_type, points, detail, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, action, event_type, amount, detail, datetime.now().isoformat()))
     return True
 
 

@@ -97,7 +97,7 @@ def try_pollinate_from_input(user_id, conversation_id, content):
             return {'reward': 0, 'reason': 'daily_limit'}
     credit_service.add_credit(
         user_id, reward,
-        action='用户输入投粉',
+        action='用户输入授粉',
         detail=f'conversation_id={conversation_id} | hash={h} | {text[:60]}',
         event_type='input_pollination'
     )
