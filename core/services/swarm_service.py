@@ -849,6 +849,36 @@ def _validate_steps_format(steps):
     return valid, errors
 
 
+def _precheck_steps(steps):
+    """执行前预检，只返回 warnings，不拦截"""
+    warnings = []
+    for s in steps:
+        module_id = s.get("module_id", "")
+        params = s.get("params", {}) or {}
+        step_num = s.get("step", "?")
+        if module_id == "file_patch":
+            fp = params.get("file_path", "")
+            if not params.get("anchor_pattern") and not params.get("old_snippet") and not params.get("new_content"):
+                warnings.append(f"step {step_num}: file_patch 缺参数")
+            pos = params.get("position")
+            if pos and pos not in ("before", "after", "replace_line"):
+                warnings.append(f"step {step_num}: position 非法 {pos}")
+            if "file_patch/main.py" in fp or "executor_service.py" in fp:
+                warnings.append(f"step {step_num}: 目标是受保护文件")
+        if module_id == "file_read":
+            fp = params.get("file_path", "")
+            if "{{step" in fp or "{step" in fp:
+                warnings.append(f"step {step_num}: 路径含未替换占位符")
+        if module_id == "run_python":
+            code = params.get("code", "")
+            for banned in ("import os", "import sys", "import subprocess", "import pathlib"):
+                if banned in code:
+                    warnings.append(f"step {step_num}: run_python 含 {banned}")
+                    break
+    return warnings
+
+
+
 # ========== 主流程 ==========
 
 async def plan_task(
@@ -1008,6 +1038,10 @@ async def plan_task(
     steps = _parse_plan(raw)
     if steps:
         steps, _fmt_errors = _validate_steps_format(steps)
+        if steps:
+            _pre_warns = _precheck_steps(steps)
+            if _pre_warns:
+                print(f"[precheck] warnings: {_pre_warns}")
         if _fmt_errors:
             print(f"[swarm] step 格式错误: {_fmt_errors}")
             return None
@@ -1250,6 +1284,10 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
     steps = _parse_plan(raw)
     if steps:
         steps, _fmt_errors = _validate_steps_format(steps)
+        if steps:
+            _pre_warns = _precheck_steps(steps)
+            if _pre_warns:
+                print(f"[precheck] warnings: {_pre_warns}")
         if _fmt_errors:
             print(f"[swarm] step 格式错误: {_fmt_errors}")
             return None

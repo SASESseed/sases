@@ -756,6 +756,14 @@ async def send_message(
                 )
                 print(f"[MSG_DEBUG] plan_result={plan_result}")
 
+                if plan_result is None:
+                    reply = "任务拆解失败（格式错误），请重试或换一种说法。"
+                    return {
+                        "conversation_id": conversation_id,
+                        "user_message": content,
+                        "assistant_reply": reply,
+                        "agent_id": agent_id,
+                    }
                 status = plan_result.get("status", "")
                 if status == "draft":
                     reply = "已生成任务草稿，请在下方编辑后确认执行。"
