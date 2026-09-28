@@ -1,5 +1,6 @@
 {
   "id": "grep_code",
+  "aliases": ["search_text"],
   "name": "代码搜索",
   "description": "在项目中搜索关键词",
   "version": "1.0.0",
