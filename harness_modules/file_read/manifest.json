@@ -17,16 +17,15 @@
   "params": {
     "file_path": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "lines": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "grep": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "max_results": {
       "type": "int",

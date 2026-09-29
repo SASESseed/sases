@@ -14,13 +14,11 @@
   "params": {
     "source_file": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "claim": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     }
   }
 }

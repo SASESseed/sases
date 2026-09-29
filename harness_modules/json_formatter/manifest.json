@@ -13,8 +13,7 @@
   "params": {
     "json_string": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "indent": {
       "type": "int",

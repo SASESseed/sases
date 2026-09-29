@@ -14,16 +14,15 @@
   "params": {
     "file_path": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "expect_contains": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "expect_not_contains": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     }
   }
 }

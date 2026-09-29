@@ -22,15 +22,15 @@
     },
     "method": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "headers": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "body": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     }
   }
 }

@@ -29,7 +29,7 @@
     },
     "filename": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "selector": {
       "type": "string",

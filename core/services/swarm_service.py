@@ -886,6 +886,43 @@ def _precheck_steps(steps):
 
 # ========== 主流程 ==========
 
+def _save_task_state(task_id, user_id, state_dict):
+    """保存任务状态到 memory（v0.19）"""
+    try:
+        from . import memory_service
+        import json as _json
+        memory_service.remember(
+            user_id=user_id,
+            memory_type='task_state',
+            content=_json.dumps(state_dict, ensure_ascii=False),
+            task_id=task_id,
+            importance=0.7,
+            tags='snapshot,swarm',
+            enable_dedup=False
+        )
+    except Exception as e:
+        print(f'[state] save failed: {e}')
+
+
+def _load_task_state(task_id, user_id):
+    """加载最近一条任务状态（v0.19）"""
+    try:
+        from . import memory_service
+        import json as _json
+        rows = memory_service.recall_by_type(user_id, 'task_state', top_k=20)
+        for r in (rows or []):
+            if r.get('task_id') == task_id:
+                try:
+                    return _json.loads(r.get('content') or '{}')
+                except Exception:
+                    return None
+        return None
+    except Exception as e:
+        print(f'[state] load failed: {e}')
+        return None
+
+
+
 async def plan_task(
     user_id: int,
     conversation_id: int,

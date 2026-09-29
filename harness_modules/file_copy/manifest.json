@@ -18,7 +18,7 @@
     },
     "src_path": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "dst": {
       "type": "any",
@@ -26,7 +26,7 @@
     },
     "dst_path": {
       "type": "any",
-      "desc": "必填"
+      "desc": "可选"
     },
     "overwrite": {
       "type": "bool",

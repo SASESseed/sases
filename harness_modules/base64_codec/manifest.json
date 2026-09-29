@@ -13,13 +13,11 @@
   "params": {
     "action": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "text": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     }
   }
 }

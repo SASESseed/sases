@@ -28,6 +28,22 @@ _OVERRIDE_REQUIRED = {
     'string_utils': ['operation', 'text'],
     'base64_codec': ['action', 'text'],
     'json_formatter': ['json_string'],
+    'verify_ui': ['action'],
+}
+
+_OVERRIDE_OPTIONAL = {
+    'api_call': ['method', 'headers', 'body'],
+    'file_copy': ['src_path', 'dst_path', 'overwrite'],
+    'extract_keypoints': ['source_file', 'text', 'max'],
+    'read_user_doc': ['source_file', 'user_id'],
+    'dir_tree': ['path', 'max_depth'],
+    'file_read': ['lines', 'grep', 'max_results', 'max_lines', 'offset'],
+    'file_patch': ['old_snippet', 'new_snippet', 'expected_count', 'anchor_pattern', 'position', 'new_content', 'create_if_missing', 'overwrite'],
+    'git_ops': ['n', 'file', 'message', 'branch', 'remote', 'steps', 'name', 'url'],
+    'verify_syntax': ['check_undefined', 'auto_rollback'],
+    'verify_patch': ['expect_contains', 'expect_not_contains'],
+    'verify_ui': ['url', 'timeout', 'filename', 'selector'],
+    'file_replace_range': ['new_content'],
 }
 
 
@@ -83,19 +99,29 @@ def main():
         if not matches:
             continue
         params_schema = {}
+        _req_list = _OVERRIDE_REQUIRED.get(module_name, [])
+        _opt_list = _OVERRIDE_OPTIONAL.get(module_name, [])
         for name, default in matches:
             if name in params_schema:
                 continue
             entry = {'type': _infer_type(default)}
-            if default:
+            if name in _opt_list:
+                if default:
+                    cd = _clean_default(default)
+                    if cd is not None:
+                        entry['default'] = cd
+                entry['desc'] = '可选'
+            elif name in _req_list:
+                entry['desc'] = '必填'
+            elif default:
                 cd = _clean_default(default)
                 if cd is not None:
                     entry['default'] = cd
-                    entry['desc'] = '\u53ef\u9009'
+                    entry['desc'] = '可选'
                 else:
-                    entry['desc'] = '\u5fc5\u586b'
+                    entry['desc'] = '必填'
             else:
-                entry['desc'] = '\u5fc5\u586b'
+                entry['desc'] = '必填'
             params_schema[name] = entry
         try:
             with open(manifest_json, 'r', encoding='utf-8') as f:

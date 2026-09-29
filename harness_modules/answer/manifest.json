@@ -15,8 +15,7 @@
   "params": {
     "content": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     }
   }
 }

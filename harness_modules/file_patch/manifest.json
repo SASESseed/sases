@@ -49,8 +49,7 @@
     },
     "file_path": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "create_if_missing": {
       "type": "bool",

@@ -14,13 +14,11 @@
   "params": {
     "a": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "b": {
       "type": "string",
-      "default": "",
-      "desc": "可选"
+      "desc": "必填"
     },
     "a_is_file": {
       "type": "bool",
