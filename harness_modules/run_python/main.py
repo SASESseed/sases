@@ -16,7 +16,7 @@ PREAMBLE_LINES = [
     '# === SAFE HELPERS ===',
     'import os as _real_os',
     '_REPO_ROOT = r"REPO_ROOT_PLACEHOLDER"',
-    "_ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/')",
+    "_ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/', 'data/', 'logs/')",
     "_FORBIDDEN_PARTS = ('.env', 'users.db', '.key', '.bin', '.pem', '.crt', 'secret_key', 'api_key_encryption')",
     '_MAX_READ = 200 * 1024',
     '_MAX_WRITE = 500 * 1024',
