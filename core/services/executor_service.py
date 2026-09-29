@@ -25,6 +25,19 @@ ALLOWED_COMMANDS = {
     "findstr", "find", "grep", "where",
     "echo", "pwd", "cd", "whoami", "hostname",
     "wc",
+    "python", "python3", "py",
+    "pip", "pip3",
+    "node", "npm", "npx",
+    "git",
+    "curl", "wget",
+    "mkdir", "md",
+    "copy", "xcopy", "move", "mv",
+    "del", "rm",
+    "ren", "rename",
+    "set", "env",
+    "tasklist", "taskkill",
+    "netstat", "ping", "ipconfig",
+    "sort", "uniq",
 }
 
 # 只保留真正危险的字符（命令链、替换、换行）
@@ -300,34 +313,29 @@ async def _execute_task(task: Dict[str, Any]):
                 output, status, dur = await _run_harness(module_id, params)
                 print(f"[executor]   harness 结果: {status} ({dur}ms) | {output[:200]}")
 
-            # 兼容 2：command 是字符串但以 harness: 开头 → 格式错误（指挥员拆解错了）
+            # 兼容 2：command 字符串含 "harness" 前缀 → 自动转成 harness 调用
             elif _looks_like_harness_prefix(cmd_raw):
-                output = (
-                    f"step 格式错误：harness 调用不能写在 command 字段。"
-                    f"正确写法必须使用 type=harness + module_id + params。"
-                    f"当前内容: {str(cmd_raw)[:150]}"
-                )
-                status = "format_error"
-                dur = 0
-                print(f"[executor]   [!] format_error: {str(cmd_raw)[:100]}")
-
-            else:
-                cmd = _substitute_placeholders(cmd_raw, previous_outputs)
-
-                if "{{step" in cmd or "{step" in cmd:
-                    output = "跳过：依赖的步骤失败（占位符未替换）"
-                    status = "skipped"
-                    dur = 0
-                else:
-                    is_safe, reason = is_command_safe(cmd)
-                    if not is_safe:
-                        output = f"命令被安全策略拒绝: {reason}"
-                        status = "blocked"
-                        dur = 0
-                        print(f"[executor]   [!] {reason}")
-                    else:
-                        output, status, dur = await _run_command(cmd)
-                        print(f"[executor]   结果: {status} ({dur}ms)")
+                _raw = str(cmd_raw).strip()
+                for _pfx in ('harness：', 'harness:', 'harness ', 'HARNESS：', 'HARNESS:', 'HARNESS '):
+                    if _raw.startswith(_pfx):
+                        _raw = _raw[len(_pfx):].strip()
+                        break
+                _parts = _raw.split(None, 1)
+                _mid = _parts[0] if _parts else ''
+                _params2 = {}
+                if len(_parts) > 1:
+                    _rest = _parts[1].strip()
+                    try:
+                        import json as _j_auto
+                        _params2 = _j_auto.loads(_rest)
+                    except Exception:
+                        import re as _re_auto
+                        for _kv in _re_auto.finditer(r'(\w+)\s*[=:]\s*["\']?([^"\'\s]+)["\']?', _rest):
+                            _params2[_kv.group(1)] = _kv.group(2)
+                _params2 = _substitute_params(_params2, previous_outputs)
+                print(f"[executor]   harness params (auto): {json.dumps(_params2, ensure_ascii=False)[:300]}")
+                output, status, dur = await _run_harness(_mid, _params2)
+                print(f"[executor]   harness 结果 (auto): {status} ({dur}ms) | {output[:200]}")
 
         if status == "success":
             previous_outputs[step_id] = output

@@ -62,13 +62,17 @@ class HarnessRuntime:
         removed = list(old_ids - new_ids)
         total = len(new_ids)
 
+        _conflicts = self._detect_conflicts(self._modules)
+        for _w in _conflicts:
+            print('[harness] 冲突警告: ' + _w)
         return {
             "success": True,
             "total_modules": total,
             "added": added,
             "removed": removed,
             "added_count": len(added),
-            "removed_count": len(removed)
+            "removed_count": len(removed),
+            "conflicts": _conflicts
         }
 
     def list_tools(self) -> List[ToolDefinition]:
@@ -137,8 +141,11 @@ class HarnessRuntime:
 
 
     def invoke_tool(self, module_id: str, params: Dict[str, Any]) -> ToolInvokeResponse:
+        import time as _t2
+        _start = _t2.time()
         info = self._modules.get(module_id)
         if not info:
+            self._log_tool_usage(module_id, params, False, 0, 'Module not found')
             return ToolInvokeResponse(
                 module_id=module_id,
                 success=False,
@@ -149,6 +156,7 @@ class HarnessRuntime:
 
         perm_error = self._check_permissions(manifest)
         if perm_error:
+            self._log_tool_usage(module_id, params, False, 0, perm_error)
             return ToolInvokeResponse(
                 module_id=module_id,
                 success=False,
@@ -157,12 +165,16 @@ class HarnessRuntime:
 
         try:
             result = info["run_fn"](params)
+            _dur = int((_t2.time() - _start) * 1000)
+            self._log_tool_usage(module_id, params, True, _dur)
             return ToolInvokeResponse(
                 module_id=module_id,
                 success=True,
                 result=result
             )
         except Exception as e:
+            _dur = int((_t2.time() - _start) * 1000)
+            self._log_tool_usage(module_id, params, False, _dur, str(e))
             return ToolInvokeResponse(
                 module_id=module_id,
                 success=False,
