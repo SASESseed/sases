@@ -137,14 +137,13 @@ def _win_path_fix(cmd):
         return cmd
     new_parts = [parts[0]]
     for p in parts[1:]:
-        if p.startswith(chr(47)) and len(p) <= 3 and p.count(chr(47)) == 1:
+        # v0.19: 以 / 开头的是选项开关，一律保留
+        if p.startswith(chr(47)):
             new_parts.append(p)
         elif chr(58)+chr(47)+chr(47) in p:
             new_parts.append(p)
-        elif chr(47) in p:
-            new_parts.append(p.replace(chr(47), chr(92)))
         else:
-            new_parts.append(p)
+            new_parts.append(p.replace(chr(47), chr(92)))
     return chr(32).join(new_parts)
 
 

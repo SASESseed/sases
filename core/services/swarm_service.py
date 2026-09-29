@@ -197,7 +197,7 @@ Windows CMD 不支持 grep，用 findstr 代替。
 
 【锚点禁正则（v0.19）】
 file_patch 的 anchor_pattern 是纯文本匹配，禁止用正则符号：
-  ^ $ \d \s \w * + ? [ ] ( ) { } |
+  ^ $ backslash-d backslash-s backslash-w * + ? [ ] ( ) { } |
 正确示例：anchor_pattern = "TIMEOUT = 60"
 错误示例：anchor_pattern = "^TIMEOUT\s*=\s*\d+"
 
