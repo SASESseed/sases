@@ -49,6 +49,23 @@ class HarnessRuntime:
         self._circuit_fail_threshold = 5
         self._circuit_cooldown_sec = 300
 
+    def _detect_conflicts(self, modules):
+        """v0.19: 只检测不同工具之间 id 重复（忽略别名）"""
+        seen = {}
+        dup = []
+        for k, info in modules.items():
+            m = info.get('manifest')
+            if not m:
+                continue
+            mid = getattr(m, 'id', '')
+            if mid in seen:
+                # 同一 manifest 对象 = 别名，跳过
+                if seen[mid] is not m:
+                    dup.append(mid)
+            else:
+                seen[mid] = m
+        return dup
+
     def reload_modules(self) -> Dict[str, Any]:
         """
         重新扫描模块目录，动态加载新生成的 Harness 模块。
@@ -137,8 +154,6 @@ class HarnessRuntime:
                 _f.write(_js.dumps(_entry, ensure_ascii=False) + chr(10))
         except Exception:
             pass
-
-
 
     def invoke_tool(self, module_id: str, params: Dict[str, Any]) -> ToolInvokeResponse:
         import time as _t2

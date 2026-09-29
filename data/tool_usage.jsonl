@@ -14,3 +14,10 @@
 {"ts": "2026-09-29T12:20:02.325885", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}
 {"ts": "2026-09-29T12:20:11.328588", "module_id": "file_patch", "success": true, "duration_ms": 27, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
 {"ts": "2026-09-29T12:20:11.375951", "module_id": "verify_syntax", "success": true, "duration_ms": 17, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:33:21.637011", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:33:21.680060", "module_id": "file_patch", "success": false, "duration_ms": 14, "error": "原片段在 harness_modules/api_call/main.py 中未找到。建议改用锚点模式。\n最相似候选：\n  行 7: TIMEOUT = 60\n", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:33:21.739854", "module_id": "verify_syntax", "success": true, "duration_ms": 3, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:33:27.699641", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "锚点 '^TIMEOUT\\s*=\\s*\\d+' 在 harness_modules/api_call/main.py 中未找到任何匹配行\n最相似候选：\n  行 7: TIMEOUT = 60\n请从上述候选选一个作为 anchor_pattern。", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-29T12:33:45.646432", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:33:45.691680", "module_id": "file_patch", "success": true, "duration_ms": 4, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:33:45.713024", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
