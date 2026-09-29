@@ -3,7 +3,7 @@ from datetime import datetime
 from ..db import db_cursor
 from . import credit_service
 
-MAX_ROUNDS = 10
+MAX_ROUNDS = 30
 CREDITS_PER_ROUND = 2
 USE_STRUCTURED_REVIEW = True
 

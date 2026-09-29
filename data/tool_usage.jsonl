@@ -12,3 +12,5 @@
 {"ts": "2026-09-29T12:19:26.250994", "module_id": "file_patch", "success": false, "duration_ms": 1, "error": "原片段在 harness_modules/api_call/main.py 中未找到。建议改用锚点模式。\n最相似候选：\n  行 8: MAX_BODY = 20000\n  行 72: raw = resp.read(MAX_BODY * 2)\n  行 7: TIMEOUT = 60\n", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
 {"ts": "2026-09-29T12:20:02.301065", "module_id": "file_patch", "success": true, "duration_ms": 37, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
 {"ts": "2026-09-29T12:20:02.325885", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:20:11.328588", "module_id": "file_patch", "success": true, "duration_ms": 27, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:11.375951", "module_id": "verify_syntax", "success": true, "duration_ms": 17, "error": "", "params_keys": ["file_path", "auto_rollback"]}
