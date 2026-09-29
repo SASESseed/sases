@@ -43,18 +43,41 @@ CHAT_ONLY = {'你好', '在吗', '嗯', '哦', '好', '谢谢', '哈哈', '测�
 
 
 def grade_input(text):
+    """v0.20: 按贡献价值分级
+    0 = 闲聊/纯标点
+    1 = 基础（普通用户输入）
+    2 = 专业（含引用/代码块/结构化）
+    3 = 极高（长文档/多引用/规范）
+    """
+    import re as _re
     t = (text or '').strip()
     if len(t) < 5 or t in CHAT_ONLY:
         return 0
     if all(c in '。，！？,.!? ' for c in t):
         return 0
+    # 基础分
     score = 1
+    # 任务意图 +1
     TASK_WORDS = ('任务', '帮我', '请帮', '麻烦', '#4', '执行', '查一下', '改一下', '写一个', '做一个')
     if any(w in t for w in TASK_WORDS):
         score += 1
+    # 复杂度 +1
     MULTI_WORDS = ('步骤', '首先', '然后', '接着', '最后', '多个', '全部')
     if len(t) > 100 or any(w in t for w in MULTI_WORDS):
         score += 1
+    # === v0.20: 专业档判定（>= 2 分） ===
+    _has_fileline = bool(_re.search(r'[\w/\.\-]+\.\w+:\d+', t))
+    _has_codeblock = '```' in t
+    _has_filepath = bool(_re.search(r'(?:^|\s)(?:core|static|docs|scripts|harness_modules|data|logs)/', t))
+    _has_numbered = bool(_re.search(r'(?:^|\n)\s*\d+[\.\)]\s', t))
+    if _has_fileline or _has_codeblock or _has_filepath or (_has_numbered and len(t) > 100):
+        score = max(score, 2)
+    # === v0.20: 极高档判定（= 3 分） ===
+    _fileline_count = len(_re.findall(r'[\w/\.\-]+\.\w+:\d+', t))
+    _has_table = bool(_re.search(r'\|[^\n]+\|', t))
+    _has_spec_kw = any(w in t for w in ('规范', '标准', '协议', '设计文档', '架构', '方案'))
+    if len(t) > 500 or _fileline_count >= 5 or (_has_spec_kw and len(t) > 300) or _has_table:
+        score = 3
     return min(score, 3)
 
 

@@ -791,6 +791,18 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_suprun_user ON supervisor_runs(user_id)")
 
 
+        # ========== 积分库（v0.20） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS credit_pool (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                amount REAL NOT NULL,
+                source TEXT,
+                created_at TEXT
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_credit_pool_time ON credit_pool(created_at)")
+
+
         # ========== 索引 ==========
         # 云宠战役
         cur.execute("CREATE INDEX IF NOT EXISTS idx_yunchong_owner_status ON yunchong_tasks(owner_user_id, status)")

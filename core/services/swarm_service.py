@@ -1145,7 +1145,7 @@ async def plan_task(
             if _prev_state:
                 _state_lines = []
                 if _prev_state.get('facts'):
-                    _state_lines.append("已提取事实：")
+                    _state_lines.append("⚠️ 以下数据已在上轮获得，本轮直接使用，禁止重复 grep/read：")
                     for _f in _prev_state['facts'][-10:]:
                         _state_lines.append(f"  - {_f.get('file', '?')}:{_f.get('line', '?')} = {_f.get('text', '')[:80]}")
                 if _prev_state.get('pending'):
@@ -1153,7 +1153,7 @@ async def plan_task(
                 if _prev_state.get('decisions'):
                     _state_lines.append("已决策：" + " | ".join(_prev_state['decisions'][:5]))
                 if _state_lines:
-                    prompt_parts.append("【上一轮任务状态】\n" + chr(10).join(_state_lines))
+                    prompt_parts.append("【上一轮任务状态（已有数据，禁止重复读取）】\n" + chr(10).join(_state_lines))
         except Exception as _se:
             print(f'[state] inject failed: {_se}')
     try:
@@ -1846,6 +1846,9 @@ async def handle_step_done(
                     import json as _js_st
                     _facts = []
                     _seen_lines = set()
+                    _task_text = str(task.get('user_text') or '')
+                    _fn_match = _re_st.findall(r'[\w/\-]+\.\w{1,6}', _task_text)
+                    _file_name = _fn_match[0] if _fn_match else ''
                     for _r in task.get("results", []):
                         _out = str(_r.get("output") or "")
                         try:
@@ -1853,18 +1856,19 @@ async def handle_step_done(
                         except Exception:
                             _d = None
                         if isinstance(_d, dict) and isinstance(_d.get("hits"), list):
+                            _fn = _d.get("source_file") or _file_name
                             for _h in _d["hits"]:
                                 _ln_num = _h.get("line")
                                 if _ln_num and _ln_num not in _seen_lines:
                                     _seen_lines.add(_ln_num)
-                                    _facts.append({"line": _ln_num, "text": str(_h.get("text") or "")[:100]})
+                                    _facts.append({"file": _fn, "line": _ln_num, "text": str(_h.get("text") or "")[:100]})
                         _out2 = _out.replace('\\n', chr(10))
                         for _m in _re_st.finditer(r'(?m)(\d+):\s+([^\n]{3,120})', _out2):
                             _ln_num = int(_m.group(1))
                             if _ln_num in _seen_lines:
                                 continue
                             _seen_lines.add(_ln_num)
-                            _facts.append({"line": _ln_num, "text": _m.group(2).strip()[:100]})
+                            _facts.append({"file": _file_name, "line": _ln_num, "text": _m.group(2).strip()[:100]})
                     _save_task_state(f"run_{_rid_state}", task.get("user_id"), {
                         "facts": _facts[-15:],
                         "pending": [],

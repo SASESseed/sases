@@ -366,7 +366,7 @@ async def task_summarizer(task):
         _ans_all = ''
         for _r in results:
             _ans_all += str(_r.get('answer') or _r.get('output') or '') + ' | '
-        _fl_count = len(_re_final.findall(r'[\w/\.\-]+\.\w+:\d+', _ans_all))
+        _fl_count = len(_re_final.findall(r'[\w/\.\-]+\.\w+:\d+|\b\d+行', _ans_all))
         if _fl_count >= 3:
             print(f'[supervisor] task_summarizer 终轮提示词命中: {_fl_count} 条 file:line')
             return {'goal_achieved': True, 'goal_reason': f'报告含 {_fl_count} 条 file:line 具体结论', 'missing': [], 'next_hint': ''}
