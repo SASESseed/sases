@@ -1,0 +1,14 @@
+{"ts": "2026-09-29T12:01:42.268868", "module_id": "grep_code", "success": true, "duration_ms": 1695, "error": "", "params_keys": ["pattern", "max_results"]}
+{"ts": "2026-09-29T12:01:42.300330", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:01:42.358741", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "只允许修改以下目录：static/ / core/ / scripts/ / docs/ / harness_modules/ / data/ / logs/，收到: {\"success\": true, \"pattern\": \"当前允许的命令\", \"scanned_files\": 439, \"count\": 1, \"matches\": [{\"file\": \"core/services/comman", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-29T12:01:42.417129", "module_id": "verify_syntax", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:10:00.138262", "module_id": "file_read", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:10:00.187363", "module_id": "file_patch", "success": true, "duration_ms": 20, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:18:02.077011", "module_id": "file_patch", "success": true, "duration_ms": 45, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:18:02.098222", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:18:02.163985", "module_id": "harness_reload", "success": true, "duration_ms": 31, "error": "", "params_keys": []}
+{"ts": "2026-09-29T12:19:14.231301", "module_id": "file_patch", "success": true, "duration_ms": 18, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:19:26.215490", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:19:26.250994", "module_id": "file_patch", "success": false, "duration_ms": 1, "error": "原片段在 harness_modules/api_call/main.py 中未找到。建议改用锚点模式。\n最相似候选：\n  行 8: MAX_BODY = 20000\n  行 72: raw = resp.read(MAX_BODY * 2)\n  行 7: TIMEOUT = 60\n", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:02.301065", "module_id": "file_patch", "success": true, "duration_ms": 37, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:02.325885", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}

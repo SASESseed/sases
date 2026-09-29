@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import requests
 
 MAX_SIZE = 100 * 1024  # 100KB
-TIMEOUT = 10
+TIMEOUT = 30
 MAX_TEXT_LEN = 2000
 
 

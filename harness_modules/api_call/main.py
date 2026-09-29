@@ -4,8 +4,8 @@ import urllib.parse
 import ipaddress
 import socket
 
-TIMEOUT = 15
-MAX_BODY = 3000
+TIMEOUT = 60
+MAX_BODY = 20000
 FORBIDDEN_HEADERS = {'host', 'connection', 'content-length'}
 
 

@@ -45,7 +45,7 @@ async def execute_commander_task(
             f"· 任务：列出当前目录文件\n"
             f"· 任务：显示当前用户名\n"
             f"· 任务：查看系统主机名\n\n"
-            f"当前允许的命令：{ALLOWED_COMMANDS_HINT}"
+            f"当前允许的命令：{', '.join(executor_service.ALLOWED_COMMANDS)}"
         )
         if conversation_id:
             work_service.insert_assistant_message(conversation_id, hint_msg, work_service.SASES_ASSISTANT_AGENT_ID)

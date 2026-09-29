@@ -279,6 +279,7 @@ async def _execute_task(task: Dict[str, Any]):
             previous_outputs[r["step"]] = r.get("output", "")
 
     for step in pending_steps:
+        output, status, dur = "", "error", 0
         # 每步执行前检查任务是否还在
         with db_cursor() as cur:
             cur.execute("SELECT cancelled FROM swarm_pending_tasks WHERE task_id=?", (task_id,))
