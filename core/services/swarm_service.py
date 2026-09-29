@@ -255,6 +255,44 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - file_read 的三种模式：lines=[104,105]（精确行）、grep="关键词"（过滤行）、offset+max_lines（范围）
 - 读 300+ 行文件时，先用 grep 定位关键行号，再用 lines 读具体行，避免一次性拉满
 
+【工具自创建能力（v0.19 新增，重要）】
+
+如果任务需要的能力：
+1. 现有工具都做不到
+2. 可以用一个 Python 函数实现
+3. 只依赖白名单模块（json / re / math / datetime / collections / itertools）
+
+那么你可以创建新 harness 工具。
+
+【创建 4 步】
+step 1: edit_file 创建 harness_modules/{工具名}/manifest.json
+step 2: edit_file 创建 harness_modules/{工具名}/main.py
+step 3: harness_reload 让工具上线
+step 4: 调用新工具验证
+
+【manifest.json 模板】
+{"id": "tool_name", "name": "中文名", "description": "一句话功能", "version": "1.0.0", "capabilities": [], "permissions": [], "entrypoint": "main.py", "node_type": "harness"}
+
+【main.py 模板】
+def run(params):
+    x = params.get('x', '')
+    # 你的实现
+    return {"success": True, "result": ...}
+
+【约束】
+- 工具名：英文小写 + 下划线（如 count_chinese）
+- 参数名：英文小写
+- 单次创建不超过 100 行
+- 禁止 import：os, sys, subprocess, socket, requests, urllib
+- 允许 import：json, re, math, datetime, collections, itertools
+- 必须返回 {"success": bool, ...}
+- 创建后必须 reload + 调用测试
+
+【示例】
+用户："统计一段文本有几个中文字符"
+→ text_stats 做不到（只统计英文）
+→ 创建 count_chinese 工具
+→ manifest + main.py + reload + 调用
 """
 
 SUMMARY_SYSTEM_PROMPT = """请根据用户任务和执行结果，用一句话总结这次任务的结果。直接输出总结，不要任何前缀。"""
@@ -906,7 +944,7 @@ def _precheck_steps(steps):
 # ========== 主流程 ==========
 
 def _save_task_state(task_id, user_id, state_dict):
-    """保存任务状态到 memory（v0.19，同 task_id 最多保留 3 条）"""
+    """保存任务状态到 memory（v0.19）"""
     try:
         from . import memory_service
         import json as _json
@@ -919,21 +957,6 @@ def _save_task_state(task_id, user_id, state_dict):
             tags='snapshot,swarm',
             enable_dedup=False
         )
-        # v0.19: 同 task_id 只保留最新 3 条
-        try:
-            from ..db import db_cursor
-            with db_cursor(commit=True) as _cur_cl:
-                _cur_cl.execute("""
-                    DELETE FROM safety_memory
-                    WHERE id IN (
-                        SELECT id FROM safety_memory
-                        WHERE user_id=? AND memory_type='task_state' AND task_id=?
-                        ORDER BY id DESC
-                        LIMIT -1 OFFSET 3
-                    )
-                """, (user_id, task_id))
-        except Exception as _ce:
-            print(f'[state] cleanup failed: {_ce}')
     except Exception as e:
         print(f'[state] save failed: {e}')
 

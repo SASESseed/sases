@@ -1,0 +1,1 @@
+{"id":"count_chinese_chars","name":"count_chinese_chars","description":"统计字符串中中文字符的个数","entry":"main.py","version":"1.0","functions":[{"name":"count_chinese_chars","description":"输入 text，返回中文字符数量","params":{"text":"string"}}]}

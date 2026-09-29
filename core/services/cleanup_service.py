@@ -293,6 +293,10 @@ def cleanup_all() -> dict:
     except Exception as e:
         print('[cleanup] pattern 清理失败: ' + str(e))
 
+    try:
+        result['stale_task_state'] = cleanup_stale_task_state(keep_per_task=1, days=7)
+    except Exception as e:
+        print('[cleanup] task_state 清理失败: ' + str(e))
 
     try:
         _tm = scan_test_marks(dry_run=True)
