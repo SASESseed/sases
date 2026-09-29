@@ -7,6 +7,29 @@ HARNESS_DIR = os.path.join(REPO_ROOT, 'harness_modules')
 
 PARAM_PATTERN = re.compile(r"params\.get\(\s*['\"]([^'\"]+)['\"]\s*(?:,\s*(.+?))?\)")
 
+_OVERRIDE_REQUIRED = {
+    'grep_code': ['pattern'],
+    'api_call': ['url'],
+    'web_fetch': ['url'],
+    'compare_texts': ['a', 'b'],
+    'calculator': ['expression'],
+    'verify_claim': ['source_file', 'claim'],
+    'verify_syntax': ['file_path'],
+    'verify_patch': ['file_path'],
+    'answer': ['content'],
+    'file_replace_range': ['file_path', 'start_line', 'end_line'],
+    'file_copy': ['src', 'dst'],
+    'run_python': ['code'],
+    'file_read': ['file_path'],
+    'file_patch': ['file_path'],
+    'git_ops': ['action'],
+    'structure_check': ['file_path'],
+    'text_stats': ['text'],
+    'string_utils': ['operation', 'text'],
+    'base64_codec': ['action', 'text'],
+    'json_formatter': ['json_string'],
+}
+
 
 def _infer_type(default_repr):
     if not default_repr:

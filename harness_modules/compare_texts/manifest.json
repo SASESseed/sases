@@ -3,8 +3,34 @@
   "name": "对比文本",
   "description": "对比两段文本或两个文件的差异",
   "version": "1.0.0",
-  "capabilities": ["file_read"],
-  "permissions": ["restricted_file_write"],
+  "capabilities": [
+    "file_read"
+  ],
+  "permissions": [
+    "restricted_file_write"
+  ],
   "entrypoint": "main.py",
-  "node_type": "harness"
+  "node_type": "harness",
+  "params": {
+    "a": {
+      "type": "string",
+      "default": "",
+      "desc": "可选"
+    },
+    "b": {
+      "type": "string",
+      "default": "",
+      "desc": "可选"
+    },
+    "a_is_file": {
+      "type": "bool",
+      "default": false,
+      "desc": "可选"
+    },
+    "b_is_file": {
+      "type": "bool",
+      "default": false,
+      "desc": "可选"
+    }
+  }
 }

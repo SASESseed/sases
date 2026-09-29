@@ -9,5 +9,17 @@
   ],
   "permissions": [],
   "entrypoint": "main.py",
-  "node_type": "harness"
+  "node_type": "harness",
+  "params": {
+    "json_string": {
+      "type": "string",
+      "default": "",
+      "desc": "可选"
+    },
+    "indent": {
+      "type": "int",
+      "default": 2,
+      "desc": "可选"
+    }
+  }
 }

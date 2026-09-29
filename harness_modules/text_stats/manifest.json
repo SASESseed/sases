@@ -9,5 +9,12 @@
   ],
   "permissions": [],
   "entrypoint": "main.py",
-  "node_type": "harness"
+  "node_type": "harness",
+  "params": {
+    "text": {
+      "type": "string",
+      "default": "",
+      "desc": "可选"
+    }
+  }
 }
