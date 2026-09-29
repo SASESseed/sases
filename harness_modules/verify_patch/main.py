@@ -1,6 +1,6 @@
 import os
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/')
+ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/', 'data/', 'logs/')
 FORBIDDEN = ('.env', 'users.db', '.key', '.bin', '.pem', '.crt', 'secret_key', 'api_key_encryption')
 
 def _check(p):
