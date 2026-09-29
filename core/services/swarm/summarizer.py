@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from .. import config
+from ... import config
 from .llm_parser import _call_llm
 
 def _summary_sender(task):
@@ -12,7 +12,7 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
     # P0：记录经验 pattern（静默失败，不阻塞主流程）
     try:
         if user_id and task_id and results:
-            from . import pattern_service
+            from .. import pattern_service
             n = pattern_service.record_pattern(user_id, task_id, "dev", results)
             if n:
                 print(f"[swarm] 已记录 {n} 条 pattern")
@@ -45,7 +45,7 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
     _ISOLATE_EXECUTION_NOTE = True
     try:
         if user_id and task_id and results and not _ISOLATE_EXECUTION_NOTE:
-            from . import project_service
+            from .. import project_service
             _digest = ' | '.join([str(r.get('step')) + '.' + str(r.get('status', '?')) for r in results[:5]])
             _outcome = 'success' if all(r.get('review') != 'retry' for r in results) else 'partial'
             _preview = ' | '.join([str(r.get('description', ''))[:30] for r in results[:3]])

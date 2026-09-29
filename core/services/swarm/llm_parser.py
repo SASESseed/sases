@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Optional, List, Dict, Any
 import openai
-from .. import config
+from ... import config
 
 client = openai.OpenAI(
     api_key=config.DEEPSEEK_API_KEY,
