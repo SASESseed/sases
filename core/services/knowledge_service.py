@@ -370,7 +370,8 @@ def add_to_knowledge_base(
         return cur.lastrowid
 
 
-def increment_hit_count(kb_id: int) -> bool:
+def increment_hit_count(kb_id: int, reuser_id: int = None) -> bool:
+    """增加命中次数；若传入 reuser_id，触发被动授粉（给原贡献者 +1，日上限 10）"""
     try:
         with db_cursor(commit=True) as cur:
             cur.execute("""
@@ -378,6 +379,25 @@ def increment_hit_count(kb_id: int) -> bool:
                 SET hit_count = hit_count + 1, last_used_at = ?
                 WHERE id = ?
             """, (datetime.now().isoformat(), kb_id))
+            # v0.20: 被动授粉
+            if reuser_id:
+                cur.execute("SELECT contributor_id FROM knowledge_base WHERE id=?", (kb_id,))
+                _row = cur.fetchone()
+                _contributor = _row["contributor_id"] if _row else None
+                if _contributor and _contributor != reuser_id:
+                    try:
+                        from . import credit_service as _cs
+                        _today = _cs.get_today_passive_points(_contributor)
+                        if _today < 10:
+                            _cs.add_credit(
+                                _contributor, 1,
+                                action='被动授粉',
+                                detail=f'方案 id={kb_id} 被用户 {reuser_id} 复用',
+                                event_type='passive_pollination'
+                            )
+                            print(f'[知识库] 被动授粉: contributor={_contributor} +1 (今日已得 {_today+1}/10)')
+                    except Exception as _pe:
+                        print(f'[知识库] 被动授粉失败: {_pe}')
         return True
     except Exception as e:
         print(f"[知识库] 增加命中次数失败: {e}")
