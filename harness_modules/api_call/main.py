@@ -5,7 +5,7 @@ import ipaddress
 import socket
 
 TIMEOUT = 60
-MAX_BODY = 20000
+MAX_BODY = 15000
 FORBIDDEN_HEADERS = {'host', 'connection', 'content-length'}
 
 
