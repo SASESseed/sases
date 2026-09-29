@@ -113,6 +113,29 @@ class HarnessRuntime:
                     return f"模块 '{manifest.name}' 声明了未知权限 '{perm}'，已阻止执行"
         return None
 
+    def _log_tool_usage(self, module_id, params, success, duration_ms, error=None):
+        """v0.19: 记录每次工具调用"""
+        try:
+            import json as _js
+            from datetime import datetime as _dt
+            import os as _os
+            _dir = 'data'
+            _os.makedirs(_dir, exist_ok=True)
+            _entry = {
+                'ts': _dt.now().isoformat(),
+                'module_id': module_id,
+                'success': bool(success),
+                'duration_ms': int(duration_ms),
+                'error': (error or '')[:200],
+                'params_keys': list(params.keys()) if isinstance(params, dict) else [],
+            }
+            with open(_os.path.join(_dir, 'tool_usage.jsonl'), 'a', encoding='utf-8') as _f:
+                _f.write(_js.dumps(_entry, ensure_ascii=False) + chr(10))
+        except Exception:
+            pass
+
+
+
     def invoke_tool(self, module_id: str, params: Dict[str, Any]) -> ToolInvokeResponse:
         info = self._modules.get(module_id)
         if not info:
