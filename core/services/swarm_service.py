@@ -255,44 +255,72 @@ Windows CMD 不支持 grep，用 findstr 代替。
 - file_read 的三种模式：lines=[104,105]（精确行）、grep="关键词"（过滤行）、offset+max_lines（范围）
 - 读 300+ 行文件时，先用 grep 定位关键行号，再用 lines 读具体行，避免一次性拉满
 
+【强制创建规则（最高优先级）】
+
+触发词（出现任一，必须走创建流程）：
+- 创建新工具 / 创建工具 / 新建工具
+- 做不到就创建 / 现有工具做不到
+- 自己写一个工具 / 写个工具
+
+禁止行为（违反 = 任务失败）：
+- X 用 run_python 内联代码绕过
+- X 用 answer 直接写答案绕过
+- X 跳过 manifest 或 main.py
+
+必须动作（严格 4 步）：
+- V 创建 manifest.json（create_if_missing=true）
+- V 创建 main.py（create_if_missing=true）
+- V 调 harness_reload（type=harness + module_id）
+- V 调新工具验证
+
+
+
 【工具自创建能力（v0.19 新增，重要）】
 
-如果任务需要的能力：
+触发条件（全部满足才创建）：
 1. 现有工具都做不到
 2. 可以用一个 Python 函数实现
 3. 只依赖白名单模块（json / re / math / datetime / collections / itertools）
 
-那么你可以创建新 harness 工具。
+【创建 4 步（严格按此顺序）】
 
-【创建 4 步】
-step 1: edit_file 创建 harness_modules/{工具名}/manifest.json
-step 2: edit_file 创建 harness_modules/{工具名}/main.py
-step 3: harness_reload 让工具上线
+step 1: 用 edit_file 创建 manifest.json
+  params 必含：
+    file_path: harness_modules/{工具名}/manifest.json
+    create_if_missing: true
+    new_content: '{"id":"{工具名}","name":"中文名","description":"一句话功能","version":"1.0.0","capabilities":[],"permissions":[],"entrypoint":"main.py","node_type":"harness"}'
+  ⚠️ 必须传 create_if_missing=true
+  ⚠️ 字段必须是：id / name / description / version / capabilities / permissions / entrypoint / node_type
+  ⚠️ 禁止用 module_id / entry / functions
+
+step 2: 用 edit_file 创建 main.py
+  params 必含：
+    file_path: harness_modules/{工具名}/main.py
+    create_if_missing: true
+    new_content: 'def run(params):\n    x = params.get("x", "")\n    return {"success": True, "result": ...}'
+  ⚠️ 函数名必须是 run(params)
+  ⚠️ 返回值必须含 success：{'success': True, ...}
+  ⚠️ 禁止 import os/sys/subprocess/socket/requests/urllib
+  ⚠️ 禁止 if __name__ == '__main__' 块
+
+step 3: 调用 reload
+  正确：{'step':3,'type':'harness','module_id':'harness_reload','params':{}}
+  错误：{'step':3,'command':'harness_reload'}  ← 被白名单拒绝
+
 step 4: 调用新工具验证
+  {'step':4,'type':'harness','module_id':'{工具名}','params':{...}}
 
-【manifest.json 模板】
-{"id": "tool_name", "name": "中文名", "description": "一句话功能", "version": "1.0.0", "capabilities": [], "permissions": [], "entrypoint": "main.py", "node_type": "harness"}
+【工具名规范】
+英文小写 + 下划线（如 count_chinese_chars）；目录名 = 工具名 = manifest 里的 id
 
-【main.py 模板】
-def run(params):
-    x = params.get('x', '')
-    # 你的实现
-    return {"success": True, "result": ...}
+【完整示例：统计中文字符】
+用户：统计'你好world世界'里有几个中文字符
 
-【约束】
-- 工具名：英文小写 + 下划线（如 count_chinese）
-- 参数名：英文小写
-- 单次创建不超过 100 行
-- 禁止 import：os, sys, subprocess, socket, requests, urllib
-- 允许 import：json, re, math, datetime, collections, itertools
-- 必须返回 {"success": bool, ...}
-- 创建后必须 reload + 调用测试
+step 1: edit_file(file_path='harness_modules/count_chinese_chars/manifest.json', create_if_missing=true, new_content='{"id":"count_chinese_chars","name":"中文字符统计","description":"统计中文字符数量","version":"1.0.0","capabilities":[],"permissions":[],"entrypoint":"main.py","node_type":"harness"}')
+step 2: edit_file(file_path='harness_modules/count_chinese_chars/main.py', create_if_missing=true, new_content='def run(params):\n    import re\n    text = params.get("text", "")\n    cnt = len(re.findall(r"[\u4e00-\u9fff]", text))\n    return {"success": True, "count": cnt}')
+step 3: harness_reload(params={})
+step 4: count_chinese_chars(params={"text":"你好world世界"}) → {"success": true, "count": 4}
 
-【示例】
-用户："统计一段文本有几个中文字符"
-→ text_stats 做不到（只统计英文）
-→ 创建 count_chinese 工具
-→ manifest + main.py + reload + 调用
 """
 
 SUMMARY_SYSTEM_PROMPT = """请根据用户任务和执行结果，用一句话总结这次任务的结果。直接输出总结，不要任何前缀。"""
