@@ -236,6 +236,25 @@ Windows CMD 不支持 grep，用 findstr 代替。
   错误：file_path = "scripts/run_forever.py"
 - 【重启说明（重要）】改了 core/ 下的文件后，系统会自动触发 restart_pending，不需要你手动调任何 API。不要尝试调用 /api/harness/restart_pending 或类似端点。你只需完成 file_patch + verify_syntax，然后结束。
 - 如果不知道文件路径，第 1 步用 dir /s /b 定位；第 2 步用 {{step1}} 引用定位结果
+
+【记忆纪律（v0.19 新增，极其重要）】
+1. 你看不到上一轮读的完整文件——只有摘要
+2. 需要具体行号时，必须调 verify_claim 或 file_read 重读
+3. 报告里的每个 file:line，必须先 verify_claim 确认才写入
+4. 禁止"若...需..."、"大约"、"应该"这类模糊表述
+5. 没有 file:line 的结论视为无效，不写入报告
+6. 如果需要核对某段文字是否在文件里，用 verify_claim(source_file, claim)
+
+【分轮纪律（v0.19 新增）】
+1. 单轮内最多：读 1 个文件、改 1 处代码、生成 1 段报告
+2. 任务开始前先估算几轮能完成；>3 轮的主动拆分
+3. 大任务示例："UI 合规巡检" → 第 1 轮只读文件 + 生成事实清单；第 2 轮对比；第 3 轮写报告
+4. 每轮结束调用 answer 输出本轮结论，不要试图一轮完成
+
+【长文件读取建议（v0.19）】
+- file_read 的三种模式：lines=[104,105]（精确行）、grep="关键词"（过滤行）、offset+max_lines（范围）
+- 读 300+ 行文件时，先用 grep 定位关键行号，再用 lines 读具体行，避免一次性拉满
+
 """
 
 SUMMARY_SYSTEM_PROMPT = """请根据用户任务和执行结果，用一句话总结这次任务的结果。直接输出总结，不要任何前缀。"""
@@ -887,7 +906,7 @@ def _precheck_steps(steps):
 # ========== 主流程 ==========
 
 def _save_task_state(task_id, user_id, state_dict):
-    """保存任务状态到 memory（v0.19）"""
+    """保存任务状态到 memory（v0.19，同 task_id 最多保留 3 条）"""
     try:
         from . import memory_service
         import json as _json
@@ -900,6 +919,21 @@ def _save_task_state(task_id, user_id, state_dict):
             tags='snapshot,swarm',
             enable_dedup=False
         )
+        # v0.19: 同 task_id 只保留最新 3 条
+        try:
+            from ..db import db_cursor
+            with db_cursor(commit=True) as _cur_cl:
+                _cur_cl.execute("""
+                    DELETE FROM safety_memory
+                    WHERE id IN (
+                        SELECT id FROM safety_memory
+                        WHERE user_id=? AND memory_type='task_state' AND task_id=?
+                        ORDER BY id DESC
+                        LIMIT -1 OFFSET 3
+                    )
+                """, (user_id, task_id))
+        except Exception as _ce:
+            print(f'[state] cleanup failed: {_ce}')
     except Exception as e:
         print(f'[state] save failed: {e}')
 
@@ -910,12 +944,18 @@ def _load_task_state(task_id, user_id):
         from . import memory_service
         import json as _json
         rows = memory_service.recall_by_type(user_id, 'task_state', top_k=20)
+        print(f'[state] load 查询 task_id={task_id}, 返回 {len(rows)} 条')
         for r in (rows or []):
-            if r.get('task_id') == task_id:
+            _rid = r.get('task_id')
+            if _rid == task_id:
                 try:
-                    return _json.loads(r.get('content') or '{}')
-                except Exception:
+                    _parsed = _json.loads(r.get('content') or '{}')
+                    print(f'[state] load 命中 {task_id}, facts={len(_parsed.get("facts", []))}')
+                    return _parsed
+                except Exception as _je:
+                    print(f'[state] load json failed: {_je}')
                     return None
+        print(f'[state] load 未命中 {task_id}，现有: ' + str([r.get('task_id') for r in (rows or [])]))
         return None
     except Exception as e:
         print(f'[state] load failed: {e}')
@@ -1034,6 +1074,24 @@ async def plan_task(
         prompt_parts.append(f"【需要避免的失败教训】\n{failure_text}")
     if history_text:
         prompt_parts.append(f"【最近的会话历史】\n{history_text}")
+    # v0.19: 注入任务状态快照
+    if supervisor_run_id:
+        try:
+            _prev_state = _load_task_state(f"run_{supervisor_run_id}", user_id)
+            if _prev_state:
+                _state_lines = []
+                if _prev_state.get('facts'):
+                    _state_lines.append("已提取事实：")
+                    for _f in _prev_state['facts'][-10:]:
+                        _state_lines.append(f"  - {_f.get('file', '?')}:{_f.get('line', '?')} = {_f.get('text', '')[:80]}")
+                if _prev_state.get('pending'):
+                    _state_lines.append("待完成：" + " | ".join(_prev_state['pending'][:5]))
+                if _prev_state.get('decisions'):
+                    _state_lines.append("已决策：" + " | ".join(_prev_state['decisions'][:5]))
+                if _state_lines:
+                    prompt_parts.append("【上一轮任务状态】\n" + chr(10).join(_state_lines))
+        except Exception as _se:
+            print(f'[state] inject failed: {_se}')
     try:
         from .. import harness_runtime as _hr
         _tools = _hr.harness_runtime.list_tools()
@@ -1042,9 +1100,17 @@ async def plan_task(
             for _t in _tools:
                 _mid = getattr(_t, 'module_id', '') or ''
                 _name = getattr(_t, 'name', '') or ''
-                _desc = (getattr(_t, 'description', '') or '')[:100]
-                if _mid:
-                    _tl.append('- ' + _mid + '：' + _name + ' —— ' + _desc)
+                _desc = (getattr(_t, 'description', '') or '')[:80]
+                _aliases = getattr(_t, 'aliases', []) or []
+                _params = getattr(_t, 'params', {}) or {}
+                if not _mid:
+                    continue
+                _alias_str = (' (别名: ' + ', '.join(_aliases) + ')') if _aliases else ''
+                _line = '- ' + _mid + _alias_str + '：' + _name + ' —— ' + _desc
+                _tl.append(_line)
+                _required = [k for k, v in _params.items() if v.get('desc') == '必填']
+                if _required:
+                    _tl.append('    必填：' + ', '.join(_required))
             if len(_tl) > 1:
                 prompt_parts.append(chr(10).join(_tl))
     except Exception as _te:
@@ -1449,9 +1515,23 @@ async def handle_step_done(
                 for r in task['results']
             )
             if _has_answer:
-                print('[supervisor] run ' + str(_run_id) + ' completed')
-                _sv_a.finish_run(_run_id, 'completed')
-                return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+                # v0.19: answer 也需 task_summarizer 判断目标是否真达成
+                _ans_ok = True
+                if getattr(_sv_a, 'USE_STRUCTURED_REVIEW', False):
+                    try:
+                        _ans_rev = await _sv_a.task_summarizer(task)
+                        if _ans_rev and not _ans_rev.get('goal_achieved'):
+                            _ans_ok = False
+                            print('[supervisor] answer 产出但目标未达成，继续下一轮')
+                        else:
+                            _sv_a.record_round(_run_id, plan_summary='', exec_summary='', review=_ans_rev) if _run_id else None
+                    except Exception as _ae:
+                        print('[supervisor] answer review 失败: ' + str(_ae))
+                if _ans_ok:
+                    print('[supervisor] run ' + str(_run_id) + ' completed')
+                    _sv_a.finish_run(_run_id, 'completed')
+                    return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+                # else fall through 到续轮逻辑
 
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮
@@ -1693,6 +1773,41 @@ async def handle_step_done(
 
 
             summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
+            summary = await _summarize(task["user_text"], task["results"], user_id=task["user_id"], task_id=task_id)
+            # v0.19: 保存本轮任务状态
+            _rid_state = task.get("supervisor_run_id")
+            if _rid_state:
+                try:
+                    import re as _re_st
+                    import json as _js_st
+                    _facts = []
+                    _seen_lines = set()
+                    for _r in task.get("results", []):
+                        _out = str(_r.get("output") or "")
+                        try:
+                            _d = _js_st.loads(_out)
+                        except Exception:
+                            _d = None
+                        if isinstance(_d, dict) and isinstance(_d.get("hits"), list):
+                            for _h in _d["hits"]:
+                                _ln_num = _h.get("line")
+                                if _ln_num and _ln_num not in _seen_lines:
+                                    _seen_lines.add(_ln_num)
+                                    _facts.append({"line": _ln_num, "text": str(_h.get("text") or "")[:100]})
+                        _out2 = _out.replace('\\n', chr(10))
+                        for _m in _re_st.finditer(r'(?m)(\d+):\s+([^\n]{3,120})', _out2):
+                            _ln_num = int(_m.group(1))
+                            if _ln_num in _seen_lines:
+                                continue
+                            _seen_lines.add(_ln_num)
+                            _facts.append({"line": _ln_num, "text": _m.group(2).strip()[:100]})
+                    _save_task_state(f"run_{_rid_state}", task.get("user_id"), {
+                        "facts": _facts[-15:],
+                        "pending": [],
+                    })
+                    print(f"[state] 已保存快照 run_{_rid_state}，facts={len(_facts)}")
+                except Exception as _se:
+                    print(f"[state] save failed: {_se}")
             _insert_message(conversation_id, f"[SUMMARY]:{summary}", sender_agent_id=_summary_sender(task))
             del _pending[task_id]
             _delete_pending_from_db(task_id)
@@ -1706,9 +1821,23 @@ async def handle_step_done(
                 for r in task['results']
             )
             if _has_answer:
-                print('[supervisor] run ' + str(_run_id) + ' completed')
-                _sv_a.finish_run(_run_id, 'completed')
-                return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+                # v0.19: answer 也需 task_summarizer 判断目标是否真达成
+                _ans_ok = True
+                if getattr(_sv_a, 'USE_STRUCTURED_REVIEW', False):
+                    try:
+                        _ans_rev = await _sv_a.task_summarizer(task)
+                        if _ans_rev and not _ans_rev.get('goal_achieved'):
+                            _ans_ok = False
+                            print('[supervisor] answer 产出但目标未达成，继续下一轮')
+                        else:
+                            _sv_a.record_round(_run_id, plan_summary='', exec_summary='', review=_ans_rev) if _run_id else None
+                    except Exception as _ae:
+                        print('[supervisor] answer review 失败: ' + str(_ae))
+                if _ans_ok:
+                    print('[supervisor] run ' + str(_run_id) + ' completed')
+                    _sv_a.finish_run(_run_id, 'completed')
+                    return {"status": "completed", "task_id": task_id, "summary": "answer 工具产出"}
+                # else fall through 到续轮逻辑
 
             if _run_id:
                 # v0.18.1: 单步任务全成功 -> 直接完成，不续轮

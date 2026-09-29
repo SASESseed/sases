@@ -168,6 +168,36 @@ def scan_test_marks(dry_run: bool = True) -> dict:
     return {'dry_run': dry_run, 'count': len(findings), 'findings': findings}
 
 
+def cleanup_stale_task_state(keep_per_task: int = 1, days: int = 7) -> int:
+    """清理 task_state 类型记忆：每个 task_id 只保留最新 N 条，并删除超 N 天的记录"""
+    deleted = 0
+    try:
+        with db_cursor(commit=True) as cur:
+            cur.execute("""
+                DELETE FROM safety_memory
+                WHERE memory_type='task_state'
+                  AND id IN (
+                    SELECT s1.id FROM safety_memory s1
+                    WHERE s1.memory_type='task_state'
+                      AND (SELECT COUNT(*) FROM safety_memory s2
+                           WHERE s2.memory_type='task_state'
+                             AND s2.task_id = s1.task_id
+                             AND s2.id > s1.id) >= ?
+                  )
+            """, (keep_per_task,))
+            deleted += cur.rowcount
+            cur.execute("""
+                DELETE FROM safety_memory
+                WHERE memory_type='task_state'
+                  AND created_at < datetime('now', ?)
+            """, (f'-{days} days',))
+            deleted += cur.rowcount
+    except Exception as e:
+        print(f'[cleanup] stale_task_state 失败: {e}')
+    return deleted
+
+
+
 def cleanup_all() -> dict:
     """执行全部清理任务，返回各项删除数量"""
     result = {
