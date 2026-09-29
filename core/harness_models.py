@@ -7,12 +7,14 @@ class ModuleManifest(BaseModel):
     name: str
     description: str = ""
     version: str = "1.0.0"
-    capabilities: List[str] = []          # 能力标签，如 ["unit_conversion"]
-    permissions: List[str] = []           # 权限声明，如 ["network", "file_read"]
-    entrypoint: str = "main.py"           # 入口文件，默认 main.py
-    icon: Optional[str] = None            # 节点图标（可选）
-    node_type: str = "harness"            # 节点类型，默认为 harness
-    aliases: List[str] = []               # 别名列表（可选，用于兼容旧名）
+    capabilities: List[str] = []
+    permissions: List[str] = []
+    entrypoint: str = "main.py"
+    icon: Optional[str] = None
+    node_type: str = "harness"
+    aliases: List[str] = []
+    params: Dict[str, Any] = {}
+    cost: Dict[str, Any] = {}
 
 class ToolDefinition(BaseModel):
     """工具定义，用于返回给调用方"""
@@ -23,6 +25,9 @@ class ToolDefinition(BaseModel):
     permissions: List[str]
     version: str
     node_type: str
+    aliases: List[str] = []
+    params: Dict[str, Any] = {}
+    cost: Dict[str, Any] = {}
 
 class ToolInvokeRequest(BaseModel):
     """调用工具请求体"""
@@ -34,4 +39,5 @@ class ToolInvokeResponse(BaseModel):
     module_id: str
     success: bool
     result: Any = None
+    error: Optional[str] = None
     error: Optional[str] = None

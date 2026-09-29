@@ -15,11 +15,17 @@ DEFAULT_ALLOWED_PERMISSIONS = {
     "text_stats",
     "file_patch",
     "frontend_edit",
-    "restricted_file_write"
+    "restricted_file_write",
+    "network",
+    "llm_call",
+    "file_read"
 }
 
 # 危险权限，默认拒绝，需要用户显式授权
-DANGEROUS_PERMISSIONS = {
+DANGEROUS_PERMISSIONS = set()  # v0.19: 本地系统，权限全开
+
+# 供未来分发时启用：设 SASES_HARNESS_STRICT=1 环境变量恢复限制
+_STRICT_SET = {
     "local_command",
     "file_write",
     "file_delete",
@@ -28,6 +34,9 @@ DANGEROUS_PERMISSIONS = {
     "subprocess",
     "system"
 }
+import os as _os
+if _os.environ.get('SASES_HARNESS_STRICT') == '1':
+    DANGEROUS_PERMISSIONS = _STRICT_SET
 
 
 class HarnessRuntime:
@@ -35,6 +44,10 @@ class HarnessRuntime:
         self.modules_dir = modules_dir
         self._modules = load_harness_modules(modules_dir)
         self.user_grants = set()
+        # v0.19: 熔断器
+        self._circuit_state = {}
+        self._circuit_fail_threshold = 5
+        self._circuit_cooldown_sec = 300
 
     def reload_modules(self) -> Dict[str, Any]:
         """
@@ -60,8 +73,12 @@ class HarnessRuntime:
 
     def list_tools(self) -> List[ToolDefinition]:
         tools = []
+        _seen = set()
         for module_id, info in self._modules.items():
             manifest = info["manifest"]
+            if manifest.id in _seen:
+                continue
+            _seen.add(manifest.id)
             tools.append(ToolDefinition(
                 module_id=manifest.id,
                 name=manifest.name,
@@ -69,7 +86,10 @@ class HarnessRuntime:
                 capabilities=manifest.capabilities,
                 permissions=manifest.permissions,
                 version=manifest.version,
-                node_type=manifest.node_type
+                node_type=manifest.node_type,
+                aliases=list(getattr(manifest, 'aliases', []) or []),
+                params=dict(getattr(manifest, 'params', {}) or {}),
+                cost=dict(getattr(manifest, 'cost', {}) or {}),
             ))
         return tools
 
@@ -80,14 +100,17 @@ class HarnessRuntime:
         return None
 
     def _check_permissions(self, manifest: ModuleManifest) -> Optional[str]:
-        """检查模块权限，返回错误信息或 None 表示通过"""
-        for perm in manifest.permissions:
-            if perm in self.user_grants:
-                continue
-            if perm in DANGEROUS_PERMISSIONS:
-                return f"模块 '{manifest.name}' 需要危险权限 '{perm}'，但当前未被授权，已阻止执行"
-            if perm not in DEFAULT_ALLOWED_PERMISSIONS:
-                return f"模块 '{manifest.name}' 声明了未知权限 '{perm}'，已阻止执行"
+        # v0.19: 本地系统，权限检查全放开
+        # 如需恢复限制：设 SASES_HARNESS_STRICT=1 环境变量
+        import os as _os
+        if _os.environ.get('SASES_HARNESS_STRICT') == '1':
+            for perm in manifest.permissions:
+                if perm in self.user_grants:
+                    continue
+                if perm in DANGEROUS_PERMISSIONS:
+                    return f"模块 '{manifest.name}' 需要危险权限 '{perm}'，但当前未被授权，已阻止执行"
+                if perm not in DEFAULT_ALLOWED_PERMISSIONS:
+                    return f"模块 '{manifest.name}' 声明了未知权限 '{perm}'，已阻止执行"
         return None
 
     def invoke_tool(self, module_id: str, params: Dict[str, Any]) -> ToolInvokeResponse:
