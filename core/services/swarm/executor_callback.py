@@ -7,7 +7,8 @@ from .persistence import _save_pending, _delete_pending_from_db, _load_pending, 
 from .reviewer import review_step
 from .task_state import _save_task_state
 from .summarizer import _summarize, _summary_sender
-from .commander import plan_task
+from .commander import plan_task, replan_failed_steps
+from .helpers import _insert_message
 
 async def handle_step_done(
     conversation_id: int,
