@@ -105,4 +105,23 @@ def _insert_message(conversation_id: int, content: str, sender_agent_id: Optiona
             "UPDATE conversations SET updated_at=? WHERE id=?",
             (datetime.now().isoformat(), conversation_id)
         )
-        return cur.lastrowid
+        _msg_id = cur.lastrowid
+        cur.execute("SELECT user_id FROM conversations WHERE id=?", (conversation_id,))
+        _row_u = cur.fetchone()
+        _uid = _row_u["user_id"] if _row_u else None
+    if _uid:
+        try:
+            import asyncio as _aio
+            from ...api_routes.ws_routes import broadcast_to_user as _bc_u
+            _loop = _aio.get_running_loop()
+            _loop.create_task(_bc_u(_uid, {
+                'type': 'new_message',
+                'conversation_id': conversation_id,
+                'sender': 'assistant' if sender_agent_id else 'user',
+                'content': (content or '')[:200],
+            }))
+        except RuntimeError:
+            pass
+        except Exception as _e_bc:
+            print('[ws] insert_message broadcast failed: ' + str(_e_bc))
+    return _msg_id
