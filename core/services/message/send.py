@@ -282,6 +282,7 @@ async def send_message(
                         break
             # 单行 *1: 且含图片语义 → 关联最近图片导入
             if not _uni_text and isinstance(content, str) and content.startswith(('*1:', '*1：')):
+                from datetime import datetime as _dtn
                 _img_uni_body = content[3:].strip()
                 if any(_k in _img_uni_body for _k in ('图片', '这张图', '上图', '刚才的图', '图上的')):
                     _img_rep = ''
