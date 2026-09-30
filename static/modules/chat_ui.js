@@ -1,7 +1,7 @@
 // static/modules/chat_ui.js
 
 // ========== 协议消息过滤（v0.17.0） ==========
-const HIDDEN_PREFIXES = ['[TASK]:', '[TASK_DRAFT]:', '[STEP_DONE]:', '[RETRY_TASK]:'];
+const HIDDEN_PREFIXES = ['[TASK]:', '[TASK_DRAFT]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[SUPERVISOR_PROGRESS]:'];
 
 export function isProtocolMessage(content) {
   if (typeof content !== 'string') return false;
