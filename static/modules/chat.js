@@ -918,8 +918,13 @@ window.addEventListener('sases_new_message', (e) => {
   const d = e.detail || {};
   const m = d.message || d;
   const _cid = m.conversation_id || d.conversation_id;
-  if (_cid && _cid !== chatState.conversationId) return;
-  if (typeof appendMessage === 'function' && m && (m.content || m.role)) appendMessage(m);
+  if (_cid && chatState.conversationId && String(_cid) !== String(chatState.conversationId)) return;
+  const _content = (m.content || m.assistant_reply || '').trim();
+  const _proto = ['[TASK]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[TASK_DRAFT]:', '[SUPERVISOR_PROGRESS]:'];
+  if (_proto.some(p => _content.startsWith(p))) return;
+  if (typeof loadMessages === 'function' && chatState.conversationId) {
+    loadMessages(chatState.conversationId);
+  }
 });
 
 export function initChat() {
