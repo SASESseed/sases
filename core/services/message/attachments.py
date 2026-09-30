@@ -51,7 +51,10 @@ def _enrich_attachment(content):
             _desc = (_r.choices[0].message.content or '').strip()
             if not _desc:
                 _rc = getattr(_r.choices[0].message, 'reasoning_content', None) or ''
-                _desc = _rc.strip()[:200]
+                _rc_lines = [l.strip() for l in _rc.split(chr(10)) if l.strip()]
+                _desc = _rc_lines[-1][:200] if _rc_lines else ''
+            if not _desc:
+                _desc = '(模型未能描述图片)'
             return '[用户发了一张图片] 图片描述：' + _desc
         except Exception as _e:
             print('[message] vision API 失败: ' + str(_e))
