@@ -136,7 +136,7 @@ async function sendMessage() {
       chatState.conversationId = data.conversation_id;
     }
     updateMessageStatus(tempId, 'sent');
-    if (data.assistant_reply) {
+    if (data.assistant_reply && String(data.assistant_reply).trim() !== String(text).trim()) {
       appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
     }
 
