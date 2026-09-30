@@ -183,6 +183,8 @@ export function createMessageElement(role, content, senderName, messageId, timeI
 
 // ========== 消息插入与时间标签 ==========
 export function appendMessage(role, content, senderName = null, messageId = null, timeIso = null, isPending = false, chatState = null) {
+  if (typeof role !== 'string' || !role) return null;
+  if (typeof content !== 'string' || !content) return null;
   if (isProtocolMessage(content)) return null;
   content = stripSummaryPrefix(content);
   if (isProtocolMessage(content)) return;
