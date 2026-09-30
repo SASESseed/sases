@@ -4,7 +4,7 @@ from .conversations import (
     mark_conversation_read, toggle_pin_conversation, delete_conversation,
 )
 from .model_call import call_model_with_config
-from .attachments import _enrich_attachment, _extract_text_from_image
+from .attachments import _enrich_attachment
 from .send import send_message
 
 __all__ = [
