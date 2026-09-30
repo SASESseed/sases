@@ -194,6 +194,19 @@ async function sendMessage() {
       showSwarmActionButtons(data.task_id, text, data.swarm_status);
     }
 
+    // 主动轮询：10 秒内每 2 秒 reload，确保 swarm 结果最终出现
+    if (data.swarm && data.task_id) {
+      let _pollCount = 0;
+      const _pollTimer = setInterval(() => {
+        _pollCount++;
+        if (_pollCount > 5) { clearInterval(_pollTimer); return; }
+        if (typeof loadMessages === 'function' && chatState.conversationId) {
+          loadMessages(chatState.conversationId);
+        }
+      }, 2000);
+    }
+
+
     if (typeof window.onboarding?.report === 'function') {
       window.onboarding.report('send_message');
     }
