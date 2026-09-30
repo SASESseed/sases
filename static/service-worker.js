@@ -1,8 +1,7 @@
 // static/service-worker.js
-const CACHE_NAME = 'sases-cache-v60';
+const CACHE_NAME = 'sases-cache-v61';
 const STATIC_ASSETS = [
   '/static/index.html',
-  '/static/style.css',
   '/static/favicon.svg',
   '/static/modules/main.js',
   '/static/modules/api.js',
