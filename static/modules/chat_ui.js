@@ -166,6 +166,7 @@ export function createMessageElement(role, content, senderName, messageId, timeI
     wrapper.appendChild(avatar);
     if (isPending) {
       const status = document.createElement('span');
+      status.className = 'message-status';
       status.style.fontSize = '12px';
       status.style.color = '#999';
       status.style.alignSelf = 'center';
