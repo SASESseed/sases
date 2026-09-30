@@ -77,7 +77,9 @@ def _normalize_steps(steps):
         # 情况2：command 是 harness:xxx 或 harness xxx
         if not handled and ('harness:' in cmd_stripped or cmd_stripped.startswith('harness ')):
             body = cmd_stripped.replace('harness:', '', 1).replace('harness ', '', 1).strip()
+            body = body.lstrip('/')
             mid = body.split(' ')[0].split(':')[0].strip()
+            mid = mid.lstrip('/')
             if mid:
                 out.append({  'step': s.get('step'), 'type': 'harness', 'module_id': mid, 'params': {}, 'description': s.get('description', '') })
                 print('[_normalize] harness 前缀转 module_id: ' + mid)
