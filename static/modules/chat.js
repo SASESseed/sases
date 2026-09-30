@@ -849,29 +849,7 @@ function closeModeMenu() {
   document.getElementById('mode-menu').style.display = 'none';
 }
 
-let _loadDebounceTimer = null;
-let _loadPending = null;
 async function loadMessages(conversationId, force = false) {
-  // 防抖：200ms 内的多次调用合并成一次
-  if (!force) {
-    if (_loadDebounceTimer) clearTimeout(_loadDebounceTimer);
-    return new Promise((resolve) => {
-      _loadPending = { conversationId, resolve };
-      _loadDebounceTimer = setTimeout(async () => {
-        _loadDebounceTimer = null;
-        const _p = _loadPending;
-        _loadPending = null;
-        if (_p) {
-          await _loadMessagesInternal(_p.conversationId, false);
-          _p.resolve();
-        }
-      }, 200);
-    });
-  }
-  return _loadMessagesInternal(conversationId, true);
-}
-
-async function _loadMessagesInternal(conversationId, force) {
   chatState.offset = 0;
   chatState.hasMore = true;
   const container = document.getElementById('chat-messages');
