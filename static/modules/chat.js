@@ -954,14 +954,22 @@ async function handleScroll() {
 
 window.addEventListener('sases_new_message', (e) => {
   const d = e.detail || {};
-  const m = d.message || d;
-  const _cid = m.conversation_id || d.conversation_id;
+  const _cid = d.conversation_id;
   if (_cid && chatState.conversationId && String(_cid) !== String(chatState.conversationId)) return;
-  const _content = (m.content || m.assistant_reply || '').trim();
+  const _content = (d.content || '').trim();
+  if (!_content) return;
   const _proto = ['[TASK]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[TASK_DRAFT]:', '[SUPERVISOR_PROGRESS]:'];
   if (_proto.some(p => _content.startsWith(p))) return;
-  if (typeof loadMessages === 'function' && chatState.conversationId) {
-    loadMessages(chatState.conversationId);
+  // 去重
+  if (d.message_id) {
+    if (!chatState._seenMsgIds) chatState._seenMsgIds = new Set();
+    if (chatState._seenMsgIds.has(d.message_id)) return;
+    chatState._seenMsgIds.add(d.message_id);
+  }
+  let _display = _content;
+  if (_display.startsWith('[SUMMARY]:')) _display = _display.slice(10);
+  if (typeof appendMessage === 'function') {
+    appendMessage(d.sender || 'assistant', _display, d.sender_agent_id || 'AI', d.message_id, d.created_at, false, chatState);
   }
 });
 

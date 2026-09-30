@@ -228,3 +228,6 @@
 {"ts": "2026-10-01T01:23:59.417950", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "max_lines"]}
 {"ts": "2026-10-01T01:27:35.682411", "module_id": "file_patch", "success": true, "duration_ms": 36, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
 {"ts": "2026-10-01T01:27:35.713409", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-10-01T01:27:49.383395", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "缺少 file_path 参数", "params_keys": []}
+{"ts": "2026-10-01T01:27:49.438301", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": []}
+{"ts": "2026-10-01T01:27:55.589163", "module_id": "file_patch", "success": true, "duration_ms": 117, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
