@@ -889,6 +889,8 @@ async function handleScroll() {
 
 window.addEventListener('sases_new_message', (e) => {
   const d = e.detail || {};
+  // 忽略用户自己发的消息（本地已渲染）
+  if (d.sender === 'user') return;
   const _cid = d.conversation_id;
   if (_cid && chatState.conversationId && String(_cid) !== String(chatState.conversationId)) return;
   const _content = (d.content || '').trim();
