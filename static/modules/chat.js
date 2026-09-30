@@ -894,7 +894,9 @@ async function _loadMessagesInternal(conversationId, force) {
       chatState.hasMore = false;
     }
     chatState._bulkLoading = true;
+    chatState._seenMsgIds = new Set();
     messages.forEach(msg => {
+      if (msg.id) chatState._seenMsgIds.add(msg.id);
       appendMessage(msg.sender, msg.content, msg.sender_name, msg.id, msg.created_at, false, chatState);
     });
     chatState._bulkLoading = false;
