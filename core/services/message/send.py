@@ -528,7 +528,12 @@ async def send_message(
                             _client = _oai.OpenAI(api_key=_cfg.DEEPSEEK_API_KEY, base_url=_cfg.DEEPSEEK_BASE_URL, timeout=15)
                             _resp = _client.chat.completions.create(model=_cfg.MODEL_NAME, messages=[{'role': 'user', 'content': _prompt}], temperature=0.7, max_tokens=80)
                             _ai_receipt = (_resp.choices[0].message.content or '').strip().strip('"').strip()
-                            if _ai_receipt and len(_ai_receipt) <= 60:
+                            _too_similar = False
+                            if _ai_receipt and content:
+                                _c_norm = content.strip()[:50]
+                                if _c_norm and _c_norm in _ai_receipt:
+                                    _too_similar = True
+                            if _ai_receipt and len(_ai_receipt) <= 60 and not _too_similar:
                                 _receipt = _ai_receipt
                         except Exception as _ce:
                             print(f"[supervisor] 回执生成失败，用默认: {_ce}")
