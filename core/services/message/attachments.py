@@ -25,7 +25,7 @@ def _enrich_attachment(content):
             return content + ' (读文件失败: ' + str(_e) + ')'
     if content.startswith('[IMAGE]:'):
         try:
-            from .. import config as _cfg
+            from ... import config as _cfg
             import openai as _oai
             _raw = open(_abs, 'rb').read()
             if len(_raw) > 4 * 1024 * 1024:
@@ -62,7 +62,7 @@ def _enrich_attachment(content):
 def _extract_text_from_image(image_url):
     """Extract full text from an image for KB import."""
     import os as _os_x, base64 as _b64_x, openai as _oai_x
-    from .. import config as _cfg_x
+    from ... import config as _cfg_x
     try:
         _fn = (image_url or '').split('/')[-1]
         if not _fn:

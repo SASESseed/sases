@@ -377,7 +377,7 @@ async def send_message(
                     _chat_ctx = _sv.build_context(user_id, conversation_id, content, mode='chat', supervisor_id=sender_agent_id)
                     _chat_prompt = '你是 SASES 调度员，正在与用户对话。参考资料：' + _chat_ctx + ' 用户说：' + content[:300] + ' 请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。'
                     import openai as _coai
-                    from .. import config as _ccfg
+                    from ... import config as _ccfg
                     _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
                     _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=4000)
                     _chat_reply = (_cresp.choices[0].message.content or '').strip()
@@ -438,7 +438,7 @@ async def send_message(
                         _ctx2 = supervisor_service.build_context(user_id, conversation_id, content, mode='execute', supervisor_id=sender_agent_id or agent_id)
                         _p2 = '你是 SASES 调度员。用户可能在对话中提出想让系统做的事。\n\n上下文：' + _ctx2 + '\n\n用户消息：' + content[:300] + '\n\n如果用户消息是明确的执行请求（要改代码/加功能/跑任务），输出 JSON：{"propose": true, "goal": "具体任务描述"}\n否则输出：{"propose": false}\n只输出 JSON，不要其他文字。'
                         import openai as _oai2
-                        from .. import config as _cfg2
+                        from ... import config as _cfg2
                         _c2 = _oai2.OpenAI(api_key=_cfg2.DEEPSEEK_API_KEY, base_url=_cfg2.DEEPSEEK_BASE_URL, timeout=15)
                         _r2 = _c2.chat.completions.create(model=_cfg2.MODEL_NAME, messages=[{'role': 'user', 'content': _p2}], temperature=0.2, max_tokens=150)
                         _raw2 = (_r2.choices[0].message.content or '').strip()
@@ -478,7 +478,7 @@ async def send_message(
                             _ctx = supervisor_service.build_context(user_id, conversation_id, content, mode='execute', supervisor_id=sender_agent_id or agent_id)
                             _prompt = '你是调度助手。基于以下上下文，用一句话（不超过30字）回应用户，像真人说话，不要复述用户原话。上下文：' + _ctx + ' 用户新消息：' + content[:200] + ' 只输出这一句话。'
                             import openai as _oai
-                            from .. import config as _cfg
+                            from ... import config as _cfg
                             _client = _oai.OpenAI(api_key=_cfg.DEEPSEEK_API_KEY, base_url=_cfg.DEEPSEEK_BASE_URL, timeout=15)
                             _resp = _client.chat.completions.create(model=_cfg.MODEL_NAME, messages=[{'role': 'user', 'content': _prompt}], temperature=0.7, max_tokens=80)
                             _ai_receipt = (_resp.choices[0].message.content or '').strip().strip('"').strip()

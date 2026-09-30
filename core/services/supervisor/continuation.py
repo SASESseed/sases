@@ -70,7 +70,7 @@ async def resume_restart_pending_runs():
 
 async def check_and_continue(run_id, last_summary, plan_text=None, exec_text=None, review=None):
     import openai
-    from .. import config
+    from ... import config
     run = get_run(run_id)
     if not run or run['status'] != 'running':
         return False, None
