@@ -12,6 +12,6 @@ __all__ = [
     'list_conversations', 'create_conversation', 'get_messages',
     'mark_conversation_read', 'toggle_pin_conversation', 'delete_conversation',
     'call_model_with_config',
-    '_enrich_attachment', '_extract_text_from_image',
+    '_enrich_attachment',
     'send_message',
 ]
