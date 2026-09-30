@@ -307,7 +307,7 @@ async def send_message(
                     try:
                         with db_cursor(commit=True) as _cin_img:
                             _cin_img.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _img_rep, sender_agent_id))
-                            _cin_img.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                            _cin_img.execute("UPDATE conversations SET updated_at=? WHERE id=?", (_dtn.now().isoformat(), conversation_id))
                     except Exception as _e2_img:
                         print('[message] *1 单行图片导入回写失败: ' + str(_e2_img))
                     return {
