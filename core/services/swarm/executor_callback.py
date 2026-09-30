@@ -155,7 +155,7 @@ async def handle_step_done(
                             _out = str(_r.get('output') or '')
                             if _r_status != 'success':
                                 continue
-                            if _r_cmd not in ('file_patch', 'run_python'):
+                            if _r_cmd != 'file_patch':
                                 continue
                             if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True
@@ -465,7 +465,7 @@ async def handle_step_done(
                             _out = str(_r.get('output') or '')
                             if _r_status != 'success':
                                 continue
-                            if _r_cmd not in ('file_patch', 'run_python'):
+                            if _r_cmd != 'file_patch':
                                 continue
                             if 'core/' in _desc or 'core/' in _out or 'core\\' in _desc or 'core\\' in _out:
                                 _has_core = True

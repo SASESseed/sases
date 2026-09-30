@@ -1,0 +1,119 @@
+{"ts": "2026-09-29T12:01:42.268868", "module_id": "grep_code", "success": true, "duration_ms": 1695, "error": "", "params_keys": ["pattern", "max_results"]}
+{"ts": "2026-09-29T12:01:42.300330", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:01:42.358741", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "只允许修改以下目录：static/ / core/ / scripts/ / docs/ / harness_modules/ / data/ / logs/，收到: {\"success\": true, \"pattern\": \"当前允许的命令\", \"scanned_files\": 439, \"count\": 1, \"matches\": [{\"file\": \"core/services/comman", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-29T12:01:42.417129", "module_id": "verify_syntax", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:10:00.138262", "module_id": "file_read", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:10:00.187363", "module_id": "file_patch", "success": true, "duration_ms": 20, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:18:02.077011", "module_id": "file_patch", "success": true, "duration_ms": 45, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:18:02.098222", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:18:02.163985", "module_id": "harness_reload", "success": true, "duration_ms": 31, "error": "", "params_keys": []}
+{"ts": "2026-09-29T12:19:14.231301", "module_id": "file_patch", "success": true, "duration_ms": 18, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:19:26.215490", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:19:26.250994", "module_id": "file_patch", "success": false, "duration_ms": 1, "error": "原片段在 harness_modules/api_call/main.py 中未找到。建议改用锚点模式。\n最相似候选：\n  行 8: MAX_BODY = 20000\n  行 72: raw = resp.read(MAX_BODY * 2)\n  行 7: TIMEOUT = 60\n", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:02.301065", "module_id": "file_patch", "success": true, "duration_ms": 37, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:02.325885", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:20:11.328588", "module_id": "file_patch", "success": true, "duration_ms": 27, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:20:11.375951", "module_id": "verify_syntax", "success": true, "duration_ms": 17, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:33:21.637011", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:33:21.680060", "module_id": "file_patch", "success": false, "duration_ms": 14, "error": "原片段在 harness_modules/api_call/main.py 中未找到。建议改用锚点模式。\n最相似候选：\n  行 7: TIMEOUT = 60\n", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:33:21.739854", "module_id": "verify_syntax", "success": true, "duration_ms": 3, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:33:27.699641", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "锚点 '^TIMEOUT\\s*=\\s*\\d+' 在 harness_modules/api_call/main.py 中未找到任何匹配行\n最相似候选：\n  行 7: TIMEOUT = 60\n请从上述候选选一个作为 anchor_pattern。", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-29T12:33:45.646432", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:33:45.691680", "module_id": "file_patch", "success": true, "duration_ms": 4, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:33:45.713024", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T12:37:34.025412", "module_id": "file_patch", "success": true, "duration_ms": 61, "error": "", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-29T12:37:34.162236", "module_id": "verify_syntax", "success": true, "duration_ms": 93, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:39:07.173741", "module_id": "file_patch", "success": true, "duration_ms": 49, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:39:07.272126", "module_id": "verify_syntax", "success": true, "duration_ms": 68, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:42:01.603805", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:42:01.670491", "module_id": "file_patch", "success": true, "duration_ms": 26, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-29T12:42:01.704733", "module_id": "verify_syntax", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T12:44:10.834870", "module_id": "file_patch", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "create_if_missing", "new_content"]}
+{"ts": "2026-09-29T12:44:10.884773", "module_id": "file_patch", "success": true, "duration_ms": 11, "error": "", "params_keys": ["file_path", "create_if_missing", "new_content"]}
+{"ts": "2026-09-29T12:44:10.951220", "module_id": "harness_reload", "success": true, "duration_ms": 45, "error": "", "params_keys": []}
+{"ts": "2026-09-29T12:44:10.982717", "module_id": "is_prime", "success": true, "duration_ms": 0, "error": "", "params_keys": ["number"]}
+{"ts": "2026-09-29T12:44:11.001117", "module_id": "is_prime", "success": true, "duration_ms": 0, "error": "", "params_keys": ["number"]}
+{"ts": "2026-09-29T12:46:23.007171", "module_id": "file_read", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:46:23.032096", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:46:23.065072", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-29T12:46:23.082907", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:46:23.119087", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-29T12:46:41.039889", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:46:41.070805", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:46:41.097992", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:46:41.127455", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:46:41.149346", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-29T12:55:59.772562", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:55:59.810340", "module_id": "file_read", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path", "grep"]}
+{"ts": "2026-09-29T12:55:59.838511", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-29T12:56:23.805351", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:56:23.842930", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:56:23.870634", "module_id": "verify_claim", "success": true, "duration_ms": 0, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:56:23.899763", "module_id": "verify_claim", "success": true, "duration_ms": 1, "error": "", "params_keys": ["source_file", "claim"]}
+{"ts": "2026-09-29T12:56:23.921747", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content", ""]}
+{"ts": "2026-09-29T23:47:43.443468", "module_id": "file_replace_range", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:47:43.507653", "module_id": "verify_syntax", "success": true, "duration_ms": 29, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:47:52.468013", "module_id": "file_replace_range", "success": true, "duration_ms": 2, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:47:52.510700", "module_id": "verify_syntax", "success": true, "duration_ms": 15, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:48:46.557326", "module_id": "file_replace_range", "success": true, "duration_ms": 6, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:48:46.583893", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:48:52.576004", "module_id": "file_replace_range", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:49:01.617085", "module_id": "file_replace_range", "success": true, "duration_ms": 4, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:49:01.662997", "module_id": "verify_syntax", "success": true, "duration_ms": 20, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:49:46.681277", "module_id": "file_replace_range", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:49:46.725778", "module_id": "verify_syntax", "success": true, "duration_ms": 9, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:49:52.684852", "module_id": "file_replace_range", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:49:52.729409", "module_id": "verify_syntax", "success": true, "duration_ms": 16, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-29T23:50:01.684819", "module_id": "file_replace_range", "success": true, "duration_ms": 4, "error": "", "params_keys": ["file_path", "start_line", "end_line", "new_content"]}
+{"ts": "2026-09-29T23:50:01.725133", "module_id": "verify_syntax", "success": true, "duration_ms": 15, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-29T23:51:15.193664", "module_id": "harness_reload", "success": true, "duration_ms": 30, "error": "", "params_keys": []}
+{"ts": "2026-09-29T23:51:27.257033", "module_id": "run_python", "success": true, "duration_ms": 0, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-29T23:51:33.190846", "module_id": "run_python", "success": true, "duration_ms": 0, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-29T23:51:42.190302", "module_id": "run_python", "success": true, "duration_ms": 0, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-29T23:52:15.424319", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-29T23:56:44.567788", "module_id": "harness_reload", "success": true, "duration_ms": 49, "error": "", "params_keys": []}
+{"ts": "2026-09-29T23:56:53.698437", "module_id": "run_python", "success": true, "duration_ms": 90, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-29T23:57:02.706204", "module_id": "run_python", "success": true, "duration_ms": 76, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-29T23:57:08.591834", "module_id": "run_python", "success": true, "duration_ms": 72, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T00:00:56.905115", "module_id": "harness_reload", "success": true, "duration_ms": 37, "error": "", "params_keys": []}
+{"ts": "2026-09-30T00:01:11.962621", "module_id": "run_python", "success": true, "duration_ms": 83, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T01:15:41.486907", "module_id": "file_patch", "success": true, "duration_ms": 49, "error": "", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-09-30T01:15:41.520891", "module_id": "verify_syntax", "success": true, "duration_ms": 8, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T06:54:35.984095", "module_id": "run_python", "success": true, "duration_ms": 85, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T06:59:46.568278", "module_id": "run_python", "success": true, "duration_ms": 91, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:03:53.106679", "module_id": "run_python", "success": true, "duration_ms": 86, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:04:50.235160", "module_id": "run_python", "success": true, "duration_ms": 68, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:05:47.539790", "module_id": "run_python", "success": true, "duration_ms": 77, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:05:47.582798", "module_id": "verify_syntax", "success": true, "duration_ms": 13, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:06:35.778877", "module_id": "run_python", "success": true, "duration_ms": 83, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:07:23.944041", "module_id": "run_python", "success": true, "duration_ms": 84, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:07:23.988114", "module_id": "verify_syntax", "success": true, "duration_ms": 28, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:08:08.988098", "module_id": "run_python", "success": true, "duration_ms": 90, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:08:09.025760", "module_id": "verify_syntax", "success": true, "duration_ms": 16, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-30T07:08:09.065536", "module_id": "verify_syntax", "success": true, "duration_ms": 12, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-09-30T07:09:12.025954", "module_id": "run_python", "success": true, "duration_ms": 83, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:10:45.190223", "module_id": "run_python", "success": true, "duration_ms": 183, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:11:36.158353", "module_id": "run_python", "success": true, "duration_ms": 67, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:12:30.356382", "module_id": "run_python", "success": true, "duration_ms": 79, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:12:45.299959", "module_id": "run_python", "success": true, "duration_ms": 79, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:13:33.303702", "module_id": "grep_code", "success": true, "duration_ms": 50, "error": "", "params_keys": ["pattern", "path", "file_ext", "max_results"]}
+{"ts": "2026-09-30T07:14:06.312829", "module_id": "grep_code", "success": true, "duration_ms": 38, "error": "", "params_keys": ["pattern", "path", "file_ext", "max_results"]}
+{"ts": "2026-09-30T07:16:12.583672", "module_id": "run_python", "success": true, "duration_ms": 85, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:16:27.584765", "module_id": "file_patch", "success": true, "duration_ms": 11, "error": "", "params_keys": ["file_path", "overwrite", "new_content"]}
+{"ts": "2026-09-30T07:16:27.621256", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:16:42.710560", "module_id": "file_patch", "success": true, "duration_ms": 10, "error": "", "params_keys": ["file_path", "overwrite", "new_content"]}
+{"ts": "2026-09-30T07:16:42.738538", "module_id": "verify_syntax", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:19:11.714134", "module_id": "run_python", "success": true, "duration_ms": 76, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:19:11.746139", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-30T07:21:44.961682", "module_id": "file_patch", "success": true, "duration_ms": 27, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-30T07:21:45.010628", "module_id": "verify_syntax", "success": true, "duration_ms": 12, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:23:41.530023", "module_id": "run_python", "success": true, "duration_ms": 80, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:23:41.562225", "module_id": "answer", "success": true, "duration_ms": 0, "error": "", "params_keys": ["content"]}
+{"ts": "2026-09-30T07:26:05.656758", "module_id": "run_python", "success": true, "duration_ms": 80, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:28:14.488748", "module_id": "run_python", "success": true, "duration_ms": 63, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:31:58.151146", "module_id": "run_python", "success": true, "duration_ms": 84, "error": "", "params_keys": ["code"]}
+{"ts": "2026-09-30T07:35:04.396098", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "禁止修改受保护文件: core/services/executor_service.py", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-30T07:35:04.486774", "module_id": "verify_syntax", "success": true, "duration_ms": 15, "error": "", "params_keys": ["file_path", "auto_rollback"]}
+{"ts": "2026-09-30T07:35:10.578439", "module_id": "file_patch", "success": false, "duration_ms": 0, "error": "禁止修改受保护文件: core/services/executor_service.py", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-30T09:28:40.926618", "module_id": "file_patch", "success": true, "duration_ms": 50, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-09-30T09:28:40.974558", "module_id": "verify_syntax", "success": true, "duration_ms": 17, "error": "", "params_keys": ["file_path", "auto_rollback"]}
