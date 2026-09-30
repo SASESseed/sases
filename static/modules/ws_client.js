@@ -20,7 +20,13 @@ function _openWs(uid) {
     const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
     const url = proto + location.host + '/ws/user/' + uid;
     _ws = new WebSocket(url);
-    _ws.onopen = () => console.log('[user-ws] connected for user', uid);
+    _ws.onopen = () => {
+      console.log('[user-ws] connected for user', uid);
+      if (_ws._hb) clearInterval(_ws._hb);
+      _ws._hb = setInterval(() => {
+        if (_ws && _ws.readyState === 1) _ws.send('ping');
+      }, 25000);
+    };
     _ws.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data);
