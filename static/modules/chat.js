@@ -879,7 +879,14 @@ async function loadMessages(conversationId, force = false) {
     chatState.offset = messages.length;
     container.scrollTop = container.scrollHeight;
     const _imgs = container.querySelectorAll('img');
-    const _done = () => { container.scrollTop = container.scrollHeight; container.style.visibility = 'visible'; };
+    const _scrollBottom = () => { container.scrollTop = container.scrollHeight; };
+    const _done = () => {
+      _scrollBottom();
+      requestAnimationFrame(_scrollBottom);
+      setTimeout(_scrollBottom, 50);
+      setTimeout(_scrollBottom, 200);
+      container.style.visibility = 'visible';
+    };
     if (_imgs.length === 0) {
       requestAnimationFrame(_done);
     } else {
