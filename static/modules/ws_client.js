@@ -37,6 +37,7 @@ function _openWs(uid) {
     };
     _ws.onclose = () => {
       console.log('[user-ws] closed, will reconnect in 3s');
+      if (_ws && _ws._hb) clearInterval(_ws._hb);
       _ws = null;
       if (_reconnectTimer) clearTimeout(_reconnectTimer);
       _reconnectTimer = setTimeout(() => _openWs(uid), 3000);
