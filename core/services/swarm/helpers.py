@@ -116,11 +116,17 @@ def _insert_message(conversation_id: int, content: str, sender_agent_id: Optiona
             import asyncio as _aio
             from ...api_routes.ws_routes import broadcast_to_user as _bc_u
             _loop = _aio.get_running_loop()
+            _display = content or ''
+            if _display.startswith('[SUMMARY]:'):
+                _display = _display[len('[SUMMARY]:'):]
             _loop.create_task(_bc_u(_uid, {
                 'type': 'new_message',
+                'message_id': _msg_id,
                 'conversation_id': conversation_id,
                 'sender': 'assistant' if sender_agent_id else 'user',
-                'content': (content or '')[:200],
+                'content': _display,
+                'sender_agent_id': sender_agent_id,
+                'created_at': datetime.now().isoformat(),
             }))
         except RuntimeError:
             pass
