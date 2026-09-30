@@ -13,7 +13,7 @@ def _enrich_attachment(content):
         _rel = _rest.split('|')[0].strip().lstrip('/')
     except Exception:
         return content
-    _root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    _root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
     _abs = _os.path.join(_root, _rel)
     if not _os.path.exists(_abs):
         return content + ' (文件不存在)'
