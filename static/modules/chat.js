@@ -862,11 +862,20 @@ function closeModeMenu() {
   document.getElementById('mode-menu').style.display = 'none';
 }
 
-async function loadMessages(conversationId) {
+async function loadMessages(conversationId, force = false) {
   chatState.offset = 0;
   chatState.hasMore = true;
   const container = document.getElementById('chat-messages');
   if (!container) return;
+  // 检查是否有新消息：无新消息则跳过重建
+  try {
+    const _check = await api.getConversationMessages(conversationId, 1, 0, true);
+    const _latest = (_check.messages && _check.messages[0]) ? _check.messages[0].id : null;
+    if (!force && _latest && _latest === chatState._lastMsgId) {
+      return;
+    }
+    chatState._lastMsgId = _latest;
+  } catch (e) { /* 检查失败则继续走原逻辑 */ }
   container.style.visibility = 'hidden';
   container.innerHTML = '';
   try {

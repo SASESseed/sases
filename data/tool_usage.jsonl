@@ -213,3 +213,7 @@
 {"ts": "2026-10-01T01:07:42.836266", "module_id": "file_patch", "success": false, "duration_ms": 56, "error": "原片段在 static/modules/chat.js 中未找到。建议改用锚点模式。\n最相似候选：\n  行 193: else if (data.swarm && data.task_id) {\n  行 188: if (data.swarm && data.swarm_status === 'draft' && data.task_id) {\n  行 183: if (data.proposed", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
 {"ts": "2026-10-01T01:07:51.715858", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "offset", "limit"]}
 {"ts": "2026-10-01T01:07:51.845194", "module_id": "file_patch", "success": true, "duration_ms": 107, "error": "", "params_keys": ["file_path", "anchor_pattern", "position", "new_content"]}
+{"ts": "2026-10-01T01:09:49.781601", "module_id": "file_read", "success": true, "duration_ms": 1, "error": "", "params_keys": ["file_path"]}
+{"ts": "2026-10-01T01:11:35.023172", "module_id": "file_read", "success": true, "duration_ms": 0, "error": "", "params_keys": ["file_path", "max_lines"]}
+{"ts": "2026-10-01T01:15:49.717689", "module_id": "file_patch", "success": true, "duration_ms": 120, "error": "", "params_keys": ["file_path", "old_snippet", "new_snippet", "expected_count"]}
+{"ts": "2026-10-01T01:15:49.825208", "module_id": "verify_syntax", "success": true, "duration_ms": 81, "error": "", "params_keys": ["file_path", "auto_rollback"]}
