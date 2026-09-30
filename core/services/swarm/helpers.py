@@ -109,7 +109,9 @@ def _insert_message(conversation_id: int, content: str, sender_agent_id: Optiona
         cur.execute("SELECT user_id FROM conversations WHERE id=?", (conversation_id,))
         _row_u = cur.fetchone()
         _uid = _row_u["user_id"] if _row_u else None
-    if _uid:
+    _protocols = ('[TASK]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[TASK_DRAFT]:', '[SUPERVISOR_PROGRESS]:')
+    _should_bc = _uid and not (content or '').startswith(_protocols)
+    if _should_bc:
         try:
             import asyncio as _aio
             from ...api_routes.ws_routes import broadcast_to_user as _bc_u
