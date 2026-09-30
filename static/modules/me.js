@@ -80,9 +80,12 @@ export function initMe() {
     if (typeof window.openWallet === 'function') window.openWallet();
     else alert(t('wallet') + ' - ' + t('coming_soon'));
   });
-  document.getElementById('menu-knowledge').addEventListener('click', openKnowledgeBase);
-  document.getElementById('menu-contributions').addEventListener('click', openContributions);
-  document.getElementById('menu-settings').addEventListener('click', () => {
+  const _el_knowledge = document.getElementById('menu-knowledge');
+  if (_el_knowledge) _el_knowledge.addEventListener('click', openKnowledgeBase);
+  const _el_contrib = document.getElementById('menu-contributions');
+  if (_el_contrib) _el_contrib.addEventListener('click', openContributions);
+  const _el_settings = document.getElementById('menu-settings');
+  if (_el_settings) _el_settings.addEventListener('click', () => {
     if (typeof window.openSettings === 'function') window.openSettings();
     else alert(t('settings') + ' - ' + t('coming_soon'));
   });
