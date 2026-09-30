@@ -739,6 +739,12 @@ async def send_message(
                     (conversation_id, assistant_reply))
         cur.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
 
+    try:
+        from ...api_routes.ws_routes import broadcast_to_user as _bc_user
+        await _bc_user(user_id, {'type': 'new_message', 'conversation_id': conversation_id, 'sender': 'assistant', 'preview': (assistant_reply or '')[:80]})
+    except Exception as _e_bc:
+        print('[ws] broadcast failed: ' + str(_e_bc))
+
     return {
         "conversation_id": conversation_id,
         "user_message": content,
