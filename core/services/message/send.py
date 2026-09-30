@@ -518,7 +518,7 @@ async def send_message(
                 # 调度者回执（v0.18.0 带上下文）
                 if sender_agent_id:
                     try:
-                        _receipt = "收到，我来处理：" + content[:50]
+                        _receipt = "收到，我来处理。"
                         try:
                             from .. import supervisor_service
                             _ctx = supervisor_service.build_context(user_id, conversation_id, content, mode='execute', supervisor_id=sender_agent_id or agent_id)
