@@ -893,6 +893,11 @@ window.addEventListener('sases_new_message', (e) => {
   if (d.sender === 'user') return;
   const _cid = d.conversation_id;
   if (_cid && chatState.conversationId && String(_cid) !== String(chatState.conversationId)) return;
+  // 收到最终结果（非协议消息）时，自动移除任务按钮卡片
+  const _content_ws = (d.content || '').trim();
+  if (_content_ws) {
+    document.querySelectorAll('[id^="swarm-actions-"]').forEach(el => el.remove());
+  }
   const _content = (d.content || '').trim();
   if (!_content) return;
   const _proto = ['[TASK]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[TASK_DRAFT]:', '[SUPERVISOR_PROGRESS]:'];
