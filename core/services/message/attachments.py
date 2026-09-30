@@ -44,7 +44,7 @@ def _enrich_attachment(content):
             _r = _cli.chat.completions.create(
                 model=_cfg.VISION_MODEL_NAME,
                 messages=[{'role': 'user', 'content': [
-                    {'type': 'text', 'text': '用 100 字以内描述这张图片的内容、文字、场景。'},
+                    {'type': 'text', 'text': '直接描述图片的内容、文字、场景，100字以内。只输出描述本身，禁止输出任何分析过程、思考步骤或格式说明。'},
                     {'type': 'image_url', 'image_url': {'url': 'data:' + _mime + ';base64,' + _b64s}}
                 ]}],
                 max_tokens=300
