@@ -9,7 +9,7 @@ from .reviewer import UNRECOVERABLE_KEYWORDS
 from .memory_cache import _pending
 from .persistence import (_save_pending, _delete_pending_from_db, _load_pending, _has_active_task_in_conversation, _ensure_feedback_table)
 from .helpers import _insert_message, _get_conversation_history, pick_swarm_agents
-from .llm_parser import _call_llm, _parse_plan, _validate_steps_format, _precheck_steps
+from .llm_parser import _call_llm, _parse_plan, _normalize_steps, _validate_steps_format, _precheck_steps
 from .task_state import _load_task_state
 
 async def plan_task(
