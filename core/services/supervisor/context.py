@@ -1,4 +1,5 @@
 import time as _ctx_time
+from ...db import db_cursor
 from .constants import _CTX_CACHE, _CTX_TTL, _CTX_MAX
 
 def _ctx_key(user_id, conversation_id, mode, supervisor_id, query):

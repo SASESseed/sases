@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from ...db import db_cursor
 from .. import credit_service
+from .context import _dict
 from .constants import MAX_ROUNDS, CREDITS_PER_ROUND
 
 def get_run(run_id):
