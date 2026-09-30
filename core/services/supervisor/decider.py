@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from ..db import db_cursor
+from ...db import db_cursor
 from .constants import USE_STRUCTURED_REVIEW
 
 def build_next_input(run_id):
@@ -26,7 +26,7 @@ async def task_summarizer(task):
     print('[supervisor] task_summarizer 被调用, task_id=' + str(task.get('task_id')))
     import openai
     import asyncio
-    from .. import config
+    from ... import config
     user_text = task.get('user_text', '')
     _orig_run_id = task.get('supervisor_run_id')
     if _orig_run_id:
@@ -108,7 +108,7 @@ async def task_summarizer(task):
 async def decide_next_step(run_id):
     import openai
     import asyncio
-    from .. import config
+    from ... import config
     run = get_run(run_id)
     if not run:
         return None
@@ -121,7 +121,7 @@ async def decide_next_step(run_id):
         history_text += '第 ' + str(h.get('round', '?')) + ' 轮：' + (h.get('plan') or '')[:80] + chr(10)
         history_text += '  结果：' + (h.get('exec') or '')[:300] + chr(10)
     try:
-        from .. import harness_runtime as _hr
+        from ... import harness_runtime as _hr
         _tools = _hr.harness_runtime.list_tools()
         _names = ' / '.join([getattr(t, 'module_id', '') for t in _tools if getattr(t, 'module_id', '')])
         _tool_line = '可用工具：' + _names
