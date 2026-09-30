@@ -280,6 +280,44 @@ async def send_message(
                                     _uni_text = _uni_text[len(_skip):].strip()
                                     break
                         break
+            # 单行 *1: 且含图片语义 → 关联最近图片导入
+            if not _uni_text and isinstance(content, str) and content.startswith(('*1:', '*1：')):
+                _img_uni_body = content[3:].strip()
+                if any(_k in _img_uni_body for _k in ('图片', '这张图', '上图', '刚才的图', '图上的')):
+                    _img_rep = ''
+                    try:
+                        if not conversation_id:
+                            conversation_id = create_conversation(user_id, agent_id or 'sases_assistant_2', '图片导入')
+                        from .attachments import import_image_to_kb as _imp_img
+                        with db_cursor() as _cur_img:
+                            _cur_img.execute("SELECT content FROM messages WHERE conversation_id=? AND content LIKE '[IMAGE]:%' ORDER BY id DESC LIMIT 1", (conversation_id,))
+                            _row_img = _cur_img.fetchone()
+                        if not _row_img:
+                            _img_rep = '未找到最近上传的图片，请先发一张图。'
+                        else:
+                            _img_url = _row_img['content'][8:].split('|')[0].strip()
+                            _res_img = _imp_img(_img_url, user_id)
+                            if _res_img.get('success'):
+                                _img_rep = '✅ 已导入 ' + str(_res_img.get('chunks', 0)) + ' 个分片（' + _res_img.get('source', '') + '）。'
+                            else:
+                                _img_rep = '❌ 导入失败：' + _res_img.get('error', '未知')
+                    except Exception as _e_img:
+                        _img_rep = '图片导入异常：' + str(_e_img)
+                    try:
+                        with db_cursor(commit=True) as _cin_img:
+                            _cin_img.execute("INSERT INTO messages (conversation_id, sender, content, sender_agent_id) VALUES (?, 'assistant', ?, ?)", (conversation_id, _img_rep, sender_agent_id))
+                            _cin_img.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.now().isoformat(), conversation_id))
+                    except Exception as _e2_img:
+                        print('[message] *1 单行图片导入回写失败: ' + str(_e2_img))
+                    return {
+                        'conversation_id': conversation_id,
+                        'user_message': content,
+                        'assistant_reply': _img_rep,
+                        'agent_id': agent_id,
+                        'sender_agent_id': sender_agent_id,
+                        'mode': mode,
+                        'import_mode': 'image'
+                    }
             if _uni_text:
                 try:
                     from .. import project_service as _ps_uni
