@@ -337,6 +337,20 @@ async def _execute_task(task: Dict[str, Any]):
                 output, status, dur = await _run_harness(_mid, _params2)
                 print(f"[executor]   harness 结果 (auto): {status} ({dur}ms) | {output[:200]}")
 
+            else:
+                cmd = cmd_raw if isinstance(cmd_raw, str) else str(cmd_raw or "")
+                for _k, _v in list(previous_outputs.items()):
+                    _first_line = (_v or "").split(chr(10))[0].strip()
+                    cmd = cmd.replace("{{step" + str(_k) + "}}", _first_line)
+                    cmd = cmd.replace("{step" + str(_k) + "}", _first_line)
+                cmd = cmd.strip()
+                if cmd:
+                    _timeout = step.get("timeout") or DEFAULT_TIMEOUT
+                    output, status, dur = await _run_command(cmd, timeout=_timeout)
+                    print(f"[executor]   command 结果: {status} ({dur}ms) | {output[:200]}")
+                else:
+                    output, status, dur = "空命令，跳过", "skipped", 0
+
         if status == "success":
             previous_outputs[step_id] = output
 
