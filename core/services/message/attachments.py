@@ -54,6 +54,10 @@ def _enrich_attachment(content):
                 _rc = getattr(_r.choices[0].message, 'reasoning_content', None) or ''
                 _rc_lines = [l.strip() for l in _rc.split(chr(10)) if l.strip()]
                 _desc = _rc_lines[-1][:200] if _rc_lines else ''
+            # 过滤推理痕迹
+            if any(_kw in _desc for _kw in ('我们需要', '分析用户', '任务：', '让我', '步骤', '首先是')):
+                _sents = [_s.strip() for _s in _desc.replace('。', '。' + chr(10)).split(chr(10)) if _s.strip()]
+                _desc = _sents[-1][:200] if _sents else _desc[:100]
             if not _desc:
                 _desc = '(模型未能描述图片)'
             return '[用户发了一张图片] 图片描述：' + _desc
