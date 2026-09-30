@@ -1,45 +1,6 @@
 // static/modules/chat.js
 import { api } from './api.js';
 
-function renderPendingAttachments() {
-  const bar = document.getElementById('pending-attachments');
-  if (!bar) return;
-  bar.innerHTML = '';
-  if (!Array.isArray(pendingAttachments) || pendingAttachments.length === 0) {
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = 'flex';
-  pendingAttachments.forEach(function (file, index) {
-    const item = document.createElement('div');
-    item.className = 'pending-attachment-item';
-    const isImage = file && typeof file.type === 'string' && file.type.indexOf('image/') === 0;
-    if (isImage) {
-      const thumb = document.createElement('img');
-      thumb.className = 'pending-attachment-thumb';
-      thumb.src = URL.createObjectURL(file);
-      thumb.alt = (file && file.name) ? file.name : 'image';
-      item.appendChild(thumb);
-    } else {
-      const name = document.createElement('span');
-      name.className = 'pending-attachment-name';
-      name.textContent = (file && file.name) ? file.name : 'file';
-      item.appendChild(name);
-    }
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'pending-attachment-remove';
-    removeBtn.textContent = '\u00d7';
-    removeBtn.addEventListener('click', function () {
-      if (typeof window.__sasesClearAttachment === 'function') {
-        window.__sasesClearAttachment(index);
-      }
-    });
-    item.appendChild(removeBtn);
-    bar.appendChild(item);
-  });
-}
-
 import { closeGroupChat, sendGroupMessage } from './group_chat.js';
 import { appendMessage, createMessageElement, updateMessageStatus } from './chat_ui.js';
 import { showWorkWarning, sendWorkCommand, sendCommanderTask, showFreeModeGuide } from './chat_work.js';
@@ -107,7 +68,6 @@ async function sendTransfer(receiver_id, amount, message, conversation_id) {
     throw e;
   }
 }
-
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
@@ -265,8 +225,6 @@ function showProposedRunCard(runId) {
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
 }
-
-
 
 function showTaskDraftEditor(taskId, steps) {
   const container = document.getElementById('chat-messages');
@@ -599,14 +557,12 @@ function updateSendButtonVisibility() {
 window.updateSendButtonVisibility = updateSendButtonVisibility;
 window.sendMessage = sendMessage;
 
-
 window.__sasesClearAttachment = function() {
   if (window.chatState) window.chatState.pendingAttachments = [];
   const el = document.getElementById('attachment-preview');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
   if (window.updateSendButtonVisibility) window.updateSendButtonVisibility();
 };
-
 
 window.__sasesUploadFile = async (file) => {
   if (!file) return;
@@ -633,7 +589,6 @@ window.__sasesUploadFile = async (file) => {
     alert('上传失败：' + (e.message || '未知错误'));
   }
 };
-
 
 window.__sasesUploadImage = async (file) => {
   if (!file) return;
