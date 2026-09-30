@@ -59,11 +59,18 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
         print(f"[swarm] 执行笔记写入失败: {e}")
 
 
-    result_text = "\n".join(
-        f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
-        for r in results
-    )
-    prompt = f"用户任务：{user_text}\n\n执行结果：\n{result_text}\n\n请用一句话总结这次任务的结果。"
+    result_lines = []
+    for r in results:
+        _line = f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
+        _out = (r.get('output') or '').strip()
+        if _out:
+            _out = _out.replace(chr(10), ' | ')[:2000]
+            _line += chr(10) + '  工具输出: ' + _out
+        result_lines.append(_line)
+    result_text = chr(10).join(result_lines)
+    prompt = f"用户任务：{user_text}\n\n执行结果：\n{result_text}\n\n请根据用户任务，输出最终结果。"
+    prompt += "如果工具返回了具体内容（文件内容、数据、答案），请直接原样呈现，不要再说'已成功'。"
+    prompt += "如果任务只是完成某个操作（如改代码、发消息），用一句话说明。"
     try:
         return await _call_llm(prompt, SUMMARY_SYSTEM_PROMPT, max_tokens=config.SUMMARY_MAX_TOKENS)
     except Exception:
