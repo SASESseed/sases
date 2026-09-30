@@ -110,7 +110,7 @@ def _insert_message(conversation_id: int, content: str, sender_agent_id: Optiona
         _row_u = cur.fetchone()
         _uid = _row_u["user_id"] if _row_u else None
     _protocols = ('[TASK]:', '[STEP_DONE]:', '[RETRY_TASK]:', '[TASK_DRAFT]:', '[SUPERVISOR_PROGRESS]:')
-    _should_bc = _uid and not (content or '').startswith(_protocols)
+    _should_bc = _uid and sender_agent_id and not (content or '').startswith(_protocols)
     if _should_bc:
         try:
             import asyncio as _aio
