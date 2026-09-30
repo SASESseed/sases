@@ -194,6 +194,7 @@ async def plan_task(
 
     steps = _parse_plan(raw)
     if steps:
+        steps = _normalize_steps(steps)
         steps, _fmt_errors = _validate_steps_format(steps)
         if steps:
             _pre_warns = _precheck_steps(steps)
@@ -440,6 +441,7 @@ async def replan_failed_steps(task: Dict[str, Any]) -> Optional[List[Dict[str, A
 
     steps = _parse_plan(raw)
     if steps:
+        steps = _normalize_steps(steps)
         steps, _fmt_errors = _validate_steps_format(steps)
         if steps:
             _pre_warns = _precheck_steps(steps)
