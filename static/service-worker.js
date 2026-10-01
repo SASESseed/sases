@@ -45,6 +45,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 跳过跨域请求（unpkg / cdn 等），交给浏览器直接处理
+  if (url.origin !== location.origin) {
+    return;
+  }
+
   // 不缓存 API 请求
   if (
     url.pathname.startsWith('/token') ||
