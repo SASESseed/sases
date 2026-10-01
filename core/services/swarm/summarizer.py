@@ -64,8 +64,8 @@ async def _summarize(user_text: str, results: List[Dict[str, Any]], user_id: int
         _line = f"步骤{r['step']}({r['description']}): {r['status']} [审核:{r.get('review','?')}]"
         _out = (r.get('output') or '').strip()
         if _out:
-            _out = _out.replace(chr(10), ' | ')[:2000]
-            _line += chr(10) + '  工具输出: ' + _out
+            _out = _out.replace(chr(10), chr(10) + '    ')[:12000]
+            _line += chr(10) + '  工具输出:' + chr(10) + '    ' + _out
         result_lines.append(_line)
     result_text = chr(10).join(result_lines)
     prompt = f"【背景】用户请求：{user_text}\n\n【执行过程】\n{result_text}\n\n【要求】请直接输出最终结果，用于展示给用户。\n- 绝对不要重复用户请求的内容。\n- 如果工具返回了具体内容（文件内容、数据、答案），直接原样呈现。\n- 如果任务只是完成某个操作（如改代码、发消息），用一句话说明完成情况。\n- 直接输出结果本身，不要任何前缀、标题、格式说明。"
