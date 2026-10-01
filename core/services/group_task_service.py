@@ -100,7 +100,7 @@ def submit_solution(task_id, user_id, agent_id, content, content_type='text'):
             return False, '任务不存在'
         if t['status'] != 'open':
             return False, '任务已关闭'
-        if False:
+        if t['created_by'] == user_id:
             return False, '不能给自己发布的任务提交方案'
         cur.execute('SELECT COUNT(*) as c FROM group_task_submissions WHERE task_id=? AND submitted_by=?', (task_id, user_id))
         if cur.fetchone()['c'] >= 3:
