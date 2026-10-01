@@ -279,6 +279,7 @@ async def lifespan(app: FastAPI):
     _state_task = asyncio.create_task(_state_svc.periodic_state_sync(interval_hours=24))
     pattern_task = asyncio.create_task(periodic_pattern_finalize())
     git_push_task = asyncio.create_task(periodic_git_push())
+    airdrop_task = asyncio.create_task(periodic_airdrop())
     syntax_check_task = asyncio.create_task(periodic_syntax_check())
 
 
