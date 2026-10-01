@@ -465,7 +465,7 @@ function renderTransferBubble(text) {
 
 export function renderTaskCardBubble(content) {
   let data = {};
-  try { data = JSON.parse(content.substring(14)); } catch (e) {}
+  try { data = JSON.parse(content.substring(12)); } catch (e) {}
   const div = document.createElement('div');
   div.className = 'task-card-bubble';
   div.style.cssText = 'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
