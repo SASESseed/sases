@@ -211,6 +211,34 @@ function appendGroupMessage(senderName, content, isSelf = false) {
   messages.scrollTop = messages.scrollHeight;
 }
 
+window.openPublishTaskDialog = function(groupId) {
+  const title = prompt('任务标题：');
+  if (!title) return;
+  const desc = prompt('任务描述（可空）：') || '';
+  const category = prompt('任务类型（text/image/code/creative）：') || 'text';
+  const rewardStr = prompt('质押积分（最少 10）：', '10');
+  if (!rewardStr) return;
+  const reward = parseFloat(rewardStr);
+  if (isNaN(reward) || reward < 10) {
+    alert('质押积分最少 10');
+    return;
+  }
+  fetch('/group/' + groupId + '/tasks/publish', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title, description: desc, category: category, reward: reward })
+  }).then(r => r.json()).then(data => {
+    if (data.error || data.detail) {
+      alert('发布失败：' + (data.error || data.detail));
+      return;
+    }
+    alert('任务已发布：ID ' + data.task_id);
+    if (typeof loadGroupMessages === 'function') loadGroupMessages();
+  }).catch(e => alert('网络错误：' + e.message));
+};
+
+
+
 export async function sendGroupMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();

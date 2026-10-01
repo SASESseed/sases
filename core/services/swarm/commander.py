@@ -231,6 +231,7 @@ async def plan_task(
         _save_pending(task)
         return {"status": "no_plan", "message": "无法拆解任务", "task_id": task_id}
 
+    print("[DIAG] 即将构建 task")
     task_id = f"t_{int(time.time() * 1000)}"
 
     is_draft = bool(require_confirmation)
@@ -253,7 +254,9 @@ async def plan_task(
         "supervisor_run_id": supervisor_run_id,
     }
     _pending[task_id] = task
+    print("[DIAG] 即将调用 _save_pending")
     _save_pending(task)
+    print("[DIAG] _save_pending 调用完成")
 
     if is_draft:
         draft_payload = {"task_id": task_id, "steps": steps}
