@@ -10,6 +10,8 @@ window._gcDebug = { getUserId: () => currentUserId, getAgentId: () => currentAge
 
 export async function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
+
+  window.currentGroupId = groupId;
   currentGroupName = groupName;
   currentAgentId = null;
   currentGroupMode = 'normal';
