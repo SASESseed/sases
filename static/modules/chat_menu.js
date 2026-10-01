@@ -250,6 +250,26 @@ export function openChatPlusPanel() {
 { icon: '📁', label: '文件', action: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.onchange = () => { if (!inp.files || !inp.files.length) return; window.chatState = window.chatState || {}; window.chatState.pendingAttachments = window.chatState.pendingAttachments || []; Array.from(inp.files).forEach(f => { window.chatState.pendingAttachments.push({ type: 'file', file: f, name: f.name, size: f.size }); }); import('./chat_ui.js').then(m => m.renderAttachmentPreview(window.chatState.pendingAttachments)); }; inp.click(); } },
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];
+if (window.currentGroupId) {
+    items.push({
+      icon: '📌',
+      label: '发任务',
+      action: () => {
+        if (typeof window.openPublishTaskDialog === 'function') window.openPublishTaskDialog(window.currentGroupId);
+      }
+    });
+  }
+  
+if (window.currentGroupId) {
+    items.push({
+      icon: '📌',
+      label: '发任务',
+      action: () => {
+        if (typeof window.openPublishTaskDialog === 'function') window.openPublishTaskDialog(window.currentGroupId);
+      }
+    });
+  }
+  
     let html = '<div class="chat-plus-grid">';
     items.forEach(item => {
       html += `
