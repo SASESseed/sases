@@ -232,3 +232,57 @@ async def api_reject_task(task_id: int, body: TaskRejectRequest, user_id: int = 
         raise HTTPException(status_code=400, detail=res)
     return res
 
+
+class StakeRequest(BaseModel):
+    amount: float
+
+
+class RedPacketConfigRequest(BaseModel):
+    hour: int
+    audience: str = 'all'
+
+
+@router.post("/{group_id}/stake")
+async def api_stake(group_id: int, body: StakeRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.stake_credits(group_id, user_id, body.amount)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/{group_id}/stake/withdraw")
+async def api_withdraw_stake(group_id: int, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.withdraw_stake(group_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.get("/{group_id}/stakes")
+async def api_list_stakes(group_id: int, user_id: int = Depends(get_current_user)):
+    return {"stakes": group_service.list_active_stakes(group_id)}
+
+
+@router.get("/{group_id}/pool")
+async def api_group_pool(group_id: int, user_id: int = Depends(get_current_user)):
+    detail = group_service.get_group_pool_detail(group_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="group not found")
+    return detail
+
+
+@router.post("/{group_id}/red-packet/config")
+async def api_config_red_packet(group_id: int, body: RedPacketConfigRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.configure_red_packet(group_id, user_id, body.hour, body.audience)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/{group_id}/red-packet/send")
+async def api_send_red_packet(group_id: int, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.distribute_group_red_packet(group_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
