@@ -1,5 +1,5 @@
 # core/bootstrap.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
@@ -233,6 +233,21 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="SASES", version="0.15.4", lifespan=lifespan)
+
+    # 统一错误返回格式（兼容 error / message 两种前端读取方式）
+    @app.exception_handler(HTTPException)
+    async def _http_exception_handler(request, exc):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={'error': exc.detail, 'message': exc.detail, 'code': exc.status_code},
+        )
+
+    @app.exception_handler(Exception)
+    async def _global_exception_handler(request, exc):
+        return JSONResponse(
+            status_code=500,
+            content={'error': str(exc), 'message': str(exc), 'code': 500},
+        )
 
     app.add_middleware(
         CORSMiddleware,
