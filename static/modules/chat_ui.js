@@ -463,6 +463,68 @@ function renderTransferBubble(text) {
   return div;
 }
 
+export function renderTaskCardBubble(content) {
+  let data = {};
+  try { data = JSON.parse(content.substring(14)); } catch (e) {}
+  const div = document.createElement('div');
+  div.className = 'task-card-bubble';
+  div.style.cssText = 'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
+  const t1 = document.createElement('div');
+  t1.style.fontSize = '12px';
+  t1.style.opacity = '0.9';
+  t1.textContent = '\ud83d\udccc \u7fa4\u4efb\u52a1';
+  div.appendChild(t1);
+  const t2 = document.createElement('div');
+  t2.style.fontSize = '15px';
+  t2.style.fontWeight = '700';
+  t2.style.marginTop = '6px';
+  t2.textContent = data.title || '\u672a\u547d\u540d\u4efb\u52a1';
+  div.appendChild(t2);
+  const t3 = document.createElement('div');
+  t3.style.fontSize = '12px';
+  t3.style.opacity = '0.9';
+  t3.style.marginTop = '4px';
+  t3.textContent = '\u8d28\u62bc ' + (data.reward || 0) + ' \u79ef\u5206 \u00b7 ' + (data.status === 'open' ? '\u8fdb\u884c\u4e2d' : '\u5df2\u7ed3\u675f');
+  div.appendChild(t3);
+  div.dataset.taskId = data.task_id || '';
+  div.onclick = function() {
+    if (typeof window.openTaskDetail === 'function') window.openTaskDetail(data.task_id);
+  };
+  return div;
+}
+
+
+export function renderTaskCardBubble(content) {
+  let data = {};
+  try { data = JSON.parse(content.substring(14)); } catch (e) {}
+  const div = document.createElement('div');
+  div.className = 'task-card-bubble';
+  div.style.cssText = 'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
+  const t1 = document.createElement('div');
+  t1.style.fontSize = '12px';
+  t1.style.opacity = '0.9';
+  t1.textContent = '\ud83d\udccc \u7fa4\u4efb\u52a1';
+  div.appendChild(t1);
+  const t2 = document.createElement('div');
+  t2.style.fontSize = '15px';
+  t2.style.fontWeight = '700';
+  t2.style.marginTop = '6px';
+  t2.textContent = data.title || '\u672a\u547d\u540d\u4efb\u52a1';
+  div.appendChild(t2);
+  const t3 = document.createElement('div');
+  t3.style.fontSize = '12px';
+  t3.style.opacity = '0.9';
+  t3.style.marginTop = '4px';
+  t3.textContent = '\u8d28\u62bc ' + (data.reward || 0) + ' \u79ef\u5206 \u00b7 ' + (data.status === 'open' ? '\u8fdb\u884c\u4e2d' : '\u5df2\u7ed3\u675f');
+  div.appendChild(t3);
+  div.dataset.taskId = data.task_id || '';
+  div.onclick = function() {
+    if (typeof window.openTaskDetail === 'function') window.openTaskDetail(data.task_id);
+  };
+  return div;
+}
+
+
 export function updateMessageStatus(messageId, status) {
   const wrapper = document.querySelector(`[data-message-id="${messageId}"]`);
   if (!wrapper) return;
