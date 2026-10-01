@@ -3,7 +3,7 @@ from datetime import datetime
 from ...db import db_cursor
 from .. import credit_service
 from .constants import MAX_ROUNDS, CREDITS_PER_ROUND, USE_STRUCTURED_REVIEW
-from .runs import get_run, finish_run, record_round
+from .runs import get_run, finish_run, record_round, deduct_round
 from .decider import decide_next_step, task_summarizer
 
 def signal_restart(run_id, reason=''):
