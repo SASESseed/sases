@@ -87,6 +87,8 @@ def _save_pending(task: Dict[str, Any]):
             )
     except Exception as e:
         print(f"[swarm] DB 写入失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def _derive_status(task: Dict[str, Any]) -> str:
@@ -140,6 +142,8 @@ def _delete_pending_from_db(task_id: str):
             cur.execute("DELETE FROM swarm_pending_tasks WHERE task_id=?", (task_id,))
     except Exception as e:
         print(f"[swarm] DB 删除失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
@@ -170,6 +174,8 @@ def _load_pending(task_id: str) -> Optional[Dict[str, Any]]:
         }
     except Exception as e:
         print(f"[swarm] DB 加载失败: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 

@@ -270,6 +270,16 @@ if (window.currentGroupId) {
     });
   }
   
+if (window.currentGroupId) {
+    items.push({
+      icon: '📌',
+      label: '发任务',
+      action: () => {
+        if (typeof window.openPublishTaskDialog === 'function') window.openPublishTaskDialog(window.currentGroupId);
+      }
+    });
+  }
+  
     let html = '<div class="chat-plus-grid">';
     items.forEach(item => {
       html += `
