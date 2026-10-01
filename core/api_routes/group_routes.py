@@ -158,3 +158,77 @@ async def set_group_mode(group_id: int, body: GroupModeRequest, user_id: int = D
     if not success:
         raise HTTPException(status_code=403, detail=msg)
     return {"status": "updated", "mode": body.mode}
+
+
+
+class TaskPublishRequest(BaseModel):
+    title: str
+    description: str = ''
+    category: str = 'text'
+    reward: float = 0
+
+
+class TaskSubmitRequest(BaseModel):
+    content: str
+    content_type: str = 'text'
+    agent_id: Optional[str] = None
+
+
+class TaskSelectRequest(BaseModel):
+    submission_id: int
+
+
+class TaskRejectRequest(BaseModel):
+    reason: str = ''
+
+
+@router.post("/{group_id}/tasks/publish")
+async def api_publish_task(group_id: int, body: TaskPublishRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    ok, res = group_task_service.publish_task(group_id, user_id, body.title, body.description, body.category, body.reward)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.get("/{group_id}/tasks")
+async def api_list_tasks(group_id: int, status: Optional[str] = None, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    return {"tasks": group_task_service.list_tasks(group_id, status)}
+
+
+@router.get("/tasks/{task_id}")
+async def api_get_task(task_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    task = group_task_service.get_task_detail(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="task not found")
+    return task
+
+
+@router.post("/tasks/{task_id}/submit")
+async def api_submit_task(task_id: int, body: TaskSubmitRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    ok, res = group_task_service.submit_solution(task_id, user_id, body.agent_id, body.content, body.content_type)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/tasks/{task_id}/select")
+async def api_select_task(task_id: int, body: TaskSelectRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    ok, res = group_task_service.select_winner(task_id, user_id, body.submission_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/tasks/{task_id}/reject")
+async def api_reject_task(task_id: int, body: TaskRejectRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_task_service
+    ok, res = group_task_service.reject_all(task_id, user_id, body.reason)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
