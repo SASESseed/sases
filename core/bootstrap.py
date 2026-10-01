@@ -222,6 +222,27 @@ async def periodic_airdrop():
             await asyncio.sleep(3600)
 
 
+async def periodic_airdrop():
+    """每天 0:30 执行空投"""
+    from .services import airdrop_service
+    while True:
+        try:
+            from datetime import datetime, timedelta
+            dt = datetime.utcnow()
+            next_run = dt.replace(hour=0, minute=30, second=0, microsecond=0)
+            if next_run <= dt:
+                next_run += timedelta(days=1)
+            wait_sec = (next_run - dt).total_seconds()
+            print(f'[airdrop] next run in {int(wait_sec)}s')
+            await asyncio.sleep(wait_sec)
+            result = await asyncio.to_thread(airdrop_service.run_daily_airdrop)
+            print(f'[airdrop] {result}')
+        except Exception as e:
+            print(f'[airdrop] error: {e}')
+            await asyncio.sleep(3600)
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(supervisor_service.resume_restart_pending_runs())
