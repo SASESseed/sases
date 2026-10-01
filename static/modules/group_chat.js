@@ -95,6 +95,8 @@ export async function openGroupChat(groupId, groupName) {
 
 export function closeGroupChat() {
   currentGroupId = null;
+
+  window.currentGroupId = null;
   currentGroupName = '';
   currentAgentId = null;
   currentGroupMode = 'normal';
