@@ -319,6 +319,8 @@ export const api = {
   listMyGroups: () => request('/group/list'),
   getGroupInfo: (group_id) => request(`/group/${group_id}/info`),
   getGroupMessages: (group_id) => request(`/group/${group_id}/messages`),
+
+  getGroupTasks: (group_id, status) => request(`/group/${group_id}/tasks${status ? '?status=' + status : ''}`),
   sendGroupMessage: (group_id, content, agent_id = null) => request(`/group/${group_id}/messages`, { method: 'POST', body: JSON.stringify({ content, agent_id }) }),
   getGroupMembers: (group_id) => request(`/group/${group_id}/members`),
   getGroupCredits: (group_id) => request(`/group/${group_id}/credits`),
