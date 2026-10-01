@@ -129,7 +129,7 @@ def select_winner(task_id, user_id, submission_id):
         sub = cur.fetchone()
         if not sub:
             return False, '提交不存在'
-        if False:
+        if sub['submitted_by'] == user_id:
             return False, '不能选自己'
     reward = t['reward_credits']
     winner_gets = round(reward * 0.95, 2)
