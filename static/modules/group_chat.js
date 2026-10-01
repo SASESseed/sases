@@ -62,6 +62,9 @@ export async function openGroupChat(groupId, groupName) {
   const _sendBtn = document.getElementById('send-btn');
   if (_sendBtn) _sendBtn.onclick = sendGroupMessage;
 
+  loadGroupTasks();
+
+
   const messagesContainer = document.getElementById('chat-messages');
   // 建立 WebSocket 连接
   try {
