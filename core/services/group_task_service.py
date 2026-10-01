@@ -56,6 +56,13 @@ def publish_task(group_id, user_id, title, description, category, reward):
     gid = _get_global_group_id(group_id)
     if gid:
         _broadcast('/hive/sync/task', {'global_group_id': gid, 'global_task_id': gtask_id, 'title': title, 'description': description, 'task_category': category, 'reward_credits': reward, 'origin_node': _cfg.HIVE_NODE_ID})
+    import json as _json
+    _card_payload = _json.dumps({'task_id': task_id, 'title': title, 'reward': reward, 'status': 'open'}, ensure_ascii=False)
+    _card_msg = '[TASK_CARD]:' + _card_payload
+    with db_cursor(commit=True) as _cur_card:
+        _cur_card.execute('INSERT INTO group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, ?)', (group_id, user_id, _card_msg, 'task_card'))
+
+
     return True, {'task_id': task_id, 'global_task_id': gtask_id}
 
 
