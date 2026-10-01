@@ -84,6 +84,31 @@ def _normalize_steps(steps):
                 out.append({  'step': s.get('step'), 'type': 'harness', 'module_id': mid, 'params': {}, 'description': s.get('description', '') })
                 print('[_normalize] harness 前缀转 module_id: ' + mid)
                 handled = True
+        # 场景3：command 是'工具名 参数'格式，如 git_ops status
+        if not handled:
+            _HARNESS_NAMES = {
+                'file_read', 'file_patch', 'file_copy', 'run_python',
+                'grep_code', 'dir_tree', 'verify_syntax', 'verify_patch',
+                'git_ops', 'api_call', 'web_fetch', 'harness_reload',
+                'structure_check', 'calculator', 'unit_converter',
+                'text_stats', 'json_formatter', 'base64_codec', 'string_utils',
+            }
+            _first = cmd_stripped.split(' ')[0].split(':')[0].strip()
+            if _first in _HARNESS_NAMES:
+                _rest = cmd_stripped.split(' ')[1:]
+                _params = {}
+                if _rest:
+                    if _rest[0] in ('status', 'diff', 'add', 'push', 'pull', 'log', 'commit', 'rollback', 'snapshot', 'remote_add'):
+                        _params = {'action': _rest[0]}
+                        if len(_rest) > 1:
+                            _params['message'] = ' '.join(_rest[1:])
+                    elif _rest[0] in ('file_path', 'pattern', 'url', 'code', 'path'):
+                        _params = {_rest[0]: ' '.join(_rest[1:])}
+                out.append({'step': s.get('step'), 'type': 'harness', 'module_id': _first, 'params': _params, 'description': s.get('description', '')})
+                print('[_normalize] command converted to harness: ' + _first)
+                handled = True
+
+
         if not handled:
             out.append(s)
     return out
