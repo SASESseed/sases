@@ -57,6 +57,9 @@ def run(params):
         return {"success": code == 0, "output": out, "error": err}
 
     if action == "commit":
+        _chk_code, _chk_out, _ = _run("git status --porcelain")
+        if not _chk_out.strip():
+            return {"success": True, "output": "nothing to commit, working tree clean", "error": ""}
         msg = params.get("message", "")
         if not msg:
             return {"success": False, "error": "缺少 commit message"}
