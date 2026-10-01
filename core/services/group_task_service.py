@@ -2,7 +2,7 @@
 import secrets
 from datetime import datetime, timedelta
 import httpx
-from ...db import db_cursor
+from ..db import db_cursor
 from .. import config as _cfg
 
 
