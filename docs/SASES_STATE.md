@@ -346,6 +346,10 @@ o
 - 2026-09-30: 列出 scripts 目录下的文件名
 - 2026-09-30: 统计 core/services 目录下有多少个 .py 文件
 - 2026-09-30: 统计 core/services 目录下 .py 文件的数量
+- 2026-10-01: 修复"重拆 LLM 把 harness 调用写成 command"的问题。
+
+背景：
+- 重拆时 LLM 会生成 {"step":1,"command":"gi
 
 
 

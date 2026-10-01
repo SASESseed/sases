@@ -240,6 +240,109 @@ def init_db():
         _ensure_column(cur, "group_messages", "global_msg_id", "TEXT")
         _ensure_column(cur, "group_messages", "origin_node", "TEXT")
 
+
+        # ========== 蜂群模式：群任务表 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                global_task_id TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                task_category TEXT DEFAULT 'text',
+                created_by INTEGER NOT NULL,
+                reward_credits REAL NOT NULL DEFAULT 0,
+                status TEXT DEFAULT 'open',
+                selected_submission_id INTEGER,
+                judging_deadline TEXT,
+                reject_reason TEXT,
+                last_repushed_at TEXT,
+                repush_count INTEGER DEFAULT 0,
+                origin_node TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (group_id) REFERENCES groups(id),
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            )
+        """)
+
+        # ========== 蜂群模式：任务提交表 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_task_submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                global_submission_id TEXT,
+                submitted_by INTEGER NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                content_type TEXT DEFAULT 'text',
+                is_disqualified INTEGER DEFAULT 0,
+                edited_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (task_id) REFERENCES group_tasks(id),
+                FOREIGN KEY (submitted_by) REFERENCES users(id)
+            )
+        """)
+
+        # ========== 蜂群模式：群积分流水 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_credit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                user_id INTEGER,
+                amount REAL NOT NULL,
+                tx_type TEXT NOT NULL,
+                detail TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # ========== 蜂群模式：成员质押 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_stakes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                status TEXT DEFAULT 'active',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                withdrawn_at TEXT,
+                FOREIGN KEY (group_id) REFERENCES groups(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        # ========== 蜂群模式：空投日志 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_airdrop_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                airdrop_date TEXT NOT NULL,
+                activity_score REAL NOT NULL,
+                rank INTEGER,
+                amount REAL NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_airdrop_group_date
+            ON group_airdrop_log(group_id, airdrop_date)
+        """)
+
+        # ========== 蜂群模式：groups 扩展字段 ==========
+        _ensure_column(cur, "groups", "credits", "REAL DEFAULT 0")
+        _ensure_column(cur, "groups", "staked_credits", "REAL DEFAULT 0")
+        _ensure_column(cur, "groups", "features", "TEXT DEFAULT '{}'")
+        _ensure_column(cur, "groups", "red_packet_hour", "INTEGER DEFAULT 20")
+        _ensure_column(cur, "groups", "red_packet_audience", "TEXT DEFAULT 'all'")
+        _ensure_column(cur, "groups", "airdrop_enabled", "INTEGER DEFAULT 1")
+        _ensure_column(cur, "groups", "airdrop_paused_until", "TEXT")
+
+        # ========== 蜂群模式：group_messages 扩展字段 ==========
+        _ensure_column(cur, "group_messages", "message_type", "TEXT DEFAULT 'text'")
+        _ensure_column(cur, "group_messages", "related_id", "INTEGER")
+        _ensure_column(cur, "group_messages", "extra_data", "TEXT")
+
+
         # ========== 市场订单表 ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS market_orders (
