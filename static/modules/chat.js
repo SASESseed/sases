@@ -136,7 +136,8 @@ async function sendMessage() {
       chatState.conversationId = data.conversation_id;
     }
     updateMessageStatus(tempId, 'sent');
-    if (data.assistant_reply && String(data.assistant_reply).trim() !== String(text).trim()) {
+    const _is_swarm_task = !!(data.swarm && data.task_id);
+    if (!_is_swarm_task && data.assistant_reply && String(data.assistant_reply).trim() !== String(text).trim()) {
       appendMessage('assistant', data.assistant_reply, 'AI', null, new Date().toISOString(), false, chatState);
     }
 
