@@ -103,8 +103,8 @@ def submit_solution(task_id, user_id, agent_id, content, content_type='text'):
         if t['created_by'] == user_id:
             return False, '不能给自己发布的任务提交方案'
         cur.execute('SELECT COUNT(*) as c FROM group_task_submissions WHERE task_id=? AND submitted_by=?', (task_id, user_id))
-        if cur.fetchone()['c'] >= 3:
-            return False, '每人最多提交 3 个方案'
+        if cur.fetchone()['c'] >= 1:
+            return False, '每人只能提交 1 个方案'
     sub_id = _gen_sub_id()
     with db_cursor(commit=True) as cur:
         cur.execute('INSERT INTO group_task_submissions (task_id, global_submission_id, submitted_by, agent_id, content, content_type) VALUES (?, ?, ?, ?, ?, ?)', (task_id, sub_id, user_id, agent_id, content, content_type))
