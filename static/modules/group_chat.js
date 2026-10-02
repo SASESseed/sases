@@ -1138,6 +1138,15 @@ export async function sendGroupMessage() {
   const atts = (window.chatState && Array.isArray(window.chatState.pendingAttachments)) ? [...window.chatState.pendingAttachments] : [];
   if (!text && atts.length === 0) return;
   if (!currentGroupId) return;
+
+  // 乐观渲染：立刻显示用户消息
+  if (text) {
+    appendGroupMessage('我', text, true);
+  }
+  input.value = '';
+  if (window.chatState) window.chatState.pendingAttachments = [];
+  if (window.__sasesClearAttachment) window.__sasesClearAttachment();
+
   try {
     for (const att of atts) {
       let content = '';
@@ -1155,11 +1164,12 @@ export async function sendGroupMessage() {
     if (text) {
       await api.sendGroupMessage(currentGroupId, text, currentAgentId);
     }
-    if (window.chatState) window.chatState.pendingAttachments = [];
-    if (window.__sasesClearAttachment) window.__sasesClearAttachment();
-    input.value = '';
-    loadGroupMessages();
   } catch (e) {
+    const _lastMsg = document.querySelector('#chat-messages .message-row.user:last-child .message');
+    if (_lastMsg) {
+      _lastMsg.style.background = '#ffebee';
+      _lastMsg.style.color = '#c62828';
+    }
     alert('发送失败：' + (e.message || '未知错误'));
   }
 }
