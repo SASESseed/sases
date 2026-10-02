@@ -221,6 +221,7 @@ window.openGroupRedPacket = async function(packetId) {
             });
             const data = await resp.json();
             if (data.error || data.detail) { alert('领取失败：' + (data.error || data.detail)); btn.disabled = false; btn.textContent = '開'; return; }
+            if (window.showGroupToast) window.showGroupToast('🧧 你抢到了 ' + data.amount + ' 积分');
             window.openGroupRedPacket(packetId);
             if (typeof loadGroupMessages === 'function') loadGroupMessages();
           } catch (e) { alert('网络错误：' + e.message); btn.disabled = false; btn.textContent = '開'; }

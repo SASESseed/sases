@@ -317,6 +317,21 @@ async def api_get_group_red_packet(packet_id: int, user_id: int = Depends(get_cu
     return detail
 
 
+@router.get("/{group_id}/red-packets/active")
+async def api_list_active_group_red_packets(group_id: int, user_id: int = Depends(get_current_user)):
+    from ..db import db_cursor
+    from datetime import datetime
+    now = datetime.utcnow().isoformat()
+    with db_cursor() as cur:
+        cur.execute('SELECT id FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail='你不是群成员')
+        cur.execute("SELECT id, sender_id, total_amount, total_count, claimed_count, packet_type, source_type, message, created_at, expires_at FROM group_red_packets WHERE group_id=? AND status='active' AND (expires_at IS NULL OR expires_at > ?) ORDER BY id DESC", (group_id, now))
+        rows = [dict(r) for r in cur.fetchall()]
+    return {'packets': rows}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
