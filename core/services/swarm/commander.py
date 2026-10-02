@@ -108,21 +108,46 @@ async def plan_task(
         print(f'[swarm] pattern 检索失败: {e}')
 
 
-    # 工具手册检索（v0.22.0）
+    # 工具手册检索（v0.22.1 规则匹配）
     manual_text = ""
     try:
-        _kw = f'%{user_input[:20]}%'
-        with db_cursor() as _cur_m:
-            _cur_m.execute(
-                "SELECT title, content FROM knowledge_docs WHERE scope='manual' AND (title LIKE ? OR tags LIKE ? OR content LIKE ?) LIMIT 3",
-                (_kw, _kw, _kw)
-            )
-            _manuals = _cur_m.fetchall()
-        if _manuals:
-            manual_text = "\n".join([f"【{m['title']}】\n{m['content'][:300]}" for m in _manuals])
-            print(f"[swarm] 检索到 {len(_manuals)} 条工具手册")
+        _MAP = [
+            (['读', '查看', '内容'], 'file_read'),
+            (['改', '替换', '插入', '添加', '删除', '写入'], 'file_patch'),
+            (['运行', '执行代码', '脚本', 'Python'], 'run_python'),
+            (['搜索', '查找', '定位'], 'grep_code'),
+            (['目录', '文件列表', '列出'], 'dir_tree'),
+            (['语法', '检查'], 'verify_syntax'),
+            (['提交', '推送', 'git'], 'git_ops'),
+            (['请求', '调用', 'API', 'HTTP'], 'api_call'),
+            (['抓', '网页', 'URL'], 'web_fetch'),
+            (['锚点'], '锚点'),
+            (['换行', 'CRLF'], '换行'),
+        ]
+        _hits = []
+        for _kws, _tool in _MAP:
+            for _kw in _kws:
+                if _kw in user_input:
+                    _hits.append(_tool)
+                    break
+        _hits = list(dict.fromkeys(_hits))[:3]
+        if _hits:
+            with db_cursor() as _cur_m:
+                _or_parts = []
+                _params = []
+                for _t in _hits:
+                    _or_parts.append("title LIKE ?")
+                    _params.append(f'%{_t}%')
+                _sql = f"SELECT title, content FROM knowledge_docs WHERE scope='manual' AND ({' OR '.join(_or_parts)}) LIMIT 3"
+                _cur_m.execute(_sql, _params)
+                _manuals = _cur_m.fetchall()
+            if _manuals:
+                manual_text = "\n".join([f"【{m['title']}】\n{m['content'][:300]}" for m in _manuals])
+                print(f"[swarm] 检索到 {len(_manuals)} 条工具手册: {_hits}")
+            else:
+                print(f"[swarm] 手册无匹配 (命中关键词: {_hits})")
         else:
-            print("[swarm] 手册无匹配")
+            print("[swarm] 手册无匹配 (无关键词命中)")
     except Exception as e:
         print(f"[swarm] 手册检索失败: {e}")
 
