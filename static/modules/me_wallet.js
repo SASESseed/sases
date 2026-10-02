@@ -50,7 +50,6 @@ export async function openWallet() {
     </div>
     <div class="me-menu">
       <div class="me-menu-item" id="menu-exchange"><span class="menu-label">${t('exchange')}</span><span class="menu-arrow">›</span></div>
-      <div class="me-menu-item" id="menu-stake"><span class="menu-label">${t('stake')}</span><span class="menu-arrow">›</span></div>
     </div>
     <div class="section-title">${t('recent_records')}</div>
     ${historyHtml}
@@ -65,7 +64,6 @@ export async function openWallet() {
     if (_computeCard) _computeCard.onclick = () => openCreditDetail('compute');
     document.getElementById('credit-risk-entry').onclick = openCreditRiskPage;
     document.getElementById('menu-exchange').onclick = openExchangePage;
-    document.getElementById('menu-stake').onclick = openStakePage;
 
   }, 100);
 }
@@ -101,39 +99,6 @@ function openExchangePage() {
   }, 100);
 }
 
-function openStakePage() {
-  const contentHtml = `
-    <div class="me-menu">
-      <div class="me-menu-item">
-        <span class="menu-label">${t('stake')}</span>
-        <input type="number" id="stake-credits" class="inline-input" placeholder="${t('enter_valid')}">
-      </div>
-      <div class="me-menu-item">
-        <span class="menu-label">${t('stake_days')}</span>
-        <input type="number" id="stake-days" class="inline-input" value="30">
-      </div>
-    </div>
-    <button class="save-btn" id="save-stake">${t('confirm')}</button>
-  `;
-  window.openSubpage(t('stake'), contentHtml, {
-    rightBtn: { text: '记录', onclick: () => showActionHistory('stake') }
-  });
-  setTimeout(() => {
-    document.getElementById('save-stake').onclick = async () => {
-      const credits = parseFloat(document.getElementById('stake-credits').value);
-      const days = parseInt(document.getElementById('stake-days').value);
-      if (!credits || credits <= 0 || !days || days <= 0) { alert(t('enter_valid')); return; }
-      try {
-        const data = await api.stakeCredits(credits, days);
-        alert(`${t('stake_success')}! ${data.expected_reward.toFixed(2)}`);
-        window.closeSubpage();
-        openWallet();
-      } catch (e) {
-        alert(t('stake_failed') + ': ' + e.message);
-      }
-    };
-  }, 100);
-}
 
 // 挂载到全局
 window.openWallet = openWallet;

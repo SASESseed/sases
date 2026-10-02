@@ -362,121 +362,8 @@ def dismiss_group(group_id: int):
 
 # ========== 蜂群模式：质押 ==========
 
-def stake_credits(group_id, user_id, amount):
-    """用户质押积分到群"""
-    if amount < 10:
-        return False, '最少质押 10 积分'
-    with db_cursor() as cur:
-        cur.execute('SELECT id FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
-        if not cur.fetchone():
-            return False, '你不是群成员'
-        cur.execute('SELECT credits FROM users WHERE id=?', (user_id,))
-        row = cur.fetchone()
-        if not row or (row['credits'] or 0) < amount:
-            return False, '个人积分不足'
-    with db_cursor(commit=True) as cur:
-        cur.execute('UPDATE users SET credits = credits - ? WHERE id=?', (amount, user_id))
-        cur.execute('UPDATE groups SET staked_credits = COALESCE(staked_credits, 0) + ? WHERE id=?', (amount, group_id))
-        cur.execute('INSERT INTO group_stakes (group_id, user_id, amount, status) VALUES (?, ?, ?, ?)', (group_id, user_id, amount, 'active'))
-        cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (group_id, user_id, amount, 'stake', '质押积分'))
-    return True, {'staked': amount}
 
 
-def withdraw_stake(group_id, user_id):
-    """提取质押（需超过 30 天）"""
-    from datetime import datetime
-    now = datetime.utcnow()
-    with db_cursor() as cur:
-        cur.execute("SELECT id, amount, created_at FROM group_stakes WHERE group_id=? AND user_id=? AND status='active'", (group_id, user_id))
-        rows = cur.fetchall()
-    if not rows:
-        return False, '没有活跃质押'
-    total = 0
-    for r in rows:
-        try:
-            created = datetime.fromisoformat(r['created_at'])
-        except Exception:
-            created = now
-        if (now - created).days >= 30:
-            total += r['amount']
-    if total <= 0:
-        return False, '质押未满 30 天'
-    with db_cursor(commit=True) as cur:
-        cur.execute('UPDATE users SET credits = credits + ? WHERE id=?', (total, user_id))
-        cur.execute('UPDATE groups SET staked_credits = MAX(0, COALESCE(staked_credits, 0) - ?) WHERE id=?', (total, group_id))
-        cur.execute("UPDATE group_stakes SET status='withdrawn', withdrawn_at=? WHERE group_id=? AND user_id=? AND status='active'", (now.isoformat(), group_id, user_id))
-        cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (group_id, user_id, -total, 'unstake', '提取质押'))
-    return True, {'withdrawn': total}
-
-
-def list_active_stakes(group_id):
-    with db_cursor() as cur:
-        cur.execute("SELECT gs.*, u.username FROM group_stakes gs LEFT JOIN users u ON gs.user_id = u.id WHERE gs.group_id=? AND gs.status='active' ORDER BY gs.id DESC", (group_id,))
-        return [dict(r) for r in cur.fetchall()]
-
-
-# ========== 蜂群模式：群红包 ==========
-
-def configure_red_packet(group_id, user_id, hour, audience):
-    """群主配置红包参数"""
-    with db_cursor() as cur:
-        cur.execute('SELECT owner_id FROM groups WHERE id=?', (group_id,))
-        row = cur.fetchone()
-        if not row or row['owner_id'] != user_id:
-            return False, '只有群主可以配置'
-        if hour < 0 or hour > 23:
-            return False, '小时必须在 0-23 之间'
-        if audience not in ('all', 'stakers'):
-            return False, 'audience 只能是 all 或 stakers'
-    with db_cursor(commit=True) as cur:
-        cur.execute('UPDATE groups SET red_packet_hour=?, red_packet_audience=? WHERE id=?', (hour, audience, group_id))
-    return True, {'hour': hour, 'audience': audience}
-
-
-def distribute_group_red_packet(group_id, user_id):
-    """群主发放群红包（群池可用余额均分）"""
-    with db_cursor() as cur:
-        cur.execute('SELECT owner_id, credits, red_packet_audience FROM groups WHERE id=?', (group_id,))
-        row = cur.fetchone()
-        if not row or row['owner_id'] != user_id:
-            return False, '只有群主可以发红包'
-        total = row['credits'] or 0
-        if total < 1000:
-            return False, '群池可用余额不足 1000'
-        audience = row['red_packet_audience'] or 'all'
-        if audience == 'stakers':
-            cur.execute("SELECT DISTINCT user_id FROM group_stakes WHERE group_id=? AND status='active'", (group_id,))
-        else:
-            cur.execute('SELECT user_id FROM group_members WHERE group_id=?', (group_id,))
-        users = [r['user_id'] for r in cur.fetchall() if r['user_id']]
-    if not users:
-        return False, '没有可领取的成员'
-    per = round(total / len(users), 2)
-    with db_cursor(commit=True) as cur:
-        for uid in users:
-            cur.execute('UPDATE users SET credits = credits + ? WHERE id=?', (per, uid))
-        cur.execute('UPDATE groups SET credits = 0 WHERE id=?', (group_id,))
-        cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (group_id, None, -total, 'red_packet_send', '群红包均分给 ' + str(len(users)) + ' 人'))
-    return True, {'total': total, 'recipients': len(users), 'per_person': per}
-
-
-def get_group_pool_detail(group_id):
-    """查群池详情"""
-    with db_cursor() as cur:
-        cur.execute('SELECT credits, staked_credits, red_packet_hour, red_packet_audience FROM groups WHERE id=?', (group_id,))
-        r = cur.fetchone()
-        if not r:
-            return None
-        return {
-            'available': r['credits'] or 0,
-            'staked': r['staked_credits'] or 0,
-            'total': (r['credits'] or 0) + (r['staked_credits'] or 0),
-            'red_packet_hour': r['red_packet_hour'],
-            'red_packet_audience': r['red_packet_audience']
-        }
-
-
-# ========== 蜂群模式：质押 ==========
 
 def stake_credits(group_id, user_id, amount):
     """用户质押积分到群"""
@@ -573,6 +460,13 @@ def distribute_group_red_packet(group_id, user_id):
             cur.execute('UPDATE users SET credits = credits + ? WHERE id=?', (per, uid))
         cur.execute('UPDATE groups SET credits = 0 WHERE id=?', (group_id,))
         cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (group_id, None, -total, 'red_packet_send', '群红包均分给 ' + str(len(users)) + ' 人'))
+    import json as _json
+    _payload = _json.dumps({'total': total, 'recipients': len(users), 'per_person': per}, ensure_ascii=False)
+    _notice = '[RED_PACKET_DONE]:' + _payload
+    with db_cursor(commit=True) as _cur_n:
+        _cur_n.execute('INSERT INTO group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, ?)', (group_id, user_id, _notice, 'red_packet_done'))
+
+
     return True, {'total': total, 'recipients': len(users), 'per_person': per}
 
 
