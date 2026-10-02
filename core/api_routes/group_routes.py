@@ -694,6 +694,15 @@ async def api_reject_invite(pending_id: int, body: dict, user_id: int = Depends(
 
 
 
+@router.get("/{group_id}/files")
+async def api_list_group_files(group_id: int, user_id: int = Depends(get_current_user)):
+    files = group_service.list_group_files(group_id, user_id)
+    if files is None:
+        raise HTTPException(status_code=403, detail="你不是群成员")
+    return {"files": files}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
