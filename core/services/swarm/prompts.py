@@ -17,7 +17,13 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
 9. 修改类任务（file_patch）执行成功后，不要再生成 findstr 或 type 等验证命令。工具返回 success 即为完成。多余的验证步骤会干扰判断。
 10. 只有用户明确要求"检查"时，才生成查询命令。
 11. 一个任务最多生成 5 个 file_patch 步骤。每个 file_patch 后必须紧接一步 verify_syntax 检查语法。多处修改可一次完成，不要拆成多次任务。
-12. 生成查询命令时，禁止使用以下字符：& < > ^ % ` $ 
+12. 【强制 harness 优先】以下 5 类操作必须用 harness，禁止用 CMD：
+    · 读文件 → file_read（禁止 type/cat/more/less/head/tail）
+    · 搜代码 → grep_code（禁止 findstr）
+    · 列目录 → dir_tree（禁止 dir /s）
+    · 改文件 → file_patch
+    · 检查语法 → verify_syntax
+13. 生成查询命令时，禁止使用以下字符：& < > ^ % ` $ 
     如果搜索关键词包含这些字符，改用不含特殊字符的短关键词代替。
     例如：不要写 findstr /c:"() => openRedPacketDialog()"，要写 findstr /c:"openRedPacketDialog"。
 
