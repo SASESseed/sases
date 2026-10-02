@@ -51,8 +51,14 @@ export async function openGroupChat(groupId, groupName) {
     settingsBtn.onclick = openGroupSettings;
   }
 
-  const identityBtn = document.getElementById('identity-btn');
-  if (identityBtn) identityBtn.style.display = 'block';
+  let identityBtn = document.getElementById('identity-btn');
+  if (identityBtn) {
+    identityBtn.style.display = 'block';
+    const _newBtn = identityBtn.cloneNode(true);
+    identityBtn.parentNode.replaceChild(_newBtn, identityBtn);
+    identityBtn = _newBtn;
+    identityBtn.onclick = openAgentSwitch;
+  }
 
   const modeBtn = document.getElementById('chat-mode-btn');
   if (modeBtn) {
