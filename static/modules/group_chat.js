@@ -322,7 +322,21 @@ window.openGroupRedPacketDialog = function(groupId) {
         if (data.error || data.detail) { alert('发布失败：' + (data.error || data.detail)); return; }
         alert('红包已发送');
         if (typeof window.closeSubpage === 'function') window.closeSubpage();
-        if (typeof loadGroupMessages === 'function') loadGroupMessages();
+        // 乐观渲染（不重拉全量）
+        try {
+          const cardPayload = JSON.stringify({
+            packet_id: data.packet_id,
+            total_amount: total,
+            total_count: count,
+            message: msg,
+            source_type: 'user',
+            packet_type: type
+          });
+          if (typeof appendGroupMessage === 'function') {
+            appendGroupMessage('我', '[RED_PACKET]:' + cardPayload, true);
+          }
+        } catch (e) {}
+        if (typeof loadGroupRedPackets === 'function') loadGroupRedPackets();
       }).catch(e => alert('网络错误：' + e.message));
     };
   }, 300);
