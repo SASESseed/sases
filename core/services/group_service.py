@@ -636,7 +636,7 @@ def insert_agent_message(group_id, agent_id, content, trigger_user_id=0):
     with db_cursor(commit=True) as cur:
         cur.execute(
             "INSERT INTO group_messages (group_id, sender_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?, ?)",
-            (group_id, 0, agent_id, content, _gmid, _cfg.HIVE_NODE_ID if _gmid else None)
+            (group_id, trigger_user_id, agent_id, content, _gmid, _cfg.HIVE_NODE_ID if _gmid else None)
         )
         msg_id = cur.lastrowid
     return msg_id
