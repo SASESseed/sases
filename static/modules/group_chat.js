@@ -1662,7 +1662,6 @@ async function openAgentSwitch(fromChat = false) {
         } catch (e) {}
         window.closeSubpage();
         document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
-        openGroupSettings();
       });
     });
   } catch (e) {
