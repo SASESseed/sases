@@ -38,7 +38,19 @@ export async function openGroupChat(groupId, groupName) {
     currentAgentId = null;
   }
 
-  document.getElementById('chat-window-title').textContent = groupName;
+  try {
+    const _sn = localStorage.getItem('sases_agent_name_' + currentGroupMode + '_' + groupId) || '';
+    const _b = document.getElementById('identity-btn');
+    if (currentAgentId && _sn) {
+      if (_b) { _b.textContent = _sn.substring(0,2); _b.style.background = '#07c160'; _b.style.color = '#fff'; _b.style.borderRadius = '50%'; _b.style.width = '32px'; _b.style.height = '32px'; _b.style.display = 'flex'; _b.style.alignItems = 'center'; _b.style.justifyContent = 'center'; _b.style.fontSize = '11px'; _b.style.fontWeight = '600'; }
+      document.getElementById('chat-window-title').textContent = groupName + ' (' + _sn + ')';
+    } else {
+      if (_b) { _b.textContent = '🤖'; _b.style.background = 'none'; _b.style.color = ''; }
+      document.getElementById('chat-window-title').textContent = groupName;
+    }
+  } catch (e) {
+    document.getElementById('chat-window-title').textContent = groupName;
+  }
   const _mt0 = document.getElementById('chat-mode-text');
   if (_mt0) _mt0.textContent = currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式';
   document.getElementById('view-chat-window').style.display = 'flex';
@@ -1309,6 +1321,7 @@ async function applyGroupMode(mode) {
   // 保存当前模式下的身份选择
   try {
     localStorage.setItem('sases_agent_' + currentGroupMode + '_' + currentGroupId, currentAgentId || '');
+          localStorage.setItem('sases_agent_name_' + currentGroupMode + '_' + currentGroupId, (opt.dataset.agentName || ''));
   } catch (e) {}
   currentGroupMode = mode;
   try {
