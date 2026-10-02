@@ -4,7 +4,8 @@ import re
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKSLASH = chr(92)
 SKIP_DIRS = ('venv312', 'venv', 'node_modules', '.git', '__pycache__', '.backups', 'archive', 'training_data', 'seeds')
-SKIP_EXT = ('.pyc', '.zip', '.safetensors', '.onnx', '.db', '.bin', '.key', '.png', '.jpg', '.ico')
+SKIP_EXT = ('.pyc', '.zip', '.safetensors', '.onnx', '.db', '.bin', '.key', '.png', '.jpg', '.ico', '.bak', '.bak_acceptance')
+SKIP_NAME_MARKERS = ('.db.bak', '.db.bak_', '.bak.')
 
 
 def _iter_files(root, rel_base, file_ext):
