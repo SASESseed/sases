@@ -989,6 +989,11 @@ function appendGroupMessage(senderName, content, isSelf = false) {
       bubble.textContent = content;
     }
   }
+  wrapper.dataset.content = content;
+  wrapper.dataset.senderName = senderName || '';
+  if (!isSelf && typeof window.attachLongPress === 'function') {
+    window.attachLongPress(wrapper, { isGroup: true, groupId: currentGroupId });
+  }
   wrapper.appendChild(avatar);
   wrapper.appendChild(bubble);
 
