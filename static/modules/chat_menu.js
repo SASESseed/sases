@@ -251,6 +251,14 @@ export function openChatPlusPanel() {
       { icon: '📍', label: '位置', action: () => alert('位置功能待实现') }
     ];
 if (window.currentGroupId) {
+
+    items.push({
+      icon: '🧧',
+      label: '群红包',
+      action: () => {
+        if (typeof window.openGroupRedPacketDialog === 'function') window.openGroupRedPacketDialog(window.currentGroupId);
+      }
+    });
     items.push({
       icon: '📌',
       label: '发任务',
