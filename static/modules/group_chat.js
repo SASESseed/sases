@@ -870,6 +870,7 @@ async function openGroupSettings() {
 
       <div class="me-menu">
         <div class="me-menu-item" id="group-knowledge-entry"><span class="menu-label">群知识库</span><span class="menu-arrow">›</span></div>
+
         <div class="me-menu-item" id="swarm-config-entry" style="display:none;"><span class="menu-label">蜂群模式管理</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-manage-entry" style="display:none;"><span class="menu-label">群管理</span><span class="menu-arrow">›</span></div>
       </div>
