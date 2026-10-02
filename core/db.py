@@ -388,6 +388,38 @@ def init_db():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_grq_group_status ON group_report_queue(group_id, status)")
 
 
+        # ========== 群资源池（蜂群模式：智能体绑定模型） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_resource_pool (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                agent_id TEXT NOT NULL,
+                model_id TEXT,
+                daily_limit INTEGER DEFAULT 100,
+                enabled INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_grp_pool_agent ON group_resource_pool(group_id, agent_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_pool_model ON group_resource_pool(model_id)")
+
+        # ========== 群资源使用日志 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_resource_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                agent_id TEXT,
+                model_id TEXT,
+                tokens_used INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_usage_date ON group_resource_usage(group_id, user_id, created_at)")
+
+
+
+
 
 
         # ========== 群红包主表 ==========
