@@ -1389,7 +1389,7 @@ async function openGroupSettings() {
   await loadGroupMembers();
 
   const identityEntry = document.getElementById('identity-switch-entry');
-  if (identityEntry) identityEntry.addEventListener('click', openAgentSwitch);
+  if (identityEntry) identityEntry.addEventListener('click', () => openAgentSwitch(false));
 
   const groupModeEntry = document.getElementById('group-mode-entry');
   if (groupModeEntry) groupModeEntry.addEventListener('click', openGroupModeMenu);
