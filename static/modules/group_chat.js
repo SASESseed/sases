@@ -1559,18 +1559,6 @@ async function openAgentSwitch() {
       html += '</div>';
     }
 
-    if (sharedAgents.length > 0) {
-      html += '<div class="section-title">群共享（蜂群模式）</div>';
-      html += '<div class="me-menu">';
-      sharedAgents.forEach(p => {
-        html += '<div class="me-menu-item agent-option" data-agent-id="' + p.agent_id + '" data-agent-source="group">';
-        html += '<span class="menu-label">' + (p.model_name || p.agent_id) + '</span>';
-        html += '<span class="menu-value" style="font-size:12px;color:#999;">群共享</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-
     container.innerHTML = html;
 
     container.querySelectorAll('.agent-option').forEach(opt => {
