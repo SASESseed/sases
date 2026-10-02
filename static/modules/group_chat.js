@@ -77,8 +77,13 @@ export async function openGroupChat(groupId, groupName) {
       if (window.updateSendButtonVisibility) window.updateSendButtonVisibility();
     };
   }
-  const _sendBtn = document.getElementById('send-btn');
-  if (_sendBtn) _sendBtn.onclick = sendGroupMessage;
+  let _sendBtn = document.getElementById('send-btn');
+  if (_sendBtn) {
+    const _newSend = _sendBtn.cloneNode(true);
+    _sendBtn.parentNode.replaceChild(_newSend, _sendBtn);
+    _sendBtn = _newSend;
+    _sendBtn.onclick = sendGroupMessage;
+  }
 
   loadGroupTasks();
   loadGroupRedPackets();
