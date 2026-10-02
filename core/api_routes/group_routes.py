@@ -138,7 +138,7 @@ async def _handle_at_agent(group_id, user_id, content):
     ok, reply = await group_resource_service.call_agent_with_group_resource(group_id, user_id, agent_id, question)
     if not ok:
         reply = f'⚠️ ' + str(reply)
-    group_service.insert_agent_message(group_id, agent_id, reply)
+    group_service.insert_agent_message(group_id, agent_id, reply, trigger_user_id=user_id)
     try:
         from .ws_routes import broadcast_to_group
         with db_cursor() as cur:
