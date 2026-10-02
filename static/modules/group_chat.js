@@ -990,19 +990,23 @@ export async function sendGroupMessage() {
 }
 
 // ==================== 群模式切换（下拉菜单） ====================
-function openGroupModeMenu() {
+async function openGroupModeMenu() {
   const menu = document.getElementById('mode-menu');
   const content = document.getElementById('mode-menu-content');
   if (!menu || !content) return;
 
-  content.innerHTML = `
-    <div class="plus-menu-item mode-item ${currentGroupMode === 'normal' ? 'active-mode' : ''}" data-mode="normal">
-      <span class="plus-menu-label">普通聊天</span>
-    </div>
-    <div class="plus-menu-item mode-item ${currentGroupMode === 'swarm' ? 'active-mode' : ''}" data-mode="swarm">
-      <span class="plus-menu-label">蜂群模式</span>
-    </div>
-  `;
+  let swarmEnabled = false;
+  try {
+    const r = await fetch('/group/' + currentGroupId + '/swarm/status', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    });
+    const d = await r.json();
+    swarmEnabled = !!d.swarm_enabled;
+  } catch (e) {}
+
+  const normalHtml = '<div class="plus-menu-item mode-item ' + (currentGroupMode === 'normal' ? 'active-mode' : '') + '" data-mode="normal"><span class="plus-menu-label">普通聊天</span></div>';
+  const swarmHtml = swarmEnabled ? '<div class="plus-menu-item mode-item ' + (currentGroupMode === 'swarm' ? 'active-mode' : '') + '" data-mode="swarm"><span class="plus-menu-label">蜂群模式</span></div>' : '';
+  content.innerHTML = normalHtml + swarmHtml;
 
   const modeBtn = document.getElementById('chat-mode-btn');
   if (modeBtn) {
@@ -1034,8 +1038,8 @@ async function applyGroupMode(mode) {
     currentGroupMode = mode;
     const modeText = document.getElementById('chat-mode-text');
     if (modeText) modeText.textContent = mode === 'normal' ? '普通聊天' : '蜂群模式';
-    if (mode === 'swarm') {
-      alert('蜂群模式暂未开放任务功能，仅可切换回普通聊天。');
+    if (typeof window.showGroupToast === 'function') {
+      window.showGroupToast(mode === 'swarm' ? '已切换到蜂群模式' : '已切换到普通模式');
     }
   } catch (e) {
     alert('切换失败：' + e.message);
@@ -1272,41 +1276,75 @@ function openRemoveDialog() {
 async function openAgentSwitch() {
   const contentHtml = `
     <div class="me-menu" id="agent-switch-list">
-      <div class="me-menu-item agent-option" data-agent-id="">👤 以本人身份</div>
-      <div class="subpage-placeholder">加载智能体...</div>
+      <div class="subpage-placeholder">加载中...</div>
     </div>
   `;
-  window.openSubpage('选择发言身份', contentHtml);
+  window.openSubpage('选择发言身份', contentHtml, {
+    returnAction: () => openGroupSettings()
+  });
 
   try {
-    const data = await api.listMyAgents();
-    const agents = data.agents || [];
+    const mine = await api.listMyAgents();
+    const myAgents = (mine && mine.agents) || [];
+
+    let sharedAgents = [];
+    let swarmEnabled = false;
+    try {
+      const poolResp = await fetch('/group/' + currentGroupId + '/resource-pool', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      });
+      const poolData = await poolResp.json();
+      swarmEnabled = !!poolData.swarm_enabled;
+      sharedAgents = (poolData.pool || []).filter(p => p.enabled);
+    } catch (e) {}
+
     const container = document.getElementById('agent-switch-list');
-    if (agents.length === 0) {
-      container.innerHTML = '<div class="subpage-placeholder">暂无智能体</div>';
-      return;
+    if (!container) return;
+
+    let html = '';
+    html += '<div class="section-title">我的智能体</div>';
+    html += '<div class="me-menu">';
+    html += '<div class="me-menu-item agent-option" data-agent-id="" data-agent-source="self">以本人身份</div>';
+    if (myAgents.length === 0) {
+      html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">你还没有智能体</div>';
+    } else {
+      myAgents.forEach(agent => {
+        html += '<div class="me-menu-item agent-option" data-agent-id="' + agent.agent_id + '" data-agent-source="self">';
+        html += '<span class="menu-label">' + (agent.name || agent.agent_id) + '</span>';
+        html += '<span class="menu-arrow">›</span>';
+        html += '</div>';
+      });
     }
-    let html = '<div class="me-menu-item agent-option" data-agent-id="">👤 以本人身份</div>';
-    agents.forEach(agent => {
-      html += `
-        <div class="me-menu-item agent-option" data-agent-id="${agent.agent_id}">
-          <span class="menu-icon">🤖</span>
-          ${agent.name}
-        </div>
-      `;
-    });
+    html += '</div>';
+
+    if (swarmEnabled && sharedAgents.length > 0) {
+      html += '<div class="section-title">群共享（蜂群模式）</div>';
+      html += '<div class="me-menu">';
+      sharedAgents.forEach(p => {
+        html += '<div class="me-menu-item agent-option" data-agent-id="' + p.agent_id + '" data-agent-source="group">';
+        html += '<span class="menu-label">' + (p.model_name || p.agent_id) + '</span>';
+        html += '<span class="menu-value" style="font-size:12px;color:#999;">群共享</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
     container.innerHTML = html;
 
     container.querySelectorAll('.agent-option').forEach(opt => {
       opt.addEventListener('click', () => {
         currentAgentId = opt.dataset.agentId || null;
+        window.currentAgentSource = opt.dataset.agentSource || 'self';
         window.closeSubpage();
         document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
         openGroupSettings();
       });
     });
   } catch (e) {
-    document.getElementById('agent-switch-list').innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
+    const container = document.getElementById('agent-switch-list');
+    if (container) {
+      container.innerHTML = '<div class="subpage-placeholder">加载失败：' + e.message + '</div>';
+    }
   }
 }
 

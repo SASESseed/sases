@@ -520,6 +520,25 @@ async def api_quota_check(group_id: int, agent_id: str, user_id: int = Depends(g
 
 
 
+class SetMemberRoleRequest(BaseModel):
+    username_or_id: str
+    role: str
+
+
+@router.get("/{group_id}/admins")
+async def api_list_group_admins(group_id: int, user_id: int = Depends(get_current_user)):
+    return {"admins": group_service.list_admins(group_id)}
+
+
+@router.post("/{group_id}/members/role")
+async def api_set_member_role(group_id: int, body: SetMemberRoleRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.set_member_role(group_id, user_id, body.username_or_id, body.role)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service

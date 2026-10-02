@@ -22,12 +22,19 @@ def _set_features(group_id, features):
 
 
 def _check_owner(group_id, user_id):
+    """检查是否是群主或管理员"""
     with db_cursor() as cur:
         cur.execute('SELECT owner_id FROM groups WHERE id=?', (group_id,))
         g = cur.fetchone()
         if not g:
             return False
-        return g['owner_id'] == user_id
+        if g['owner_id'] == user_id:
+            return True
+        cur.execute("SELECT role FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        m = cur.fetchone()
+        if m and m['role'] == 'admin':
+            return True
+    return False
 
 
 # ========== 蜂群模式开关 ==========
@@ -39,7 +46,7 @@ def is_swarm_enabled(group_id):
 
 def toggle_swarm(group_id, user_id, enabled):
     if not _check_owner(group_id, user_id):
-        return False, '只有群主可以开关蜂群模式'
+        return False, '只有群主或管理员可以开关蜂群模式'
     f = _get_features(group_id)
     f['swarm_enabled'] = bool(enabled)
     _set_features(group_id, f)
@@ -51,7 +58,7 @@ def toggle_swarm(group_id, user_id, enabled):
 def bind_agent_model(group_id, user_id, agent_id, model_id, daily_limit=100):
     """群主绑定智能体到模型"""
     if not _check_owner(group_id, user_id):
-        return False, '只有群主可以配置'
+        return False, '只有群主或管理员可以配置'
     if not agent_id:
         return False, '缺少智能体 ID'
     with db_cursor(commit=True) as cur:
@@ -64,7 +71,7 @@ def bind_agent_model(group_id, user_id, agent_id, model_id, daily_limit=100):
 
 def unbind_agent(group_id, user_id, agent_id):
     if not _check_owner(group_id, user_id):
-        return False, '只有群主可以配置'
+        return False, '只有群主或管理员可以配置'
     with db_cursor(commit=True) as cur:
         cur.execute('DELETE FROM group_resource_pool WHERE group_id=? AND agent_id=?', (group_id, agent_id))
         return True, {'unbound': agent_id}
