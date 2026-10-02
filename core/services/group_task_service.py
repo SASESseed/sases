@@ -140,6 +140,17 @@ def select_winner(task_id, user_id, submission_id):
         cur.execute('UPDATE group_tasks SET status=?, selected_submission_id=? WHERE id=?', ('done', submission_id, task_id))
         cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (t['group_id'], None, pool_gets, 'task_commission', 'task_' + str(task_id) + ' 抽成 5%'))
         cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (t['group_id'], sub['submitted_by'], winner_gets, 'task_payout', 'task_' + str(task_id) + ' 结算 95%'))
+    # 知识库回流（直接 SQL，绕过权限校验）
+    try:
+        import json as _json_k
+        with db_cursor(commit=True) as _cur_k:
+            _cur_k.execute(
+                'INSERT INTO knowledge_docs (scope, group_id, title, content, category, tags, source_type, source_id, contributor_id, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                ('group', t['group_id'], t['title'], sub['content'], 'task_result', '', 'task_result', str(t['id']), sub['submitted_by'], 'group')
+            )
+        print(f'[task] 方案已回流知识库 task={t["id"]}')
+    except Exception as _e:
+        print(f'[task] 知识库回流失败: {_e}')
     gid = _get_global_group_id(t['group_id'])
     if gid:
         _broadcast('/hive/sync/task-result', {'global_group_id': gid, 'global_task_id': t['global_task_id'], 'global_submission_id': sub['global_submission_id'], 'origin_node': _cfg.HIVE_NODE_ID})
