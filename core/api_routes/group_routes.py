@@ -352,6 +352,104 @@ async def api_group_leaderboard(group_id: int, type: str = 'contribution', user_
 
 
 
+class KnowledgeCreateRequest(BaseModel):
+    title: str = ''
+    content: str
+    category: str = 'doc'
+    tags: str = ''
+
+
+class ReportResolveRequest(BaseModel):
+    answer: str
+    category: str = 'faq'
+
+
+@router.post("/{group_id}/knowledge")
+async def api_create_knowledge(group_id: int, body: KnowledgeCreateRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    ok, res = group_knowledge_service.create_doc(group_id, user_id, body.title, body.content, body.category, body.tags)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.get("/{group_id}/knowledge")
+async def api_list_knowledge(group_id: int, category: Optional[str] = None, keyword: Optional[str] = None, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    docs = group_knowledge_service.list_docs(group_id, user_id, category, keyword)
+    if docs is None:
+        raise HTTPException(status_code=403, detail='你不是群成员')
+    return {'docs': docs}
+
+
+@router.get("/knowledge/{doc_id}")
+async def api_get_knowledge(doc_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    d = group_knowledge_service.get_doc(doc_id, user_id)
+    if not d:
+        raise HTTPException(status_code=404, detail='知识不存在')
+    return d
+
+
+@router.delete("/knowledge/{doc_id}")
+async def api_delete_knowledge(doc_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    ok, res = group_knowledge_service.delete_doc(doc_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.get("/{group_id}/report-queue")
+async def api_list_report_queue(group_id: int, status: str = 'pending', user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    rows = group_knowledge_service.list_report_queue(group_id, user_id, status)
+    if rows is None:
+        raise HTTPException(status_code=403, detail='只有群主或管理员可以查看')
+    return {'items': rows}
+
+
+@router.post("/{group_id}/report-queue")
+async def api_add_report(group_id: int, body: dict, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    question = body.get('question', '')
+    ok, res = group_knowledge_service.add_to_report_queue(group_id, user_id, question)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/report-queue/{queue_id}/resolve")
+async def api_resolve_report(queue_id: int, body: ReportResolveRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute('SELECT group_id FROM group_report_queue WHERE id=?', (queue_id,))
+        r = cur.fetchone()
+    if not r:
+        raise HTTPException(status_code=404, detail='问题不存在')
+    ok, res = group_knowledge_service.resolve_report(r['group_id'], user_id, queue_id, body.answer, body.category)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/report-queue/{queue_id}/ignore")
+async def api_ignore_report(queue_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_knowledge_service
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute('SELECT group_id FROM group_report_queue WHERE id=?', (queue_id,))
+        r = cur.fetchone()
+    if not r:
+        raise HTTPException(status_code=404, detail='问题不存在')
+    ok, res = group_knowledge_service.ignore_report(r['group_id'], user_id, queue_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
