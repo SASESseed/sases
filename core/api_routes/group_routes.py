@@ -287,12 +287,13 @@ class GroupRedPacketCreateRequest(BaseModel):
     total_count: int
     message: str = ''
     source_type: str = 'user'
+    packet_type: str = 'lucky'
 
 
 @router.post("/{group_id}/red-packets/create")
 async def api_create_group_red_packet(group_id: int, body: GroupRedPacketCreateRequest, user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
-    ok, res = group_red_packet_service.create_packet(group_id, user_id, body.total_amount, body.total_count, body.message, body.source_type)
+    ok, res = group_red_packet_service.create_packet(group_id, user_id, body.total_amount, body.total_count, body.message, body.source_type, getattr(body, "packet_type", "lucky"))
     if not ok:
         raise HTTPException(status_code=400, detail=res)
     return res

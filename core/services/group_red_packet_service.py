@@ -16,12 +16,13 @@ def _gen_notice(packet, action='created'):
         'total_amount': packet['total_amount'],
         'total_count': packet['total_count'],
         'message': packet.get('message') or '',
-        'source_type': packet.get('source_type', 'user')
+        'source_type': packet.get('source_type', 'user'),
+        'packet_type': packet.get('packet_type', 'lucky')
     }
     return '[RED_PACKET]:' + json.dumps(payload, ensure_ascii=False)
 
 
-def create_packet(group_id, user_id, total_amount, total_count, message='', source_type='user'):
+def create_packet(group_id, user_id, total_amount, total_count, message='', source_type='user', packet_type='lucky'):
     """创建群红包"""
     try:
         total_amount = float(total_amount)
@@ -57,12 +58,12 @@ def create_packet(group_id, user_id, total_amount, total_count, message='', sour
         elif source_type == 'group_pool':
             cur.execute('UPDATE groups SET credits = credits - ? WHERE id=?', (total_amount, group_id))
         cur.execute(
-            'INSERT INTO group_red_packets (group_id, sender_id, source_type, total_amount, total_count, remaining_amount, message, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (group_id, user_id, source_type, total_amount, total_count, total_amount, message, 'active', expires)
+            'INSERT INTO group_red_packets (group_id, sender_id, source_type, total_amount, total_count, remaining_amount, message, status, expires_at, packet_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (group_id, user_id, source_type, total_amount, total_count, total_amount, message, 'active', expires, packet_type)
         )
         packet_id = cur.lastrowid
     packet = {'id': packet_id, 'sender_id': user_id, 'total_amount': total_amount,
-              'total_count': total_count, 'message': message, 'source_type': source_type}
+              'total_count': total_count, 'message': message, 'source_type': source_type, 'packet_type': packet_type}
     with db_cursor(commit=True) as cur:
         notice = _gen_notice(packet)
         cur.execute(
@@ -91,8 +92,6 @@ def claim_packet(packet_id, user_id):
         cur.execute('SELECT id FROM group_members WHERE group_id=? AND user_id=?', (p['group_id'], user_id))
         if not cur.fetchone():
             return False, '你不是群成员'
-        if p['sender_id'] == user_id:
-            return False, '不能抢自己发的红包'
         cur.execute('SELECT id FROM group_red_packet_claims WHERE packet_id=? AND user_id=?', (packet_id, user_id))
         if cur.fetchone():
             return False, '你已经抢过了'
@@ -100,8 +99,17 @@ def claim_packet(packet_id, user_id):
     remaining_count = int(p['total_count']) - int(p['claimed_count'])
     if remaining_count <= 0:
         return False, '红包已抢完'
+    _ptype = 'lucky'
+    try:
+        _ptype = p['packet_type'] or 'lucky'
+    except (KeyError, IndexError):
+        _ptype = 'lucky'
     if remaining_count == 1:
         amount = round(remaining_amount, 2)
+    elif _ptype == 'normal':
+        amount = round(float(p['total_amount']) / int(p['total_count']), 2)
+        if amount > remaining_amount:
+            amount = round(remaining_amount, 2)
     else:
         max_amt = remaining_amount / remaining_count * 2
         amount = round(random.uniform(0.01, max_amt - 0.01), 2)
@@ -154,6 +162,7 @@ def get_packet_detail(packet_id, user_id):
         'status': p['status'],
         'message': p['message'],
         'source_type': p['source_type'],
+        'packet_type': p['packet_type'] if 'packet_type' in p.keys() else 'lucky',
         'created_at': p['created_at'],
         'claims': claims,
         'claimed_by_me': claimed_by_me
