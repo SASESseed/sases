@@ -188,8 +188,15 @@ def set_group_mode(group_id: int, mode: str, user_id: int = None):
         with db_cursor() as cur:
             cur.execute("SELECT owner_id FROM groups WHERE id=?", (group_id,))
             group = cur.fetchone()
-            if not group or group["owner_id"] != user_id:
-                return False, "只有群主可以切换模式"
+            if not group:
+                return False, "群不存在"
+            if group["owner_id"] == user_id:
+                pass
+            else:
+                cur.execute("SELECT role FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+                m = cur.fetchone()
+                if not m or m["role"] != "admin":
+                    return False, "只有群主或管理员可以切换模式"
 
     with db_cursor(commit=True) as cur:
         cur.execute("UPDATE groups SET mode=? WHERE id=?", (mode, group_id))
@@ -223,8 +230,6 @@ def send_group_message(group_id: int, sender_id: int, content: str, sender_agent
     import secrets as _sec
     from .. import config as _cfg
     mode = get_group_mode(group_id)
-    if mode == 'swarm':
-        return False, "蜂群模式暂未开放任务功能，请切换为普通聊天模式"
 
     _global_gid = None
     _global_msg_id = None
@@ -240,8 +245,12 @@ def send_group_message(group_id: int, sender_id: int, content: str, sender_agent
     with db_cursor(commit=True) as cur:
         if sender_agent_id:
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND agent_id=?", (group_id, sender_agent_id))
-            if not cur.fetchone():
-                return False, "智能体不在群中"
+            _in_members = cur.fetchone()
+            if not _in_members:
+                # 回退：检查是否在群资源池（蜂群模式共享）
+                cur.execute("SELECT id FROM group_resource_pool WHERE group_id=? AND agent_id=? AND enabled=1", (group_id, sender_agent_id))
+                if not cur.fetchone():
+                    return False, "智能体不在群中"
             cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?)", (group_id, sender_agent_id, content, _global_msg_id, _cfg.HIVE_NODE_ID if _global_msg_id else None))
         else:
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, sender_id))

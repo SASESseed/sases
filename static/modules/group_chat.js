@@ -11,13 +11,7 @@ window._gcDebug = { getUserId: () => currentUserId, getAgentId: () => currentAge
 export async function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
 
-  window.currentGroupId = groupId;
-  currentGroupName = groupName;
-  currentAgentId = null;
-  currentGroupMode = 'normal';
-  window.currentGroupChat = true;
-
-  // 获取当前用户ID（await 保证 loadGroupMessages 前就绪）
+  // 先获取当前用户ID
   try {
     const _me = await api.getMe();
     currentUserId = _me.user_id;
@@ -25,7 +19,28 @@ export async function openGroupChat(groupId, groupName) {
     currentUserId = null;
   }
 
+  // 从 localStorage 读取该用户的群模式
+  try {
+    currentGroupMode = localStorage.getItem('sases_group_mode_' + groupId) || 'normal';
+  } catch (e) {
+    currentGroupMode = 'normal';
+  }
+
+  window.currentGroupId = groupId;
+  currentGroupName = groupName;
+  window.currentGroupChat = true;
+
+  // 恢复当前模式对应的身份
+  try {
+    const _saved = localStorage.getItem('sases_agent_' + currentGroupMode + '_' + groupId) || '';
+    currentAgentId = _saved || null;
+  } catch (e) {
+    currentAgentId = null;
+  }
+
   document.getElementById('chat-window-title').textContent = groupName;
+  const _mt0 = document.getElementById('chat-mode-text');
+  if (_mt0) _mt0.textContent = currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式';
   document.getElementById('view-chat-window').style.display = 'flex';
   document.querySelector('.bottom-nav').style.display = 'none';
   document.querySelector('.top-bar').style.display = 'none';
@@ -44,9 +59,6 @@ export async function openGroupChat(groupId, groupName) {
     modeBtn.style.display = 'block';
     modeBtn.onclick = openGroupModeMenu;
   }
-  const modeText = document.getElementById('chat-mode-text');
-  if (modeText) modeText.textContent = '普通聊天';
-
   const _plusBtn = document.getElementById('input-plus-btn');
   if (_plusBtn) {
     _plusBtn.onclick = () => {
@@ -103,7 +115,6 @@ export function closeGroupChat() {
   window.currentGroupId = null;
   currentGroupName = '';
   currentAgentId = null;
-  currentGroupMode = 'normal';
   currentUserId = null;
   window.currentGroupChat = false;
 
@@ -687,6 +698,176 @@ window.openSwarmUsage = async function(groupId) {
 };
 
 
+window.openGroupManage = async function(groupId) {
+  let admins = [];
+  let members = [];
+  let groupInfo = {};
+
+  try {
+    const r1 = await fetch('/group/' + groupId + '/admins', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    });
+    const d1 = await r1.json();
+    admins = d1.admins || [];
+  } catch (e) {}
+
+  try {
+    const r2 = await fetch('/group/' + groupId + '/members', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    });
+    const d2 = await r2.json();
+    members = d2.members || [];
+  } catch (e) {}
+
+  try {
+    const r3 = await api.getGroupInfo(groupId);
+    groupInfo = r3 || {};
+  } catch (e) {}
+
+  const isOwner = groupInfo.owner_id != null && String(groupInfo.owner_id) === String(currentUserId);
+
+  // 渲染管理员列表
+  let adminsHtml = '';
+  admins.forEach(a => {
+    const roleLabel = a.role === 'owner' ? '群主' : '管理员';
+    adminsHtml += '<div class="me-menu-item">';
+    adminsHtml += '<span class="menu-label">' + (a.username || '用户') + '</span>';
+    adminsHtml += '<span class="menu-value">' + roleLabel + '</span>';
+    if (a.role === 'admin' && isOwner) {
+      adminsHtml += '<span class="remove-admin-btn" data-uid="' + a.user_id + '" style="color:#ff3b30;font-size:13px;margin-left:8px;cursor:pointer;">移除</span>';
+    }
+    adminsHtml += '</div>';
+  });
+
+  const html = `
+    <div class="me-menu">
+      <div class="me-menu-item" id="gm-announcement" style="cursor:pointer;">
+        <span class="menu-label">群公告</span>
+        <span class="menu-arrow">›</span>
+      </div>
+      <div class="me-menu-item" id="gm-invite-confirm" style="cursor:pointer;">
+        <span class="menu-label">群聊邀请确认</span>
+        <div class="switch"><div class="slider"></div></div>
+      </div>
+    </div>
+    <div class="section-title">群管理员</div>
+    <div class="me-menu" id="gm-admins-list">
+      ${adminsHtml}
+    </div>
+    ${isOwner ? '<div class="me-menu"><div class="me-menu-item" id="gm-add-admin" style="cursor:pointer;"><span class="menu-label" style="color:#007aff;">+ 添加管理员</span></div></div>' : ''}
+    <div class="me-menu">
+      <div class="me-menu-item" id="gm-qrcode" style="cursor:pointer;">
+        <span class="menu-label">群二维码</span>
+        <span class="menu-arrow">›</span>
+      </div>
+      <div class="me-menu-item" id="gm-transfer" style="cursor:pointer;">
+        <span class="menu-label">群主管理权转让</span>
+        <span class="menu-arrow">›</span>
+      </div>
+    </div>
+    <div class="me-menu">
+      <div class="me-menu-item" id="gm-remove-log" style="cursor:pointer;">
+        <span class="menu-label">移出群聊记录</span>
+        <span class="menu-arrow">›</span>
+      </div>
+    </div>
+  `;
+
+  window.openSubpage('群管理', html, {
+    showMore: false,
+    returnAction: () => openGroupSettings()
+  });
+
+  setTimeout(() => {
+    const ann = document.getElementById('gm-announcement');
+    if (ann) ann.onclick = () => alert('群公告开发中');
+
+    const inv = document.getElementById('gm-invite-confirm');
+    if (inv) inv.onclick = () => alert('邀请确认开关开发中');
+
+    const addAdmin = document.getElementById('gm-add-admin');
+    if (addAdmin) {
+      addAdmin.onclick = () => openAddAdminDialog(groupId, members, admins);
+    }
+
+    document.querySelectorAll('.remove-admin-btn').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const uid = btn.dataset.uid;
+        if (!confirm('确定移除该管理员？')) return;
+        try {
+          const resp = await fetch('/group/' + groupId + '/members/role', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username_or_id: String(uid), role: 'member' })
+          });
+          const data = await resp.json();
+          if (data.error || data.detail) { alert('移除失败：' + (data.error || data.detail)); return; }
+          alert('已移除');
+          window.openGroupManage(groupId);
+        } catch (err) { alert('网络错误：' + err.message); }
+      };
+    });
+
+    const qr = document.getElementById('gm-qrcode');
+    if (qr) qr.onclick = () => alert('群二维码开发中');
+
+    const tr = document.getElementById('gm-transfer');
+    if (tr) tr.onclick = () => alert('群主转让开发中');
+
+    const rl = document.getElementById('gm-remove-log');
+    if (rl) rl.onclick = () => alert('移出记录开发中');
+  }, 300);
+};
+
+window.openAddAdminDialog = function(groupId, members, currentAdmins) {
+  const adminIds = new Set(currentAdmins.map(a => String(a.user_id)));
+  const candidates = members.filter(m => m.user_id && !adminIds.has(String(m.user_id)) && m.role !== 'owner');
+
+  let listHtml = '';
+  if (candidates.length === 0) {
+    listHtml = '<div class="subpage-placeholder">没有可添加的成员</div>';
+  } else {
+    candidates.forEach(m => {
+      listHtml += '<div class="me-menu-item add-admin-item" data-uid="' + m.user_id + '" style="cursor:pointer;">';
+      listHtml += '<span class="menu-label">' + (m.display_name || m.username || ('用户 ' + m.user_id)) + '</span>';
+      listHtml += '<span class="menu-arrow">›</span>';
+      listHtml += '</div>';
+    });
+  }
+
+  const html = `
+    <div class="me-menu">
+      ${listHtml}
+    </div>
+  `;
+
+  window.openSubpage('添加管理员', html, {
+    showMore: false,
+    returnAction: () => window.openGroupManage(groupId)
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.add-admin-item').forEach(el => {
+      el.onclick = async () => {
+        const uid = el.dataset.uid;
+        try {
+          const resp = await fetch('/group/' + groupId + '/members/role', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username_or_id: uid, role: 'admin' })
+          });
+          const data = await resp.json();
+          if (data.error || data.detail) { alert('添加失败：' + (data.error || data.detail)); return; }
+          alert('已添加为管理员');
+          window.openGroupManage(groupId);
+        } catch (err) { alert('网络错误：' + err.message); }
+      };
+    });
+  }, 300);
+};
+
+
 async function loadGroupMessages() {
   try {
     const data = await api.getGroupMessages(currentGroupId);
@@ -1033,17 +1214,48 @@ function closeGroupModeMenu() {
 }
 
 async function applyGroupMode(mode) {
+  // 保存当前模式下的身份选择
   try {
-    await api.setGroupMode(currentGroupId, mode);
-    currentGroupMode = mode;
-    const modeText = document.getElementById('chat-mode-text');
-    if (modeText) modeText.textContent = mode === 'normal' ? '普通聊天' : '蜂群模式';
-    if (typeof window.showGroupToast === 'function') {
-      window.showGroupToast(mode === 'swarm' ? '已切换到蜂群模式' : '已切换到普通模式');
-    }
+    localStorage.setItem('sases_agent_' + currentGroupMode + '_' + currentGroupId, currentAgentId || '');
+  } catch (e) {}
+  currentGroupMode = mode;
+  try {
+    localStorage.setItem('sases_group_mode_' + currentGroupId, mode);
+  } catch (e) {}
+  // 恢复新模式下的身份选择
+  try {
+    const _saved = localStorage.getItem('sases_agent_' + mode + '_' + currentGroupId) || '';
+    currentAgentId = _saved || null;
   } catch (e) {
-    alert('切换失败：' + e.message);
+    currentAgentId = null;
   }
+  // 校验当前身份是否合法（蜂群模式下不能选自己的私有智能体）
+  if (mode === 'swarm' && currentAgentId) {
+    try {
+      const _pr = await fetch('/group/' + currentGroupId + '/resource-pool', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      });
+      const _pd = await _pr.json();
+      const _sharedIds = (_pd.pool || []).map(p => p.agent_id);
+      if (!_sharedIds.includes(currentAgentId)) {
+        currentAgentId = null;
+      }
+    } catch (e) {
+      currentAgentId = null;
+    }
+  }
+  const modeText = document.getElementById('chat-mode-text');
+  if (modeText) modeText.textContent = mode === 'normal' ? '普通聊天' : '蜂群模式';
+  if (typeof window.showGroupToast === 'function') {
+    window.showGroupToast(mode === 'swarm' ? '已切换到蜂群模式' : '已切换到普通模式');
+  }
+  // 更新 🤖 按钮显示
+  try {
+    const m = await import('./chat_identity.js');
+    if (m && typeof m.updateIdentityButton === 'function') {
+      m.updateIdentityButton({ senderAgentId: currentAgentId });
+    }
+  } catch (e) {}
 }
 
 async function openGroupSettings() {
@@ -1121,12 +1333,21 @@ async function openGroupSettings() {
   let _isOwnerOrAdmin = false;
   let _isOwner = false;
   try {
-    const _grpInfo = await api.getGroupInfo(currentGroupId);
-    if (_grpInfo && _grpInfo.owner_id != null) {
-      _isOwner = String(_grpInfo.owner_id) === String(currentUserId);
-      // 管理员判断：role='admin'（若后端支持）
-      // 当前先只判断群主，管理员后续扩展
-      _isOwnerOrAdmin = _isOwner;
+    const _resp = await fetch('/group/' + currentGroupId + '/admins', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    });
+    const _data = await _resp.json();
+    const _admins = _data.admins || [];
+    for (const a of _admins) {
+      if (String(a.user_id) === String(currentUserId)) {
+        if (a.role === 'owner') {
+          _isOwner = true;
+          _isOwnerOrAdmin = true;
+        } else if (a.role === 'admin') {
+          _isOwnerOrAdmin = true;
+        }
+        break;
+      }
     }
   } catch (e) {}
 
@@ -1145,7 +1366,7 @@ async function openGroupSettings() {
   // 蜂群模式管理（仅群主可见）
   const _scEntry = document.getElementById('swarm-config-entry');
   if (_scEntry) {
-    if (_isOwner) {
+    if (_isOwnerOrAdmin) {
       _scEntry.style.display = '';
       _scEntry.addEventListener('click', () => {
         if (typeof window.openSwarmConfig === 'function') {
@@ -1302,22 +1523,43 @@ async function openAgentSwitch() {
     if (!container) return;
 
     let html = '';
-    html += '<div class="section-title">我的智能体</div>';
-    html += '<div class="me-menu">';
-    html += '<div class="me-menu-item agent-option" data-agent-id="" data-agent-source="self">以本人身份</div>';
-    if (myAgents.length === 0) {
-      html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">你还没有智能体</div>';
-    } else {
-      myAgents.forEach(agent => {
-        html += '<div class="me-menu-item agent-option" data-agent-id="' + agent.agent_id + '" data-agent-source="self">';
-        html += '<span class="menu-label">' + (agent.name || agent.agent_id) + '</span>';
-        html += '<span class="menu-arrow">›</span>';
-        html += '</div>';
-      });
-    }
-    html += '</div>';
+    const isSwarm = currentGroupMode === 'swarm';
 
-    if (swarmEnabled && sharedAgents.length > 0) {
+    if (!isSwarm) {
+      // 普通模式：我的智能体
+      html += '<div class="section-title">我的智能体</div>';
+      html += '<div class="me-menu">';
+      html += '<div class="me-menu-item agent-option" data-agent-id="" data-agent-source="self">以本人身份</div>';
+      const _myFiltered = myAgents.filter(a => !(a.agent_id || '').startsWith('sases_assistant'));
+      if (_myFiltered.length === 0) {
+        html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">你还没有智能体</div>';
+      } else {
+        _myFiltered.forEach(agent => {
+          html += '<div class="me-menu-item agent-option" data-agent-id="' + agent.agent_id + '" data-agent-source="self">';
+          html += '<span class="menu-label">' + (agent.name || agent.agent_id) + '</span>';
+          html += '<span class="menu-arrow">›</span>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+    } else {
+      // 蜂群模式：以本人身份 + 群共享
+      html += '<div class="section-title">群共享智能体</div>';
+      html += '<div class="me-menu">';
+      html += '<div class="me-menu-item agent-option" data-agent-id="" data-agent-source="self">以本人身份</div>';
+      if (sharedAgents.length === 0) {
+        html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">群主未共享智能体</div>';
+      } else {
+        sharedAgents.forEach(p => {
+          html += '<div class="me-menu-item agent-option" data-agent-id="' + p.agent_id + '" data-agent-source="group">';
+          html += '<span class="menu-label">' + (p.model_name || p.agent_id) + '</span>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+    }
+
+    if (sharedAgents.length > 0) {
       html += '<div class="section-title">群共享（蜂群模式）</div>';
       html += '<div class="me-menu">';
       sharedAgents.forEach(p => {
@@ -1335,6 +1577,9 @@ async function openAgentSwitch() {
       opt.addEventListener('click', () => {
         currentAgentId = opt.dataset.agentId || null;
         window.currentAgentSource = opt.dataset.agentSource || 'self';
+        try {
+          localStorage.setItem('sases_agent_' + currentGroupMode + '_' + currentGroupId, currentAgentId || '');
+        } catch (e) {}
         window.closeSubpage();
         document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
         openGroupSettings();
