@@ -205,7 +205,7 @@ async def periodic_group_red_packet():
             cur_hour = now.hour
             with db_cursor() as cur:
                 cur.execute(
-                    "SELECT id, owner_id, credits, red_packet_hour, last_red_packet_date FROM groups WHERE red_packet_hour=? AND (last_red_packet_date IS NULL OR last_red_packet_date != ?) AND COALESCE(credits, 0) >= 100",
+                    "SELECT id, owner_id, credits, staked_credits, red_packet_hour, last_red_packet_date FROM groups WHERE red_packet_hour=? AND (last_red_packet_date IS NULL OR last_red_packet_date != ?) AND (COALESCE(credits, 0) + COALESCE(staked_credits, 0)) >= 1000",
                     (cur_hour, today)
                 )
                 rows = cur.fetchall()

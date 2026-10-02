@@ -8,7 +8,7 @@ TOP_N_GUARANTEE = 10
 TOP_N_AMOUNT = 500.0
 SINGLE_GROUP_CAP = 3000.0
 MIN_ACTIVITY = 10.0
-MIN_TOTAL_CREDITS = 100.0
+MIN_TOTAL_CREDITS = 10.0
 
 
 def _calc_activity(group_id, date_str):
@@ -53,13 +53,8 @@ def _get_eligible_groups(date_str):
         total = (g['credits'] or 0) + (g['staked'] or 0)
         if total < MIN_TOTAL_CREDITS:
             continue
-        with db_cursor() as cur:
-            cur.execute("SELECT COUNT(*) as c FROM group_stakes WHERE group_id=? AND status='active'", (g['id'],))
-            if (cur.fetchone()['c'] or 0) < 1:
-                continue
+        # 质押人数检查已移除
         activity = _calc_activity(g['id'], date_str)
-        if activity < MIN_ACTIVITY:
-            continue
         eligible.append({'group_id': g['id'], 'activity': activity})
     return eligible
 

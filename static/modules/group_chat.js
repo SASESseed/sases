@@ -1101,14 +1101,20 @@ async function loadGroupMessages() {
       } else {
         isSelf = currentUserId != null && String(msg.sender_id) === String(currentUserId);
       }
-      appendGroupMessage(msg.sender_name, msg.content, isSelf);
+      appendGroupMessage(msg.sender_name, msg.content, isSelf, true);
+    });
+    // 立刻滚 + 多帧滚动（覆盖异步卡片渲染）
+    container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+    [100, 300, 500, 800, 1200].forEach(t => {
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, t);
     });
   } catch (e) {
     appendGroupMessage('系统', '加载消息失败：' + e.message, false);
   }
 }
 
-function appendGroupMessage(senderName, content, isSelf = false) {
+function appendGroupMessage(senderName, content, isSelf = false, skipScroll = false) {
   const messages = document.getElementById('chat-messages');
   if (!messages) return;
 
@@ -1133,7 +1139,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
-          messages.scrollTop = messages.scrollHeight;
+          if (!skipScroll) messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1170,7 +1176,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
-          messages.scrollTop = messages.scrollHeight;
+          if (!skipScroll) messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1186,7 +1192,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
-          messages.scrollTop = messages.scrollHeight;
+          if (!skipScroll) messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1202,7 +1208,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
-          messages.scrollTop = messages.scrollHeight;
+          if (!skipScroll) messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1224,11 +1230,11 @@ function appendGroupMessage(senderName, content, isSelf = false) {
   wrapper.appendChild(bubble);
 
   messages.appendChild(wrapper);
-  messages.scrollTop = messages.scrollHeight;
+  if (!skipScroll) messages.scrollTop = messages.scrollHeight;
   // 高频多帧滚动，覆盖异步渲染的所有时机
-  requestAnimationFrame(() => { messages.scrollTop = messages.scrollHeight; });
+  requestAnimationFrame(() => { if (!skipScroll) messages.scrollTop = messages.scrollHeight; });
   [30, 60, 100, 150, 200, 280, 380, 500, 700, 1000].forEach(t => {
-    setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, t);
+    setTimeout(() => { if (!skipScroll) messages.scrollTop = messages.scrollHeight; }, t);
   });
 }
 
