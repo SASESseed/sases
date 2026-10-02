@@ -109,6 +109,15 @@ export function showContextMenu(x, y, wrapper, chatState) {
 
   menu.querySelector('[data-action="reply"]').addEventListener('click', async () => {
     const content = wrapper.dataset.content;
+    // 群聊：弹智能体选择
+    if (chatState && chatState.isGroup && chatState.groupId) {
+      closeContextMenu();
+      if (typeof window.openGroupAgentPickerForReply === 'function') {
+        window.openGroupAgentPickerForReply(content, chatState.groupId);
+      }
+      return;
+    }
+    // 单聊：原逻辑
     try {
       const data = await api.suggestReply(content);
       const reply = data.response || '（无建议）';
