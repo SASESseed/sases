@@ -604,6 +604,24 @@ async def api_group_ai_suggest(group_id: int, body: GroupAiSuggestRequest, user_
 
 
 
+class AnnouncementRequest(BaseModel):
+    content: str
+
+
+@router.get("/{group_id}/announcement")
+async def api_get_announcement(group_id: int, user_id: int = Depends(get_current_user)):
+    return {"announcement": group_service.get_announcement(group_id)}
+
+
+@router.post("/{group_id}/announcement")
+async def api_set_announcement(group_id: int, body: AnnouncementRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.set_announcement(group_id, user_id, body.content)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
