@@ -1194,6 +1194,8 @@ function appendGroupMessage(senderName, content, isSelf = false) {
 
   messages.appendChild(wrapper);
   messages.scrollTop = messages.scrollHeight;
+  // 大卡片是异步渲染，延迟再滚一次
+  setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 200);
 }
 
 window.openPublishTaskDialog = function(groupId) {
