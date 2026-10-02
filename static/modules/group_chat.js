@@ -1141,6 +1141,9 @@ function appendGroupMessage(senderName, content, isSelf = false) {
     let _rp_data = {};
     try { _rp_data = JSON.parse(content.substring(13)); } catch (e) {}
     if (_rp_data.packet_id) {
+      // 预占高度，避免卡片异步渲染时页面跳动
+      bubble.style.minHeight = '160px';
+      bubble.style.width = '220px';
       import('./chat_ui.js').then(m => {
         if (typeof m.renderGroupRedPacketBubble === 'function') {
           const node = m.renderGroupRedPacketBubble(content);
