@@ -793,9 +793,10 @@ def reject_invite(group_id, user_id, pending_id):
 
 def list_group_files(group_id, user_id, limit=100):
     """列出群里所有共享文件"""
-    if not _is_member(group_id, user_id):
-        return None
     with db_cursor() as cur:
+        cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cur.fetchone():
+            return None
         cur.execute("""
             SELECT m.id, m.content, m.created_at, m.sender_id, m.sender_agent_id,
                    u.username as sender_name
