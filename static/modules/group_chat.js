@@ -1627,7 +1627,7 @@ async function openAgentSwitch(fromChat = false) {
         html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">你还没有智能体</div>';
       } else {
         _myFiltered.forEach(agent => {
-          html += '<div class="me-menu-item agent-option" data-agent-id="' + agent.agent_id + '" data-agent-source="self">';
+          html += '<div class="me-menu-item agent-option" data-agent-id="' + agent.agent_id + '" data-agent-name="' + (agent.name || agent.agent_id) + '" data-agent-source="self">';
           html += '<span class="menu-label">' + (agent.name || agent.agent_id) + '</span>';
           html += '<span class="menu-arrow">›</span>';
           html += '</div>';
@@ -1643,7 +1643,7 @@ async function openAgentSwitch(fromChat = false) {
         html += '<div class="subpage-placeholder" style="padding:20px 0;font-size:13px;">群主未共享智能体</div>';
       } else {
         sharedAgents.forEach(p => {
-          html += '<div class="me-menu-item agent-option" data-agent-id="' + p.agent_id + '" data-agent-source="group">';
+          html += '<div class="me-menu-item agent-option" data-agent-id="' + p.agent_id + '" data-agent-name="' + (p.model_name || p.agent_id) + '" data-agent-source="group">';
           html += '<span class="menu-label">' + (p.model_name || p.agent_id) + '</span>';
           html += '</div>';
         });
@@ -1661,7 +1661,32 @@ async function openAgentSwitch(fromChat = false) {
           localStorage.setItem('sases_agent_' + currentGroupMode + '_' + currentGroupId, currentAgentId || '');
         } catch (e) {}
         window.closeSubpage();
-        document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (智能体)' : '');
+        const _name = opt.dataset.agentName || '';
+        const _btn = document.getElementById('identity-btn');
+        if (_btn) {
+          if (currentAgentId) {
+            _btn.textContent = (_name || currentAgentId).substring(0, 2);
+            _btn.style.background = '#07c160';
+            _btn.style.color = '#fff';
+            _btn.style.borderRadius = '50%';
+            _btn.style.width = '32px';
+            _btn.style.height = '32px';
+            _btn.style.display = 'flex';
+            _btn.style.alignItems = 'center';
+            _btn.style.justifyContent = 'center';
+            _btn.style.fontSize = '11px';
+            _btn.style.fontWeight = '600';
+          } else {
+            _btn.textContent = '🤖';
+            _btn.style.background = 'none';
+            _btn.style.color = '';
+            _btn.style.borderRadius = '';
+            _btn.style.width = '';
+            _btn.style.height = '';
+            _btn.style.fontSize = '';
+          }
+        }
+        document.getElementById('chat-window-title').textContent = currentGroupName + (currentAgentId ? ' (' + (_name || '智能体') + ')' : '');
       });
     });
   } catch (e) {
