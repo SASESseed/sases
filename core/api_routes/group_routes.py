@@ -635,6 +635,60 @@ async def api_transfer_owner(group_id: int, body: TransferOwnerRequest, user_id:
 
 
 
+class InviteConfirmRequest(BaseModel):
+    enabled: bool
+
+
+@router.get("/{group_id}/invite-confirm")
+async def api_get_invite_confirm(group_id: int, user_id: int = Depends(get_current_user)):
+    return {"enabled": group_service.get_invite_confirm(group_id)}
+
+
+@router.post("/{group_id}/invite-confirm")
+async def api_set_invite_confirm(group_id: int, body: InviteConfirmRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.set_invite_confirm(group_id, user_id, body.enabled)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.get("/{group_id}/pending-invites")
+async def api_list_pending_invites(group_id: int, user_id: int = Depends(get_current_user)):
+    rows = group_service.list_pending_invites(group_id, user_id)
+    if rows is None:
+        raise HTTPException(status_code=403, detail="只有群主或管理员可以查看")
+    return {"items": rows}
+
+
+@router.post("/pending-invites/{pending_id}/approve")
+async def api_approve_invite(pending_id: int, body: dict, user_id: int = Depends(get_current_user)):
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute("SELECT group_id FROM group_invite_pending WHERE id=?", (pending_id,))
+        r = cur.fetchone()
+    if not r:
+        raise HTTPException(status_code=404, detail="待批准记录不存在")
+    ok, res = group_service.approve_invite(r['group_id'], user_id, pending_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.post("/pending-invites/{pending_id}/reject")
+async def api_reject_invite(pending_id: int, body: dict, user_id: int = Depends(get_current_user)):
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute("SELECT group_id FROM group_invite_pending WHERE id=?", (pending_id,))
+        r = cur.fetchone()
+    if not r:
+        raise HTTPException(status_code=404, detail="待批准记录不存在")
+    ok, res = group_service.reject_invite(r['group_id'], user_id, pending_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
