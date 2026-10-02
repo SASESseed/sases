@@ -179,6 +179,20 @@ async def periodic_airdrop():
             await asyncio.sleep(3600)
 
 
+async def periodic_task_repush():
+    """每小时重播超过 12 小时未完成的任务"""
+    from .services import group_task_service
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            repushed = await asyncio.to_thread(group_task_service.repush_pending_tasks, 12)
+            if repushed:
+                print(f'[task-repush] 重播 {len(repushed)} 个任务: {repushed}')
+        except Exception as e:
+            print(f'[task-repush] error: {e}')
+            await asyncio.sleep(3600)
+
+
 async def periodic_group_red_packet():
     """每分钟检查群红包时间，到点自动发群福利手气红包"""
     from .services import group_red_packet_service
@@ -256,22 +270,34 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[备份] 启动备份异常: {e}")
 
-    summary_task = asyncio.create_task(periodic_summary_task())
-    debug_task = asyncio.create_task(debug_service.periodic_debug_scan(interval_hours=6, sample_limit=20))
-    rescue_task = asyncio.create_task(periodic_rescue_maintenance())
-    backup_task = asyncio.create_task(backup_service.periodic_backup_task())
-    executor_task = asyncio.create_task(executor_service.start_background_executor())
-    cleanup_task = asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24))
     from .services import state_service as _state_svc
-    _state_task = asyncio.create_task(_state_svc.periodic_state_sync(interval_hours=24))
-    pattern_task = asyncio.create_task(periodic_pattern_finalize())
-    git_push_task = asyncio.create_task(periodic_git_push())
-    airdrop_task = asyncio.create_task(periodic_airdrop())
 
-    group_rp_task = asyncio.create_task(periodic_group_red_packet())
+    # 分组启动所有后台任务
+    _background_tasks = []
 
-    rp_expire_task = asyncio.create_task(periodic_red_packet_expire())
-    syntax_check_task = asyncio.create_task(periodic_syntax_check())
+    # 【秒级】
+    _background_tasks.append(asyncio.create_task(executor_service.start_background_executor()))
+    _background_tasks.append(asyncio.create_task(periodic_syntax_check()))
+
+    # 【分钟级】
+    _background_tasks.append(asyncio.create_task(periodic_rescue_maintenance()))
+    _background_tasks.append(asyncio.create_task(periodic_group_red_packet()))
+    _background_tasks.append(asyncio.create_task(periodic_red_packet_expire()))
+
+    # 【小时级】
+    _background_tasks.append(asyncio.create_task(periodic_summary_task()))
+    _background_tasks.append(asyncio.create_task(debug_service.periodic_debug_scan(interval_hours=6, sample_limit=20)))
+    _background_tasks.append(asyncio.create_task(periodic_pattern_finalize()))
+    _background_tasks.append(asyncio.create_task(periodic_git_push()))
+    _background_tasks.append(asyncio.create_task(periodic_task_repush()))
+
+    # 【日级】
+    _background_tasks.append(asyncio.create_task(backup_service.periodic_backup_task()))
+    _background_tasks.append(asyncio.create_task(cleanup_service.periodic_cleanup(interval_hours=24)))
+    _background_tasks.append(asyncio.create_task(_state_svc.periodic_state_sync(interval_hours=24)))
+    _background_tasks.append(asyncio.create_task(periodic_airdrop()))
+
+    print(f"[bootstrap] 已启动 {len(_background_tasks)} 个后台任务")
 
 
     async def _periodic_restart_watch():
