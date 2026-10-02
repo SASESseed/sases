@@ -881,8 +881,12 @@ async function loadGroupMessages() {
     const container = document.getElementById('chat-messages');
     container.innerHTML = '';
     messages.forEach(msg => {
-      const isSelf = (currentUserId != null && String(msg.sender_id) === String(currentUserId)) ||
-                     (currentAgentId != null && String(msg.sender_agent_id) === String(currentAgentId));
+      let isSelf = false;
+      if (msg.sender_agent_id) {
+        isSelf = currentAgentId != null && String(msg.sender_agent_id) === String(currentAgentId);
+      } else {
+        isSelf = currentUserId != null && String(msg.sender_id) === String(currentUserId);
+      }
       appendGroupMessage(msg.sender_name, msg.content, isSelf);
     });
   } catch (e) {
