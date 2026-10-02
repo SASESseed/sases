@@ -465,7 +465,7 @@ function renderTransferBubble(text) {
 
 export function renderGroupRedPacketBubble(content) {
   let data = {};
-  try { data = JSON.parse(content.substring(12)); } catch (e) {}
+  try { data = JSON.parse(content.substring(13)); } catch (e) {}
   const div = document.createElement('div');
   div.className = 'group-red-packet-bubble';
   div.style.cssText = 'background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
