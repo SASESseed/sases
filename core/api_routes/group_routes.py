@@ -326,7 +326,7 @@ async def api_list_active_group_red_packets(group_id: int, user_id: int = Depend
         cur.execute('SELECT id FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
         if not cur.fetchone():
             raise HTTPException(status_code=403, detail='你不是群成员')
-        cur.execute("SELECT id, sender_id, total_amount, total_count, claimed_count, packet_type, source_type, message, created_at, expires_at FROM group_red_packets WHERE group_id=? AND status='active' AND (expires_at IS NULL OR expires_at > ?) ORDER BY id DESC", (group_id, now))
+        cur.execute("SELECT id, sender_id, total_amount, total_count, claimed_count, packet_type, source_type, message, created_at, expires_at FROM group_red_packets WHERE group_id=? AND status='active' AND (expires_at IS NULL OR expires_at > ?) AND id NOT IN (SELECT packet_id FROM group_red_packet_claims WHERE user_id=?) ORDER BY id DESC", (group_id, now, user_id))
         rows = [dict(r) for r in cur.fetchall()]
     return {'packets': rows}
 
