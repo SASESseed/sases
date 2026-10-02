@@ -466,14 +466,18 @@ function renderTransferBubble(text) {
 export function renderGroupRedPacketBubble(content) {
   let data = {};
   try { data = JSON.parse(content.substring(13)); } catch (e) {}
+  const isPool = data.source_type === 'group_pool';
   const div = document.createElement('div');
   div.className = 'group-red-packet-bubble';
-  div.style.cssText = 'background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
+  const bg = isPool
+    ? 'linear-gradient(135deg,#8b5cf6,#6366f1)'
+    : 'linear-gradient(135deg,#f59e0b,#ef4444)';
+  div.style.cssText = 'background:' + bg + ';color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;min-width:220px;';
   div.dataset.packetId = data.packet_id || '';
   const t1 = document.createElement('div');
   t1.style.fontSize = '13px';
   t1.style.opacity = '0.9';
-  t1.textContent = '🧧 群红包';
+  t1.textContent = isPool ? '🎁 群福利红包' : '🧧 群红包';
   div.appendChild(t1);
   const t2 = document.createElement('div');
   t2.style.fontSize = '20px';
@@ -485,7 +489,7 @@ export function renderGroupRedPacketBubble(content) {
   t3.style.fontSize = '12px';
   t3.style.opacity = '0.85';
   t3.style.marginTop = '4px';
-  t3.textContent = '共 ' + (data.total_count || 0) + ' 份';
+  t3.textContent = '共 ' + (data.total_count || 0) + ' 份' + (isPool ? ' · 群池出资' : '');
   div.appendChild(t3);
   if (data.message) {
     const t4 = document.createElement('div');
@@ -500,6 +504,7 @@ export function renderGroupRedPacketBubble(content) {
   };
   return div;
 }
+
 
 
 
