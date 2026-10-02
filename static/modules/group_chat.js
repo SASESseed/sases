@@ -117,7 +117,15 @@ export async function openGroupChat(groupId, groupName) {
         try {
           const d = JSON.parse(e.data);
           if (d && d.type === 'message') {
-            loadGroupMessages();
+            // 自己发的消息已乐观渲染，跳过
+            if (d.sender_id && String(d.sender_id) === String(currentUserId) && !d.sender_agent_id) {
+              return;
+            }
+            // 增量追加
+            const _container = document.getElementById('chat-messages');
+            if (_container) {
+              appendGroupMessage(d.sender_name || '?', d.content, false);
+            }
           }
         } catch (err) {}
       };
