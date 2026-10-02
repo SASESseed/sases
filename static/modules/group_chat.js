@@ -200,6 +200,25 @@ function appendGroupMessage(senderName, content, isSelf = false) {
     });
     bubble.style.display = 'none';
     _rendered = true;
+  } else if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) {
+    let _rp_data = {};
+    try { _rp_data = JSON.parse(content.substring(12)); } catch (e) {}
+    if (_rp_data.packet_id) {
+      import('./chat_ui.js').then(m => {
+        if (typeof m.renderGroupRedPacketBubble === 'function') {
+          const node = m.renderGroupRedPacketBubble(content);
+          if (node && node.nodeType) {
+            bubble.innerHTML = '';
+            bubble.style.padding = '0';
+            bubble.style.background = 'transparent';
+            bubble.style.border = 'none';
+            bubble.appendChild(node);
+          }
+        }
+      });
+      _rendered = true;
+    }
+
   } else if (typeof content === 'string' && content.startsWith('[RED_PACKET_DONE]:')) {
     import('./chat_ui.js').then(m => {
       if (typeof m.renderRedPacketDoneBubble === 'function') {
