@@ -455,13 +455,16 @@ def distribute_group_red_packet(group_id, user_id, total_amount=None, total_coun
     """群主发放群福利手气红包（从群池扣分）"""
     from . import group_red_packet_service
     with db_cursor() as cur:
-        cur.execute('SELECT owner_id, credits FROM groups WHERE id=?', (group_id,))
+        cur.execute('SELECT owner_id, credits, staked_credits FROM groups WHERE id=?', (group_id,))
         row = cur.fetchone()
         if not row or row['owner_id'] != user_id:
             return False, '只有群主可以发群福利'
         pool = row['credits'] or 0
-        if pool < 100:
-            return False, '群池可用余额不足 100'
+        total_pool = pool + (row['staked_credits'] or 0)
+        if total_pool < 1000:
+            return False, '群积分总值不足 1000'
+        if pool <= 0:
+            return False, '群池可用余额为空'
     if total_amount is None:
         total_amount = round(pool * 0.1, 2)
         if total_amount < 1:
