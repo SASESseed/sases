@@ -257,7 +257,7 @@ def send_group_message(group_id: int, sender_id: int, content: str, sender_agent
                 cur.execute("SELECT id FROM group_resource_pool WHERE group_id=? AND agent_id=? AND enabled=1", (group_id, sender_agent_id))
                 if not cur.fetchone():
                     return False, "智能体不在群中"
-            cur.execute("INSERT INTO group_messages (group_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?)", (group_id, sender_agent_id, content, _global_msg_id, _cfg.HIVE_NODE_ID if _global_msg_id else None))
+            cur.execute("INSERT INTO group_messages (group_id, sender_id, sender_agent_id, content, global_msg_id, origin_node) VALUES (?, ?, ?, ?, ?, ?)", (group_id, sender_id, sender_agent_id, content, _global_msg_id, _cfg.HIVE_NODE_ID if _global_msg_id else None))
         else:
             cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, sender_id))
             if not cur.fetchone():
