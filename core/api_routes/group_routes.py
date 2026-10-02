@@ -581,6 +581,29 @@ async def api_set_member_role(group_id: int, body: SetMemberRoleRequest, user_id
 
 
 
+class GroupAiSuggestRequest(BaseModel):
+    agent_id: str
+    question: str
+
+
+@router.post("/{group_id}/ai-suggest")
+async def api_group_ai_suggest(group_id: int, body: GroupAiSuggestRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="你不是群成员")
+        cur.execute("SELECT id FROM group_resource_pool WHERE group_id=? AND agent_id=? AND enabled=1", (group_id, body.agent_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="该智能体未共享给本群")
+    ok, reply = await group_resource_service.call_agent_with_group_resource(group_id, user_id, body.agent_id, body.question)
+    if not ok:
+        raise HTTPException(status_code=400, detail=reply)
+    return {"response": reply}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
