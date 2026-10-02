@@ -1027,6 +1027,53 @@ window.openGroupAgentPickerForReply = async function(quotedText, groupId) {
 };
 
 
+window.openGroupFiles = async function(groupId) {
+  let files = [];
+  try {
+    const resp = await fetch('/group/' + groupId + '/files', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    });
+    const data = await resp.json();
+    if (data.error || data.detail) { alert('加载失败：' + (data.error || data.detail)); return; }
+    files = data.files || [];
+  } catch (e) { alert('网络错误：' + e.message); return; }
+
+  const fmtSize = (s) => {
+    const n = parseInt(s) || 0;
+    if (n < 1024) return n + 'B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
+    return (n / 1024 / 1024).toFixed(1) + 'MB';
+  };
+
+  let listHtml = '';
+  if (files.length === 0) {
+    listHtml = '<div class="subpage-placeholder">暂无群文件</div>';
+  } else {
+    files.forEach(f => {
+      listHtml += '<div class="me-menu-item group-file-item" data-url="' + f.url + '" style="cursor:pointer;">';
+      listHtml += '<div style="flex:1;min-width:0;">';
+      listHtml += '<div style="font-size:14px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📎 ' + (f.name || '文件') + '</div>';
+      listHtml += '<div style="font-size:12px;color:#999;margin-top:2px;">' + (f.sender_name || '群友') + ' · ' + fmtSize(f.size) + '</div>';
+      listHtml += '</div>';
+      listHtml += '<span class="menu-arrow">›</span>';
+      listHtml += '</div>';
+    });
+  }
+
+  const html = '<div class="me-menu">' + listHtml + '</div>';
+  window.openSubpage('群文件', html, {
+    showMore: false,
+    returnAction: () => openGroupSettings()
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.group-file-item').forEach(el => {
+      el.onclick = () => window.open(el.dataset.url, '_blank');
+    });
+  }, 100);
+};
+
+
 async function loadGroupMessages() {
   try {
     const data = await api.getGroupMessages(currentGroupId);
@@ -1443,6 +1490,7 @@ async function openGroupSettings() {
         <div class="me-menu-item" id="swarm-config-entry" style="display:none;"><span class="menu-label">蜂群模式管理</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-manage-entry" style="display:none;"><span class="menu-label">群管理</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-report-entry" style="display:none;"><span class="menu-label">群汇报</span><span class="menu-value" id="group-report-count">0</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="group-files-entry"><span class="menu-label">群文件</span><span class="menu-arrow">›</span></div>
       </div>
       <div class="me-menu">
         <div class="me-menu-item" id="clear-history-entry"><span class="menu-label">清空聊天记录</span></div>
