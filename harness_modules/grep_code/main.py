@@ -18,6 +18,8 @@ def _iter_files(root, rel_base, file_ext):
     for dirpath, dirnames, filenames in os.walk(_full_base):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fn in filenames:
+            if any(m in fn for m in SKIP_NAME_MARKERS):
+                continue
             ext = os.path.splitext(fn)[1].lower()
             if ext in SKIP_EXT:
                 continue
