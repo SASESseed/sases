@@ -667,19 +667,25 @@ def transfer_owner(group_id, current_owner_id, target_username_or_id):
     """群主转让：原群主 → admin，新群主 → owner"""
     if not _is_owner(group_id, current_owner_id):
         return False, '只有群主可以转让管理权'
-    # 解析目标用户
+    # 解析目标用户：先按 username/sases_id 查，再尝试 ID
     target_uid = None
-    try:
-        target_uid = int(target_username_or_id)
-    except (ValueError, TypeError):
-        pass
     with db_cursor() as cur:
-        if target_uid is None:
-            cur.execute('SELECT id FROM users WHERE username=? OR sases_id=?', (target_username_or_id, target_username_or_id))
-            u = cur.fetchone()
-            if not u:
-                return False, '用户不存在'
+        cur.execute('SELECT id FROM users WHERE username=? OR sases_id=?', (target_username_or_id, target_username_or_id))
+        u = cur.fetchone()
+        if u:
             target_uid = u['id']
+        else:
+            try:
+                _try_id = int(target_username_or_id)
+                cur.execute('SELECT id FROM users WHERE id=?', (_try_id,))
+                u2 = cur.fetchone()
+                if u2:
+                    target_uid = u2['id']
+            except (ValueError, TypeError):
+                pass
+        if target_uid is None:
+            return False, '用户不存在'
+    with db_cursor() as cur:
         if target_uid == current_owner_id:
             return False, '不能转让给自己'
         cur.execute('SELECT role FROM group_members WHERE group_id=? AND user_id=?', (group_id, target_uid))

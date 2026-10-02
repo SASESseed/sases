@@ -836,7 +836,7 @@ window.openGroupManage = async function(groupId) {
     if (qr) qr.onclick = () => alert('群二维码开发中');
 
     const tr = document.getElementById('gm-transfer');
-    if (tr) tr.onclick = () => alert('群主转让开发中');
+    if (tr) tr.onclick = () => { if (typeof window.openTransferOwnerDialog === 'function') window.openTransferOwnerDialog(groupId); else alert('群主转让开发中'); };
 
     const rl = document.getElementById('gm-remove-log');
     if (rl) rl.onclick = () => alert('移出记录开发中');
