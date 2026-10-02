@@ -269,6 +269,8 @@ async def lifespan(app: FastAPI):
     airdrop_task = asyncio.create_task(periodic_airdrop())
 
     group_rp_task = asyncio.create_task(periodic_group_red_packet())
+
+    rp_expire_task = asyncio.create_task(periodic_red_packet_expire())
     syntax_check_task = asyncio.create_task(periodic_syntax_check())
 
 
