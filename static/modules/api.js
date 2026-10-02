@@ -321,6 +321,8 @@ export const api = {
   getGroupMessages: (group_id) => request(`/group/${group_id}/messages`),
 
   getGroupTasks: (group_id, status) => request(`/group/${group_id}/tasks${status ? '?status=' + status : ''}`),
+
+  getActiveGroupRedPackets: (group_id) => request(`/group/${group_id}/red-packets/active`),
   sendGroupMessage: (group_id, content, agent_id = null) => request(`/group/${group_id}/messages`, { method: 'POST', body: JSON.stringify({ content, agent_id }) }),
   getGroupMembers: (group_id) => request(`/group/${group_id}/members`),
   getGroupCredits: (group_id) => request(`/group/${group_id}/credits`),
