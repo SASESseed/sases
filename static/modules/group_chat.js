@@ -1389,6 +1389,7 @@ async function openGroupSettings() {
 
         <div class="me-menu-item" id="swarm-config-entry" style="display:none;"><span class="menu-label">蜂群模式管理</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-manage-entry" style="display:none;"><span class="menu-label">群管理</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="group-report-entry" style="display:none;"><span class="menu-label">群汇报</span><span class="menu-value" id="group-report-count">0</span><span class="menu-arrow">›</span></div>
       </div>
       <div class="me-menu">
         <div class="me-menu-item" id="clear-history-entry"><span class="menu-label">清空聊天记录</span></div>
@@ -1499,6 +1500,30 @@ async function openGroupSettings() {
       });
     } else {
       _gmEntry.style.display = 'none';
+    }
+  }
+
+  // 群汇报（群主/管理员可见）
+  const _grEntry = document.getElementById('group-report-entry');
+  if (_grEntry) {
+    if (_isOwnerOrAdmin) {
+      _grEntry.style.display = '';
+      _grEntry.addEventListener('click', () => {
+        if (typeof window.openGroupReportQueue === 'function') {
+          window.openGroupReportQueue(currentGroupId);
+        } else {
+          alert('群汇报开发中');
+        }
+      });
+      fetch('/group/' + currentGroupId + '/report-queue?status=pending', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      }).then(r => r.json()).then(d => {
+        const n = (d.items || []).length;
+        const cnt = document.getElementById('group-report-count');
+        if (cnt) cnt.textContent = n;
+      }).catch(() => {});
+    } else {
+      _grEntry.style.display = 'none';
     }
   }
 }
