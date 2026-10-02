@@ -405,6 +405,24 @@ def init_db():
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_grp_pool_agent ON group_resource_pool(group_id, agent_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_pool_model ON group_resource_pool(model_id)")
 
+
+        # ========== 待批准邀请 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_invite_pending (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                inviter_id INTEGER NOT NULL,
+                invitee TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                resolved_at TEXT,
+                resolved_by INTEGER
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_invite_status ON group_invite_pending(group_id, status)")
+
+
+
         # ========== 群资源使用日志 ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS group_resource_usage (
