@@ -1113,10 +1113,15 @@ function appendGroupMessage(senderName, content, isSelf = false) {
     import('./chat_ui.js').then(m => {
       if (typeof m.renderImageBubble === 'function') {
         const node = m.renderImageBubble(content, isSelf ? 'user' : 'assistant', senderName);
-        if (node && node.nodeType) messages.appendChild(node);
+        if (node && node.nodeType) {
+          bubble.innerHTML = '';
+          bubble.style.padding = '0';
+          bubble.style.background = 'transparent';
+          bubble.style.border = 'none';
+          bubble.appendChild(node);
+        }
       }
     });
-    bubble.style.display = 'none';
     _rendered = true;
   } else if (typeof content === 'string' && content.startsWith('[RED_PACKET]:')) {
     let _rp_data = {};
