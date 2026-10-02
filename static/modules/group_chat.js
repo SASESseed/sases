@@ -1133,6 +1133,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
+          messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1169,6 +1170,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
+          messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1184,6 +1186,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
+          messages.scrollTop = messages.scrollHeight;
         }
       }
     });
@@ -1199,6 +1202,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
           bubble.style.background = 'transparent';
           bubble.style.border = 'none';
           bubble.appendChild(node);
+          messages.scrollTop = messages.scrollHeight;
         }
       }
     });
