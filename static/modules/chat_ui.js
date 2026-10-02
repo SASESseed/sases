@@ -494,6 +494,32 @@ export function renderTaskCardBubble(content) {
 }
 
 
+export function renderRedPacketDoneBubble(content) {
+  let data = {};
+  try { data = JSON.parse(content.substring(19)); } catch (e) {}
+  const div = document.createElement('div');
+  div.style.cssText = 'background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:12px 16px;border-radius:12px;min-width:220px;';
+  const t1 = document.createElement('div');
+  t1.style.fontSize = '13px';
+  t1.style.opacity = '0.9';
+  t1.textContent = '群红包已发放';
+  div.appendChild(t1);
+  const t2 = document.createElement('div');
+  t2.style.fontSize = '20px';
+  t2.style.fontWeight = '700';
+  t2.style.marginTop = '6px';
+  t2.textContent = '共 ' + (data.total || 0) + ' 积分';
+  div.appendChild(t2);
+  const t3 = document.createElement('div');
+  t3.style.fontSize = '12px';
+  t3.style.opacity = '0.9';
+  t3.style.marginTop = '4px';
+  t3.textContent = '已均分给 ' + (data.recipients || 0) + ' 位成员，人均 ' + (data.per_person || 0);
+  div.appendChild(t3);
+  return div;
+}
+
+
 export function updateMessageStatus(messageId, status) {
   const wrapper = document.querySelector(`[data-message-id="${messageId}"]`);
   if (!wrapper) return;
