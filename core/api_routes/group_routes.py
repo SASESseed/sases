@@ -282,6 +282,48 @@ async def api_config_red_packet(group_id: int, body: RedPacketConfigRequest, use
 @router.post("/{group_id}/red-packet/send")
 async def api_send_red_packet(group_id: int, user_id: int = Depends(get_current_user)):
     ok, res = group_service.distribute_group_red_packet(group_id, user_id)
+class GroupRedPacketCreateRequest(BaseModel):
+    total_amount: float
+    total_count: int
+    message: str = ''
+    source_type: str = 'user'
+
+
+@router.post("/{group_id}/red-packets/create")
+async def api_create_group_red_packet(group_id: int, body: GroupRedPacketCreateRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_red_packet_service
+    ok, res = group_red_packet_service.create_packet(group_id, user_id, body.total_amount, body.total_count, body.message, body.source_type)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.post("/red-packets/{packet_id}/claim")
+async def api_claim_group_red_packet(packet_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_red_packet_service
+    ok, res = group_red_packet_service.claim_packet(packet_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.get("/red-packets/{packet_id}")
+async def api_get_group_red_packet(packet_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_red_packet_service
+    detail = group_red_packet_service.get_packet_detail(packet_id, user_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="红包不存在")
+    return detail
+
+
+@router.post("/red-packets/expire")
+async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
+    from ..services import group_red_packet_service
+    expired = group_red_packet_service.expire_packets()
+    return {"expired": expired, "count": len(expired)}
+
+
+
     if not ok:
         raise HTTPException(status_code=400, detail=res)
     return res
