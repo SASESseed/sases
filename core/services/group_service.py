@@ -93,7 +93,7 @@ def invite_to_group(group_id: int, inviter_id: int, invitee: str):
             if cur.fetchone():
                 return False, "智能体已在群中"
             with db_cursor(commit=True) as cur2:
-                cur2.execute("INSERT INTO group_members (group_id, agent_id, role, origin_node) VALUES (?, ?, 'agent', ?)", (group_id, agent_id, _origin))
+                cur2.execute("INSERT INTO group_members (group_id, user_id, agent_id, role, origin_node) VALUES (?, ?, ?, 'agent', ?)", (group_id, inviter_id, agent_id, _origin))
             return True, "邀请智能体成功"
 
         return False, "找不到该用户或智能体，或智能体不属于你"

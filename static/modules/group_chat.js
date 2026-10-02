@@ -777,6 +777,13 @@ window.openGroupManage = async function(groupId) {
     <div class="me-menu" id="gm-admins-list">
       ${adminsHtml}
     </div>
+    <div class="me-menu">
+      <div class="me-menu-item" id="gm-pending-invites" style="cursor:pointer;">
+        <span class="menu-label">待批准邀请</span>
+        <span class="menu-value" id="gm-pending-count">0</span>
+        <span class="menu-arrow">›</span>
+      </div>
+    </div>
     ${isOwner ? '<div class="me-menu"><div class="me-menu-item" id="gm-add-admin" style="cursor:pointer;"><span class="menu-label" style="color:#007aff;">+ 添加管理员</span></div></div>' : ''}
     <div class="me-menu">
       <div class="me-menu-item" id="gm-qrcode" style="cursor:pointer;">
@@ -806,7 +813,45 @@ window.openGroupManage = async function(groupId) {
     if (ann) ann.onclick = () => alert('群公告开发中');
 
     const inv = document.getElementById('gm-invite-confirm');
-    if (inv) inv.onclick = () => alert('邀请确认开关开发中');
+    if (inv) inv.onclick = async () => {
+      const sw = inv.querySelector('.switch');
+      const cur = sw && sw.classList.contains('on');
+      try {
+        const resp = await fetch('/group/' + groupId + '/invite-confirm', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: !cur })
+        });
+        const data = await resp.json();
+        if (data.error || data.detail) { alert('切换失败：' + (data.error || data.detail)); return; }
+        if (sw) {
+          if (data.invite_confirm) sw.classList.add('on'); else sw.classList.remove('on');
+        }
+      } catch (e) { alert('网络错误：' + e.message); }
+    };
+    // 读取当前开关状态
+    fetch('/group/' + groupId + '/invite-confirm', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+    }).then(r => r.json()).then(d => {
+      const sw = inv && inv.querySelector('.switch');
+      if (sw) {
+        if (d.enabled) sw.classList.add('on'); else sw.classList.remove('on');
+      }
+    }).catch(() => {});
+
+    const pendingInv = document.getElementById('gm-pending-invites');
+    if (pendingInv) {
+      pendingInv.onclick = () => {
+        if (typeof window.openPendingInvites === 'function') window.openPendingInvites(groupId);
+      };
+      fetch('/group/' + groupId + '/pending-invites', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      }).then(r => r.json()).then(d => {
+        const n = (d.items || []).length;
+        const cnt = document.getElementById('gm-pending-count');
+        if (cnt) cnt.textContent = n;
+      }).catch(() => {});
+    }
 
     const addAdmin = document.getElementById('gm-add-admin');
     if (addAdmin) {
