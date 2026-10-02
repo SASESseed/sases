@@ -102,11 +102,16 @@ async def send_group_message(group_id: int, body: GroupMessageRequest, user_id: 
             cur.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
             _r = cur.fetchone()
         if _r and _r['global_group_id']:
+            with db_cursor() as _cur_n:
+                _cur_n.execute('SELECT username FROM users WHERE id=?', (user_id,))
+                _u_n = _cur_n.fetchone()
+                _sname = _u_n['username'] if _u_n else '?'
             await broadcast_to_group(_r['global_group_id'], {
                 'type': 'message',
                 'content': body.content,
                 'sender_id': user_id,
                 'sender_agent_id': body.agent_id,
+                'sender_name': _sname,
             })
     except Exception as _e:
         print('[ws] push failed:', _e)
