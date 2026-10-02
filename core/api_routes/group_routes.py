@@ -622,6 +622,19 @@ async def api_set_announcement(group_id: int, body: AnnouncementRequest, user_id
 
 
 
+class TransferOwnerRequest(BaseModel):
+    username_or_id: str
+
+
+@router.post("/{group_id}/transfer-owner")
+async def api_transfer_owner(group_id: int, body: TransferOwnerRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.transfer_owner(group_id, user_id, body.username_or_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
