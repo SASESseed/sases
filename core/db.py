@@ -347,6 +347,49 @@ def init_db():
         _ensure_column(cur, "group_messages", "extra_data", "TEXT")
 
 
+        # ========== 统一知识库文档表（群知识库/工具手册/项目文档） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS knowledge_docs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scope TEXT NOT NULL DEFAULT 'group',
+                group_id INTEGER,
+                title TEXT,
+                content TEXT NOT NULL,
+                category TEXT DEFAULT 'doc',
+                tags TEXT,
+                source_type TEXT DEFAULT 'manual',
+                source_id TEXT,
+                contributor_id INTEGER,
+                hit_count INTEGER DEFAULT 0,
+                visibility TEXT DEFAULT 'group',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_kdocs_scope_group ON knowledge_docs(scope, group_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_kdocs_category ON knowledge_docs(category)")
+
+        # ========== 群汇报队列（待补充的知识缺口） ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_report_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                asked_by INTEGER,
+                anonymous INTEGER DEFAULT 0,
+                hit_knowledge_id INTEGER,
+                status TEXT DEFAULT 'pending',
+                resolved_kb_id INTEGER,
+                resolved_by INTEGER,
+                resolved_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grq_group_status ON group_report_queue(group_id, status)")
+
+
+
+
         # ========== 群红包主表 ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS group_red_packets (

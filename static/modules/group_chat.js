@@ -709,6 +709,12 @@ async function openGroupSettings() {
         <div class="me-menu-item" id="group-credits-entry"><span class="menu-label">群积分</span><span class="menu-value" id="group-credits-balance">0</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-leaderboard-entry"><span class="menu-label">群排行榜</span><span class="menu-arrow">›</span></div>
       </div>
+
+      <div class="me-menu">
+        <div class="me-menu-item" id="group-knowledge-entry"><span class="menu-icon">📚</span><span class="menu-label">群知识库</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="swarm-config-entry" style="display:none;"><span class="menu-icon">⚙️</span><span class="menu-label">蜂群模式管理</span><span class="menu-arrow">›</span></div>
+        <div class="me-menu-item" id="group-manage-entry" style="display:none;"><span class="menu-icon">👥</span><span class="menu-label">群管理</span><span class="menu-arrow">›</span></div>
+      </div>
       <div class="me-menu">
         <div class="me-menu-item" id="clear-history-entry"><span class="menu-label">清空聊天记录</span></div>
         <div class="me-menu-item danger" id="leave-group-entry"><span class="menu-label">退出群聊</span></div>
@@ -752,6 +758,65 @@ async function openGroupSettings() {
 
   const leaveGroupEntry = document.getElementById('leave-group-entry');
   if (leaveGroupEntry) leaveGroupEntry.addEventListener('click', leaveGroup);
+
+  // 权限判断：群主/管理员
+  let _isOwnerOrAdmin = false;
+  let _isOwner = false;
+  try {
+    const _grpInfo = await api.getGroupInfo(currentGroupId);
+    if (_grpInfo && _grpInfo.owner_id != null) {
+      _isOwner = String(_grpInfo.owner_id) === String(currentUserId);
+      // 管理员判断：role='admin'（若后端支持）
+      // 当前先只判断群主，管理员后续扩展
+      _isOwnerOrAdmin = _isOwner;
+    }
+  } catch (e) {}
+
+  // 群知识库（所有成员可见）
+  const _gkEntry = document.getElementById('group-knowledge-entry');
+  if (_gkEntry) {
+    _gkEntry.addEventListener('click', () => {
+      if (typeof window.openGroupKnowledge === 'function') {
+        window.openGroupKnowledge(currentGroupId);
+      } else {
+        alert('群知识库开发中');
+      }
+    });
+  }
+
+  // 蜂群模式管理（仅群主可见）
+  const _scEntry = document.getElementById('swarm-config-entry');
+  if (_scEntry) {
+    if (_isOwner) {
+      _scEntry.style.display = '';
+      _scEntry.addEventListener('click', () => {
+        if (typeof window.openSwarmConfig === 'function') {
+          window.openSwarmConfig(currentGroupId);
+        } else {
+          alert('蜂群模式管理开发中');
+        }
+      });
+    } else {
+      _scEntry.style.display = 'none';
+    }
+  }
+
+  // 群管理（群主/管理员可见）
+  const _gmEntry = document.getElementById('group-manage-entry');
+  if (_gmEntry) {
+    if (_isOwnerOrAdmin) {
+      _gmEntry.style.display = '';
+      _gmEntry.addEventListener('click', () => {
+        if (typeof window.openGroupManage === 'function') {
+          window.openGroupManage(currentGroupId);
+        } else {
+          alert('群管理开发中');
+        }
+      });
+    } else {
+      _gmEntry.style.display = 'none';
+    }
+  }
 }
 
 async function loadGroupCredits() {
@@ -1052,7 +1117,86 @@ function sendRedPacketNow() {
 
 
 
-function openGroupLeaderboard() { alert('群排行榜开发中'); }
+async function openGroupLeaderboard() {
+  const tabs = [
+    { key: 'contribution', label: '贡献榜' },
+    { key: 'task', label: '任务榜' },
+    { key: 'redpacket', label: '红包榜' }
+  ];
+  let currentType = 'contribution';
+  let cache = {};
+
+  const renderList = (items) => {
+    if (!items || items.length === 0) {
+      return '<div style="text-align:center;color:#999;padding:40px 0;">暂无数据</div>';
+    }
+    let html = '<div style="padding:8px 12px;">';
+    items.forEach((it, idx) => {
+      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1) + '';
+      html += '<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f5;">';
+      html += '<div style="width:36px;text-align:center;font-size:' + (idx < 3 ? '20px' : '14px') + ';color:' + (idx < 3 ? '#333' : '#999') + ';">' + medal + '</div>';
+      html += '<div style="flex:1;margin-left:12px;font-size:14px;color:#333;">' + (it.username || '匿名') + '</div>';
+      html += '<div style="font-size:14px;color:#f59e0b;font-weight:600;">' + (it.score || 0) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  };
+
+  const loadData = async (type) => {
+    if (cache[type]) return cache[type];
+    try {
+      const resp = await fetch('/group/' + currentGroupId + '/leaderboard?type=' + type, {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      });
+      const data = await resp.json();
+      cache[type] = data.leaderboard || [];
+      return cache[type];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const renderTabs = () => {
+    return tabs.map(t =>
+      '<div class="lb-tab" data-type="' + t.key + '" style="flex:1;text-align:center;padding:10px 0;font-size:14px;cursor:pointer;">' + t.label + '</div>'
+    ).join('');
+  };
+
+  const renderPage = async () => {
+    const items = await loadData(currentType);
+    const contentHtml = `
+      <div>
+        <div style="display:flex;border-bottom:1px solid #eee;background:#fff;">${renderTabs()}</div>
+        <div id="lb-list">${renderList(items)}</div>
+      </div>
+    `;
+    window.openSubpage('群排行榜', contentHtml, { showMore: false });
+    setTimeout(() => {
+      document.querySelectorAll('.lb-tab').forEach(el => {
+        const t = el.dataset.type;
+        const active = t === currentType;
+        el.style.color = active ? '#007aff' : '#666';
+        el.style.fontWeight = active ? '600' : '400';
+        el.style.borderBottom = active ? '2px solid #007aff' : 'none';
+        el.onclick = async () => {
+          currentType = t;
+          const newItems = await loadData(t);
+          document.getElementById('lb-list').innerHTML = renderList(newItems);
+          document.querySelectorAll('.lb-tab').forEach(e => {
+            const tt = e.dataset.type;
+            const a = tt === currentType;
+            e.style.color = a ? '#007aff' : '#666';
+            e.style.fontWeight = a ? '600' : '400';
+            e.style.borderBottom = a ? '2px solid #007aff' : 'none';
+          });
+        };
+      });
+    }, 100);
+  };
+
+  await renderPage();
+}
 function clearGroupHistory() {
   if (!confirm('确定清空本群聊天记录（仅你的视角）？')) return;
   alert('清空功能开发中');
