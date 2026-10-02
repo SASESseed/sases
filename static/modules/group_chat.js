@@ -1374,6 +1374,7 @@ export async function sendGroupMessage() {
       }
       if (content) {
         await api.sendGroupMessage(currentGroupId, content, currentAgentId);
+        appendGroupMessage('我', content, true);
       }
     }
     if (text) {
