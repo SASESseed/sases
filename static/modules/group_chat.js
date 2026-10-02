@@ -2011,7 +2011,7 @@ async function openGroupCreditsDetail() {
       • 可用余额满 1000 可发群红包
     </div>
   `;
-  window.openSubpage('群积分', contentHtml, { showMore: false });
+  window.openSubpage('群积分', contentHtml, { showMore: false, returnAction: () => openGroupSettings() });
   setTimeout(() => {
     const stake = document.getElementById('gc-stake-entry');
     if (stake) stake.onclick = openGroupStakeDialog;
@@ -2033,7 +2033,7 @@ function openGroupStakeDialog() {
     </div>
     <button class="save-btn" id="gc-stake-submit">质押</button>
   `;
-  window.openSubpage('质押积分', contentHtml);
+  window.openSubpage('质押积分', contentHtml, { returnAction: () => openGroupCreditsDetail() });
   setTimeout(() => {
     const btn = document.getElementById('gc-stake-submit');
     if (!btn) return;

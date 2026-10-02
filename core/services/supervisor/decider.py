@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from ...db import db_cursor
 from .constants import USE_STRUCTURED_REVIEW
+from .runs import get_run
 
 def build_next_input(run_id):
     run = get_run(run_id)
