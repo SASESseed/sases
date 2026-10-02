@@ -235,6 +235,28 @@ async def api_publish_task(group_id: int, body: TaskPublishRequest, user_id: int
     ok, res = group_task_service.publish_task(group_id, user_id, body.title, body.description, body.category, body.reward)
     if not ok:
         raise HTTPException(status_code=400, detail=res)
+    try:
+        import json as _json_b
+        from .ws_routes import broadcast_to_group
+        from ..db import db_cursor as _dc_b
+        with _dc_b() as _cur_b:
+            _cur_b.execute("SELECT global_group_id FROM groups WHERE id=?", (group_id,))
+            _r_b = _cur_b.fetchone()
+        if _r_b and _r_b['global_group_id']:
+            await broadcast_to_group(_r_b['global_group_id'], {
+                'type': 'message',
+                'content': '[TASK_CARD]:' + _json_b.dumps({
+                    'task_id': res['task_id'],
+                    'title': body.title,
+                    'reward': body.reward,
+                    'status': 'open'
+                }, ensure_ascii=False),
+                'sender_id': None,
+                'sender_agent_id': None,
+                'sender_name': '系统'
+            })
+    except Exception as _e_b:
+        print('[ws] publish broadcast failed:', _e_b)
     return res
 
 
