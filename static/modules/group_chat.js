@@ -1604,6 +1604,18 @@ async function openGroupSettings() {
     }
   }
 
+  // 群文件（所有成员可见）
+  const _gfEntry = document.getElementById('group-files-entry');
+  if (_gfEntry) {
+    _gfEntry.addEventListener('click', () => {
+      if (typeof window.openGroupFiles === 'function') {
+        window.openGroupFiles(currentGroupId);
+      } else {
+        alert('群文件开发中');
+      }
+    });
+  }
+
   // 群汇报（群主/管理员可见）
   const _grEntry = document.getElementById('group-report-entry');
   if (_grEntry) {
