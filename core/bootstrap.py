@@ -217,6 +217,19 @@ async def periodic_group_red_packet():
         await asyncio.sleep(60)
 
 
+async def periodic_red_packet_expire():
+    """每小时检查过期红包并退款"""
+    from .services import group_red_packet_service
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            expired = await asyncio.to_thread(group_red_packet_service.expire_packets)
+            if expired:
+                print(f'[rp-expire] 退回 {len(expired)} 个过期红包: {expired}')
+        except Exception as e:
+            print(f'[rp-expire] error: {e}')
+            await asyncio.sleep(3600)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(supervisor_service.resume_restart_pending_runs())
