@@ -57,7 +57,7 @@ export async function openGroupChat(groupId, groupName) {
     const _newBtn = identityBtn.cloneNode(true);
     identityBtn.parentNode.replaceChild(_newBtn, identityBtn);
     identityBtn = _newBtn;
-    identityBtn.onclick = openAgentSwitch;
+    identityBtn.onclick = () => openAgentSwitch(true);
   }
 
   const modeBtn = document.getElementById('chat-mode-btn');
