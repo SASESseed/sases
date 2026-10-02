@@ -436,39 +436,37 @@ def configure_red_packet(group_id, user_id, hour, audience):
     return True, {'hour': hour, 'audience': audience}
 
 
-def distribute_group_red_packet(group_id, user_id):
-    """群主发放群红包（群池可用余额均分）"""
+def distribute_group_red_packet(group_id, user_id, total_amount=None, total_count=None):
+    """群主发放群福利手气红包（从群池扣分）"""
+    from . import group_red_packet_service
     with db_cursor() as cur:
-        cur.execute('SELECT owner_id, credits, red_packet_audience FROM groups WHERE id=?', (group_id,))
+        cur.execute('SELECT owner_id, credits FROM groups WHERE id=?', (group_id,))
         row = cur.fetchone()
         if not row or row['owner_id'] != user_id:
-            return False, '只有群主可以发红包'
-        total = row['credits'] or 0
-        if total < 1000:
-            return False, '群池可用余额不足 1000'
-        audience = row['red_packet_audience'] or 'all'
-        if audience == 'stakers':
-            cur.execute("SELECT DISTINCT user_id FROM group_stakes WHERE group_id=? AND status='active'", (group_id,))
-        else:
-            cur.execute('SELECT user_id FROM group_members WHERE group_id=?', (group_id,))
-        users = [r['user_id'] for r in cur.fetchall() if r['user_id']]
-    if not users:
-        return False, '没有可领取的成员'
-    per = round(total / len(users), 2)
+            return False, '只有群主可以发群福利'
+        pool = row['credits'] or 0
+        if pool < 100:
+            return False, '群池可用余额不足 100'
+    if total_amount is None:
+        total_amount = round(pool * 0.1, 2)
+        if total_amount < 1:
+            total_amount = 1.0
+    if total_count is None:
+        total_count = 5
+    if total_amount > pool:
+        total_amount = pool
+    ok, res = group_red_packet_service.create_packet(
+        group_id, user_id, total_amount, int(total_count),
+        message='群福利红包', source_type='group_pool', packet_type='lucky'
+    )
+    if not ok:
+        return False, res
+    # 记录发放日期，防止重复
+    from datetime import datetime
+    today = datetime.utcnow().strftime('%Y-%m-%d')
     with db_cursor(commit=True) as cur:
-        for uid in users:
-            cur.execute('UPDATE users SET credits = credits + ? WHERE id=?', (per, uid))
-        cur.execute('UPDATE groups SET credits = 0 WHERE id=?', (group_id,))
-        cur.execute('INSERT INTO group_credit_log (group_id, user_id, amount, tx_type, detail) VALUES (?, ?, ?, ?, ?)', (group_id, None, -total, 'red_packet_send', '群红包均分给 ' + str(len(users)) + ' 人'))
-    import json as _json
-    _payload = _json.dumps({'total': total, 'recipients': len(users), 'per_person': per}, ensure_ascii=False)
-    _notice = '[RED_PACKET_DONE]:' + _payload
-    with db_cursor(commit=True) as _cur_n:
-        _cur_n.execute('INSERT INTO group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, ?)', (group_id, user_id, _notice, 'red_packet_done'))
-
-
-    return True, {'total': total, 'recipients': len(users), 'per_person': per}
-
+        cur.execute('UPDATE groups SET last_red_packet_date=? WHERE id=?', (today, group_id))
+    return True, res
 
 def get_group_pool_detail(group_id):
     """查群池详情"""
