@@ -961,28 +961,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
         }
       }
     });
-    _rendered = true;
-    import('./chat_ui.js').then(m => {
-      if (typeof m.renderTaskCardBubble === 'function') {
-        const node = m.renderTaskCardBubble(content);
-        if (node && node.nodeType) {
-          bubble.innerHTML = '';
-          bubble.style.padding = '0';
-          bubble.style.background = 'transparent';
-          bubble.style.border = 'none';
-          bubble.appendChild(node);
-        }
-      }
-    });
-    _rendered = true;
-    import('./chat_ui.js').then(m => {
-      if (typeof m.renderTaskCardBubble === 'function') {
-        const node = m.renderTaskCardBubble(content);
-        if (node && node.nodeType) messages.appendChild(node);
-      }
-    });
     bubble.style.display = 'none';
-    _rendered = true;
 
   } else if (typeof content === 'string' && content.startsWith('[FILE]:')) {
     import('./chat_ui.js').then(m => {
