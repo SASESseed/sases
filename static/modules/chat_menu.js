@@ -147,6 +147,12 @@ export function attachLongPress(wrapper, chatState) {
   wrapper.addEventListener('touchmove', () => {
     if (timer) clearTimeout(timer);
   });
+
+  // PC 端：右键弹出菜单
+  wrapper.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY, wrapper, chatState);
+  });
 }
 
 // 将 attachLongPress 挂到 window，方便 chat_ui.js 调用
