@@ -97,7 +97,9 @@ async def handle_step_done(
     except Exception as e:
         print(f"[swarm] 审核日志入库失败: {e}")
 
-    if len(task["done"]) >= len(task["steps"]):
+    _unique_step_ids = set(str(s.get("step")) for s in task["steps"])
+    _unique_done_ids = set(str(d) for d in task["done"])
+    if len(_unique_done_ids) >= len(_unique_step_ids):
         failed = [r for r in task["results"] if r.get("review") == "retry"]
         blocked = [r for r in task["results"] if r.get("status") == "blocked"]
 

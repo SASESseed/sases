@@ -1165,7 +1165,7 @@ function appendGroupMessage(senderName, content, isSelf = false) {
         }
       }
     });
-    bubble.style.display = 'none';
+    _rendered = true;
 
   } else if (typeof content === 'string' && content.startsWith('[FILE]:')) {
     import('./chat_ui.js').then(m => {
