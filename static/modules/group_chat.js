@@ -200,6 +200,21 @@ function appendGroupMessage(senderName, content, isSelf = false) {
     });
     bubble.style.display = 'none';
     _rendered = true;
+  } else if (typeof content === 'string' && content.startsWith('[RED_PACKET_DONE]:')) {
+    import('./chat_ui.js').then(m => {
+      if (typeof m.renderRedPacketDoneBubble === 'function') {
+        const node = m.renderRedPacketDoneBubble(content);
+        if (node && node.nodeType) {
+          bubble.innerHTML = '';
+          bubble.style.padding = '0';
+          bubble.style.background = 'transparent';
+          bubble.style.border = 'none';
+          bubble.appendChild(node);
+        }
+      }
+    });
+    _rendered = true;
+
   } else if (typeof content === 'string' && content.startsWith('[TASK_CARD]:')) {
     import('./chat_ui.js').then(m => {
       if (typeof m.renderTaskCardBubble === 'function') {
