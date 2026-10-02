@@ -72,6 +72,9 @@
 .switch input:checked + .slider { background-color: var(--color-success); }
 .switch input:checked + .slider:before { transform: translateX(20px); }
 
+.switch.on > .slider { background-color: var(--color-success); }
+.switch.on > .slider:before { transform: translateX(20px); }
+
 /* ===== 搜索框（微信风格：浅灰圆角） ===== */
 .subpage-search-bar {
   display: flex;
