@@ -343,6 +343,41 @@ def init_db():
         _ensure_column(cur, "group_messages", "extra_data", "TEXT")
 
 
+        # ========== 群红包主表 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_red_packets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                sender_id INTEGER NOT NULL,
+                source_type TEXT DEFAULT 'user',
+                total_amount REAL NOT NULL,
+                total_count INTEGER NOT NULL,
+                claimed_count INTEGER DEFAULT 0,
+                remaining_amount REAL NOT NULL,
+                message TEXT,
+                status TEXT DEFAULT 'active',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_rp_group ON group_red_packets(group_id, status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grp_rp_expires ON group_red_packets(status, expires_at)")
+
+        # ========== 群红包领取记录 ==========
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS group_red_packet_claims (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                packet_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                claimed_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_grp_rpc_pid_uid ON group_red_packet_claims(packet_id, user_id)")
+
+
+
+
         # ========== 市场订单表 ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS market_orders (
