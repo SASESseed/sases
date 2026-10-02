@@ -1511,7 +1511,7 @@ async function openGroupSettings() {
     <div class="group-settings-container">
       <div class="member-grid" id="group-members-container"><div class="subpage-placeholder">加载中...</div></div>
       <div class="me-menu">
-        <div class="me-menu-item"><span class="menu-label">群聊名称</span><span class="menu-value">${currentGroupName}</span></div>
+<div class="me-menu-item" id="gm-group-name" onclick="openGroupNameEditor()"><span class="me-menu-label">群聊名称</span><span class="me-menu-value">' + (currentGroupName || '') + '</span></div>
         <div class="me-menu-item" id="identity-switch-entry"><span class="menu-label">身份切换</span><span class="menu-value" id="identity-current">以本人身份</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-mode-entry"><span class="menu-label">群模式</span><span class="menu-value" id="group-mode-current">${currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式'}</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="announcement-entry"><span class="menu-label">群公告</span><span class="menu-arrow">›</span></div>
@@ -1892,6 +1892,19 @@ async function openAgentSwitch(fromChat = false) {
 }
 
 window.openAnnouncementEditor = async function() {
+
+
+window.openGroupNameEditor = function() {
+  var canEdit = !!(window.isGroupOwner || window.isGroupAdmin);
+  var v = currentGroupName || '';
+  var h = document.getElementById('gne-page');
+  if (!h) { h = document.createElement('div'); h.id = 'gne-page'; h.className = 'page-secondary'; document.body.appendChild(h); }
+  h.innerHTML = '<div class="sp-bar"><span id="gne-back">返回</span><b>群聊名称</b></div><input id="gne-in" value="' + v + '"' + (canEdit ? '' : ' readonly') + '><button id="gne-save"' + (canEdit ? '' : ' style=display:none') + '>保存</button>';
+  h.style.display = 'block';
+  document.getElementById('gne-back').onclick = function(){ h.style.display = 'none'; };
+  document.getElementById('gne-save').onclick = function(){ currentGroupName = document.getElementById('gne-in').value.trim(); h.style.display = 'none'; if (window.renderGroupSettings) window.renderGroupSettings(); };
+};
+
   const groupId = currentGroupId;
   if (!groupId) return;
 
