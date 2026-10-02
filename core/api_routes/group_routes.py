@@ -450,6 +450,76 @@ async def api_ignore_report(queue_id: int, user_id: int = Depends(get_current_us
 
 
 
+class BindAgentModelRequest(BaseModel):
+    agent_id: str
+    model_id: str
+    daily_limit: int = 100
+
+
+class SwarmToggleRequest(BaseModel):
+    enabled: bool
+
+
+@router.get("/{group_id}/swarm/status")
+async def api_swarm_status(group_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    return {"swarm_enabled": group_resource_service.is_swarm_enabled(group_id)}
+
+
+@router.post("/{group_id}/swarm/toggle")
+async def api_swarm_toggle(group_id: int, body: SwarmToggleRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    ok, res = group_resource_service.toggle_swarm(group_id, user_id, body.enabled)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.get("/{group_id}/resource-pool")
+async def api_list_resource_pool(group_id: int, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    rows = group_resource_service.list_pool(group_id, user_id)
+    if rows is None:
+        raise HTTPException(status_code=403, detail='你不是群成员')
+    return {'pool': rows, 'swarm_enabled': group_resource_service.is_swarm_enabled(group_id)}
+
+
+@router.post("/{group_id}/resource-pool/bind")
+async def api_bind_agent_model(group_id: int, body: BindAgentModelRequest, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    ok, res = group_resource_service.bind_agent_model(group_id, user_id, body.agent_id, body.model_id, body.daily_limit)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.post("/{group_id}/resource-pool/unbind")
+async def api_unbind_agent(group_id: int, body: dict, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    agent_id = body.get('agent_id', '')
+    ok, res = group_resource_service.unbind_agent(group_id, user_id, agent_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.get("/{group_id}/resource-usage")
+async def api_resource_usage(group_id: int, days: int = 7, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    stats = group_resource_service.get_usage_stats(group_id, user_id, days)
+    if stats is None:
+        raise HTTPException(status_code=403, detail='只有群主可以查看')
+    return stats
+
+
+@router.get("/{group_id}/quota-check")
+async def api_quota_check(group_id: int, agent_id: str, user_id: int = Depends(get_current_user)):
+    from ..services import group_resource_service
+    ok, res = group_resource_service.check_quota(group_id, user_id, agent_id)
+    return {'ok': ok, 'detail': res}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
