@@ -623,7 +623,7 @@ def parse_at_prefix(content):
     return agent_name, rest
 
 
-def insert_agent_message(group_id, agent_id, content):
+def insert_agent_message(group_id, agent_id, content, trigger_user_id=0):
     """把智能体的回复插入群消息表"""
     import secrets as _sec
     from .. import config as _cfg
