@@ -108,7 +108,27 @@ async def plan_task(
         print(f'[swarm] pattern 检索失败: {e}')
 
 
+    # 工具手册检索（v0.22.0）
+    manual_text = ""
+    try:
+        _kw = f'%{user_input[:20]}%'
+        with db_cursor() as _cur_m:
+            _cur_m.execute(
+                "SELECT title, content FROM knowledge_docs WHERE scope='manual' AND (title LIKE ? OR tags LIKE ? OR content LIKE ?) LIMIT 3",
+                (_kw, _kw, _kw)
+            )
+            _manuals = _cur_m.fetchall()
+        if _manuals:
+            manual_text = "\n".join([f"【{m['title']}】\n{m['content'][:300]}" for m in _manuals])
+            print(f"[swarm] 检索到 {len(_manuals)} 条工具手册")
+        else:
+            print("[swarm] 手册无匹配")
+    except Exception as e:
+        print(f"[swarm] 手册检索失败: {e}")
+
     prompt_parts = []
+    if manual_text:
+        prompt_parts.append(f"【工具手册参考】\n{manual_text}")
     if pattern_text:
         prompt_parts.append(pattern_text)
 
