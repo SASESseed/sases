@@ -2000,12 +2000,7 @@ async function openGroupCreditsDetail() {
       <div class="me-menu-item" id="gc-redpacket-config">
         <span class="menu-icon">🧧</span>
         <span class="menu-label">红包配置</span>
-        <span class="menu-value">${pool.red_packet_hour || 20}:00</span>
-        <span class="menu-arrow">›</span>
-      </div>
-      <div class="me-menu-item" id="gc-send-redpacket">
-        <span class="menu-icon">🎁</span>
-        <span class="menu-label">立即发红包（群主）</span>
+        <span class="menu-value">${_utcHourToLocal(pool.red_packet_hour != null ? pool.red_packet_hour : 20)}:00</span>
         <span class="menu-arrow">›</span>
       </div>
     </div>
@@ -2022,8 +2017,6 @@ async function openGroupCreditsDetail() {
     if (stake) stake.onclick = openGroupStakeDialog;
     const config = document.getElementById('gc-redpacket-config');
     if (config) config.onclick = openRedPacketConfig;
-    const send = document.getElementById('gc-send-redpacket');
-    if (send) send.onclick = sendRedPacketNow;
   }, 300);
 }
 
@@ -2063,36 +2056,59 @@ function openGroupStakeDialog() {
   }, 300);
 }
 
+
+function _utcHourToLocal(utcH) {
+  const o = new Date().getTimezoneOffset();
+  return Math.floor((utcH - o / 60 + 24) % 24);
+}
+function _localHourToUtc(localH) {
+  const o = new Date().getTimezoneOffset();
+  return Math.floor((localH + o / 60 + 24) % 24);
+}
+
 function openRedPacketConfig() {
-  const contentHtml = `
-    <div class="me-menu">
-      <div class="me-menu-item">
-        <span class="menu-label">发放时间（0-23 点）</span>
-        <input type="number" id="gc-rp-hour" class="inline-input" value="20" min="0" max="23">
+  const html = `
+    <div class='me-menu'>
+      <div class='me-menu-item'>
+        <span class='menu-label'>发放时间（本地时间）</span>
+        <input type='number' id='gc-rp-hour' class='inline-input' value='20' min='0' max='23'>
       </div>
-      <div class="me-menu-item">
-        <span class="menu-label">谁可以抢</span>
-        <select id="gc-rp-audience" class="inline-input">
-          <option value="all">所有群成员</option>
-          <option value="stakers">仅质押成员</option>
+      <div class='me-menu-item'>
+        <span class='menu-label'>谁可以抢</span>
+        <select id='gc-rp-audience' class='inline-input'>
+          <option value='all'>所有群成员</option>
+          <option value='stakers'>仅质押成员</option>
         </select>
       </div>
+      <div style='padding:8px 12px;font-size:12px;color:#999;'>填本地时间，系统自动按 UTC 存储</div>
     </div>
-    <button class="save-btn" id="gc-rp-save">保存配置</button>
+    <button class='save-btn' id='gc-rp-save'>保存配置</button>
   `;
-  window.openSubpage('红包配置', contentHtml);
-  setTimeout(() => {
+  window.openSubpage('红包配置', html);
+  setTimeout(async () => {
+    let uh = 20, au = 'all';
+    try {
+      const r = await fetch('/group/' + currentGroupId + '/pool', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') } });
+      const d = await r.json();
+      uh = d.red_packet_hour != null ? d.red_packet_hour : 20;
+      au = d.red_packet_audience || 'all';
+    } catch (e) {}
+    const hi = document.getElementById('gc-rp-hour');
+    if (hi) hi.value = _utcHourToLocal(uh);
+    const au2 = document.getElementById('gc-rp-audience');
+    if (au2) au2.value = au;
     const btn = document.getElementById('gc-rp-save');
     if (!btn) return;
     btn.onclick = async () => {
-      const hour = parseInt(document.getElementById('gc-rp-hour').value);
-      const audience = document.getElementById('gc-rp-audience').value;
-      if (isNaN(hour) || hour < 0 || hour > 23) { alert('小时必须 0-23'); return; }
+      const lh = parseInt(document.getElementById('gc-rp-hour').value);
+      const aud = document.getElementById('gc-rp-audience').value;
+      if (isNaN(lh) || lh < 0 || lh > 23) { alert('小时必须 0-23'); return; }
+      const u = _localHourToUtc(lh);
       try {
         const resp = await fetch('/group/' + currentGroupId + '/red-packet/config', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hour: hour, audience: audience })
+          body: JSON.stringify({ hour: u, audience: aud })
         });
         const data = await resp.json();
         if (data.error || data.detail) { alert('保存失败：' + (data.error || data.detail)); return; }
@@ -2103,7 +2119,6 @@ function openRedPacketConfig() {
     };
   }, 300);
 }
-
 function sendRedPacketNow() {
   if (!confirm('确定立即发放群红包？群池可用余额将均分给符合受众的成员。')) return;
   fetch('/group/' + currentGroupId + '/red-packet/send', {

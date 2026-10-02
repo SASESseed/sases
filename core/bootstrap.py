@@ -224,6 +224,32 @@ async def periodic_group_red_packet():
                         with db_cursor(commit=True) as cur:
                             cur.execute('UPDATE groups SET last_red_packet_date=? WHERE id=?', (today, g['id']))
                         print(f'[group-rp] group {g["id"]} sent {amount}')
+                        # WS 广播
+                        try:
+                            import json as _json_g
+                            from .api_routes.ws_routes import broadcast_to_group as _bcg
+                            with db_cursor() as _cg:
+                                _cg.execute('SELECT global_group_id FROM groups WHERE id=?', (g['id'],))
+                                _rg = _cg.fetchone()
+                            if _rg and _rg['global_group_id']:
+                                _payload = _json_g.dumps({
+                                    'packet_id': res.get('packet_id') if isinstance(res, dict) else None,
+                                    'sender_id': g['owner_id'],
+                                    'total_amount': amount,
+                                    'total_count': 5,
+                                    'message': '每日群福利',
+                                    'source_type': 'group_pool',
+                                    'packet_type': 'lucky'
+                                }, ensure_ascii=False)
+                                await _bcg(_rg['global_group_id'], {
+                                    'type': 'message',
+                                    'content': '[RED_PACKET]:' + _payload,
+                                    'sender_id': None,
+                                    'sender_agent_id': None,
+                                    'sender_name': '系统'
+                                })
+                        except Exception as _bge:
+                            print(f'[group-rp] ws broadcast failed: {_bge}')
                 except Exception as e:
                     print(f'[group-rp] failed group {g["id"]}: {e}')
         except Exception as e:
