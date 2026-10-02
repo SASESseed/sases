@@ -332,6 +332,26 @@ async def api_list_active_group_red_packets(group_id: int, user_id: int = Depend
 
 
 
+@router.get("/{group_id}/leaderboard")
+async def api_group_leaderboard(group_id: int, type: str = 'contribution', user_id: int = Depends(get_current_user)):
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute('SELECT id FROM group_members WHERE group_id=? AND user_id=?', (group_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail='你不是群成员')
+        if type == 'contribution':
+            cur.execute('SELECT u.id, u.username, COALESCE(gm.contribution_points, 0) as score FROM group_members gm LEFT JOIN users u ON gm.user_id = u.id WHERE gm.group_id=? AND gm.user_id IS NOT NULL ORDER BY score DESC LIMIT 50', (group_id,))
+        elif type == 'task':
+            cur.execute("SELECT u.id, u.username, COUNT(*) * 10 as score FROM group_task_submissions s JOIN group_tasks t ON s.task_id = t.id LEFT JOIN users u ON s.submitted_by = u.id WHERE t.group_id=? AND t.selected_submission_id = s.id GROUP BY u.id ORDER BY score DESC LIMIT 50", (group_id,))
+        elif type == 'redpacket':
+            cur.execute('SELECT u.id, u.username, COALESCE(SUM(c.amount), 0) as score FROM group_red_packet_claims c LEFT JOIN users u ON c.user_id = u.id LEFT JOIN group_red_packets p ON c.packet_id = p.id WHERE p.group_id=? GROUP BY u.id ORDER BY score DESC LIMIT 50', (group_id,))
+        else:
+            raise HTTPException(status_code=400, detail='未知榜单类型')
+        rows = [dict(r) for r in cur.fetchall()]
+    return {'type': type, 'leaderboard': rows}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
