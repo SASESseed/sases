@@ -1204,11 +1204,11 @@ function appendGroupMessage(senderName, content, isSelf = false) {
 
   messages.appendChild(wrapper);
   messages.scrollTop = messages.scrollHeight;
-  // 卡片异步渲染，多帧滚动确保到底
+  // 高频多帧滚动，覆盖异步渲染的所有时机
   requestAnimationFrame(() => { messages.scrollTop = messages.scrollHeight; });
-  setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 100);
-  setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 400);
-  setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 800);
+  [30, 60, 100, 150, 200, 280, 380, 500, 700, 1000].forEach(t => {
+    setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, t);
+  });
 }
 
 window.openPublishTaskDialog = function(groupId) {
