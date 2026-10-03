@@ -57,6 +57,13 @@ class MainWindow(QMainWindow):
         self.log.appendPlainText(t.rstrip())
 
     def start(self):
+        import urllib.request
+        try:
+            urllib.request.urlopen(f'http://127.0.0.1:{port}/hive/info', timeout=2)
+            self.log.appendPlainText('检查到外部服务已运行')
+            return
+        except Exception:
+            pass
         try:
             urllib.request.urlopen(f'http://127.0.0.1:{launcher.launcher_config.PORT}/hive/info', timeout=2).close()
             _log = getattr(self, 'log', None) or getattr(self, 'log_view', None) or getattr(self, 'output', None)
