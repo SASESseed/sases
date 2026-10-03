@@ -1570,7 +1570,7 @@ async function openGroupSettings() {
     <div class="group-settings-container">
       <div class="member-grid" id="group-members-container"><div class="subpage-placeholder">加载中...</div></div>
       <div class="me-menu">
-<div class="me-menu-item" id="gm-group-name" onclick="openGroupNameEditor()"><span class="me-menu-label">群聊名称</span><span class="me-menu-value">' + (currentGroupName || '') + '</span></div>
+<div class="me-menu-item" id="group-name-entry" style="cursor:pointer;"><span class="menu-label">群聊名称</span><span class="menu-value" id="group-name-value">${currentGroupName}</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="identity-switch-entry"><span class="menu-label">身份切换</span><span class="menu-value" id="identity-current">以本人身份</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="group-mode-entry"><span class="menu-label">群模式</span><span class="menu-value" id="group-mode-current">${currentGroupMode === 'normal' ? '普通聊天' : '蜂群模式'}</span><span class="menu-arrow">›</span></div>
         <div class="me-menu-item" id="announcement-entry"><span class="menu-label">群公告</span><span class="menu-arrow">›</span></div>
@@ -1604,6 +1604,9 @@ async function openGroupSettings() {
 
   loadGroupCredits();
   await loadGroupMembers();
+
+  const _gnEntry = document.getElementById('group-name-entry');
+  if (_gnEntry) _gnEntry.addEventListener('click', openGroupNameEditor);
 
   const identityEntry = document.getElementById('identity-switch-entry');
   if (identityEntry) identityEntry.addEventListener('click', () => openAgentSwitch(false));
@@ -2031,12 +2034,6 @@ window.openGroupNameEditor = function() {
     });
   }
 };
-function openNicknameEditor() { alert('昵称编辑开发中'); }
-function openGroupSearch() { alert('查找聊天记录开发中'); }
-function toggleGroupMute() { alert('免打扰开发中'); }
-function toggleGroupPin() {
-  api.togglePinGroup(currentGroupId, true).then(() => location.reload()).catch(e => alert('操作失败: ' + e.message));
-}
 async function openGroupCreditsDetail() {
   let pool = { available: 0, staked: 0, total: 0, red_packet_hour: 20, red_packet_audience: 'all' };
   try {
@@ -2286,6 +2283,145 @@ async function openGroupLeaderboard() {
 
   await renderPage();
 }
+function openGroupNameEditor() {
+  const html = `
+    <div class="me-menu">
+      <div class="me-menu-item">
+        <span class="menu-label">群名称</span>
+        <input id="gn-input" type="text" class="inline-input" value="${currentGroupName}" maxlength="50">
+      </div>
+    </div>
+    <button class="save-btn" id="gn-save">保存</button>
+  `;
+  window.openSubpage('群名称', html, {
+    showMore: false,
+    returnAction: () => openGroupSettings()
+  });
+  setTimeout(() => {
+    const btn = document.getElementById('gn-save');
+    if (!btn) return;
+    btn.onclick = () => {
+      const newName = (document.getElementById('gn-input') || {}).value || '';
+      if (!newName.trim()) { alert('群名不能为空'); return; }
+      fetch('/group/' + currentGroupId + '/name', {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() })
+      }).then(r => r.json()).then(d => {
+        if (d.error || d.detail) { alert('保存失败：' + (d.error || d.detail)); return; }
+        currentGroupName = newName.trim();
+        const el = document.getElementById('group-name-value');
+        if (el) el.textContent = currentGroupName;
+        document.getElementById('chat-window-title').textContent = currentGroupName;
+        alert('已保存');
+        window.closeSubpage();
+      }).catch(e => alert('网络错误：' + e.message));
+    };
+  }, 300);
+}
+
+function openNicknameEditor() {
+  const html = `
+    <div class="me-menu">
+      <div class="me-menu-item">
+        <span class="menu-label">群昵称</span>
+        <input id="nick-input" type="text" class="inline-input" maxlength="20" placeholder="最多 20 字">
+      </div>
+    </div>
+    <button class="save-btn" id="nick-save">保存</button>
+  `;
+  window.openSubpage('我的群昵称', html, {
+    showMore: false,
+    returnAction: () => openGroupSettings()
+  });
+  setTimeout(() => {
+    const btn = document.getElementById('nick-save');
+    if (!btn) return;
+    btn.onclick = () => {
+      const nn = (document.getElementById('nick-input') || {}).value || '';
+      fetch('/group/' + currentGroupId + '/nickname', {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nn })
+      }).then(r => r.json()).then(d => {
+        if (d.error || d.detail) { alert('保存失败：' + (d.error || d.detail)); return; }
+        alert('已保存');
+        window.closeSubpage();
+      }).catch(e => alert('网络错误：' + e.message));
+    };
+  }, 300);
+}
+
+function openGroupSearch() {
+  const html = `
+    <div class="subpage-search-bar">
+      <input type="text" id="gs-input" class="search-input" placeholder="输入关键词">
+      <button class="search-btn" id="gs-btn">搜索</button>
+    </div>
+    <div id="gs-results"></div>
+  `;
+  window.openSubpage('查找聊天记录', html, {
+    showMore: false,
+    returnAction: () => openGroupSettings()
+  });
+  setTimeout(() => {
+    const input = document.getElementById('gs-input');
+    const btn = document.getElementById('gs-btn');
+    const doSearch = () => {
+      const q = (input || {}).value || '';
+      if (!q.trim()) return;
+      fetch('/group/' + currentGroupId + '/search-messages?q=' + encodeURIComponent(q), {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token') }
+      }).then(r => r.json()).then(d => {
+        const msgs = d.messages || [];
+        const container = document.getElementById('gs-results');
+        if (!container) return;
+        if (msgs.length === 0) {
+          container.innerHTML = '<div class="subpage-placeholder">无匹配结果</div>';
+        } else {
+          let h = '<div class="me-menu">';
+          msgs.forEach(m => {
+            h += '<div class="me-menu-item" style="display:block;padding:12px;">';
+            h += '<div style="font-size:12px;color:#999;">' + (m.created_at || '') + '</div>';
+            h += '<div style="font-size:14px;color:#333;margin-top:4px;white-space:pre-wrap;">' + (m.content || '') + '</div>';
+            h += '</div>';
+          });
+          h += '</div>';
+          container.innerHTML = h;
+        }
+      }).catch(e => alert('网络错误：' + e.message));
+    };
+    if (btn) btn.onclick = doSearch;
+    if (input) input.onkeydown = (e) => { if (e.key === 'Enter') doSearch(); };
+  }, 300);
+}
+
+function toggleGroupMute() {
+  const sw = document.querySelector('#mute-entry .switch');
+  const cur = sw && sw.classList.contains('on');
+  fetch('/group/' + currentGroupId + '/mute', {
+    method: 'PATCH',
+    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('sases_token'), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ muted: !cur })
+  }).then(r => r.json()).then(d => {
+    if (d.error || d.detail) { alert('失败：' + (d.error || d.detail)); return; }
+    if (sw) {
+      if (d.is_muted) sw.classList.add('on'); else sw.classList.remove('on');
+    }
+  }).catch(e => alert('网络错误：' + e.message));
+}
+
+function toggleGroupPin() {
+  const sw = document.querySelector('#pin-entry .switch');
+  const cur = sw && sw.classList.contains('on');
+  api.togglePinGroup(currentGroupId, !cur).then(() => {
+    if (sw) {
+      if (!cur) sw.classList.add('on'); else sw.classList.remove('on');
+    }
+  }).catch(e => alert('操作失败: ' + e.message));
+}
+
+
 function clearGroupHistory() {
   if (!confirm('确定清空本群聊天记录（仅你的视角）？')) return;
   alert('清空功能开发中');
@@ -2397,3 +2533,11 @@ window.openGroupReportQueue = async function(groupId) {
     });
   }, 300);
 };
+
+
+// window mount
+window.openGroupNameEditor = openGroupNameEditor;
+window.openNicknameEditor = openNicknameEditor;
+window.openGroupSearch = openGroupSearch;
+window.toggleGroupMute = toggleGroupMute;
+window.toggleGroupPin = toggleGroupPin;
