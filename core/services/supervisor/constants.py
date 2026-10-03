@@ -6,5 +6,5 @@ USE_STRUCTURED_REVIEW = True
 
 import time as _ctx_time
 _CTX_CACHE = {}
-_CTX_TTL = 5
+_CTX_TTL = 1
 _CTX_MAX = 200
