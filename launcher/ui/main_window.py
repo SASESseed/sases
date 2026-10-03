@@ -1,5 +1,14 @@
 """SASES 启动器主窗口。"""
 import os, sys
+
+
+def _decode_child_line(raw):
+    for enc in ('utf-8', 'gbk', 'cp936', 'latin-1'):
+        try:
+            return raw.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return raw.decode('utf-8', 'replace')
 from PyQt6.QtCore import QProcess
 from PyQt6.QtWidgets import QMainWindow, QWidget, QPushButton, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QMessageBox
 
@@ -53,7 +62,7 @@ class MainWindow(QMainWindow):
 
     def read(self):
         b = self.proc.readAllStandardOutput() + self.proc.readAllStandardError()
-        for line in bytes(b).decode('utf-8', 'ignore').splitlines():
+        for line in _decode_child_line(bytes(b)).splitlines():
             self.out(line)
 
     def done(self, code, st):
