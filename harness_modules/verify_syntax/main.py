@@ -196,6 +196,16 @@ def run(params):
             result['undefined_check_error'] = str(_ce)
 
 
+    if ext == '.js':
+        try:
+            with open(abs_p, 'r', encoding='utf-8') as _wf:
+                _js_content = _wf.read(200 * 1024)
+            _sub_warns = _check_open_subpage_return_action(_js_content)
+            if _sub_warns:
+                result['warnings'] = _sub_warns
+        except Exception as _we:
+            result['warning_check_error'] = str(_we)
+
     auto_rollback = params.get('auto_rollback', True)
     if not ok and auto_rollback:
         bak = _find_latest_backup(safe)
