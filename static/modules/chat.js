@@ -279,23 +279,6 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
   chatState.conversationId = conversationId ? parseInt(conversationId) : null;
   chatState.agentId = agentId;
   chatState.agentType = agentType;
-
-  // 若无 conversationId 但有 agentId，异步查已有会话（防止每次新建）
-  if (!chatState.conversationId && agentId) {
-    const _targetAgentId = agentId;
-    const _hadConvId = !!conversationId;
-    api.getConversations().then(_convs => {
-      if (_hadConvId) return;
-      if (chatState.agentId !== _targetAgentId) return;
-      const _list = (_convs && _convs.conversations) || _convs || [];
-      const _existing = _list.find(c => (c.agent_id === _targetAgentId) || (c.agentId === _targetAgentId));
-      if (_existing && _existing.id) {
-        chatState.conversationId = parseInt(_existing.id);
-        console.log('[chat] 复用已有会话', chatState.conversationId);
-        loadMessages(chatState.conversationId);
-      }
-    }).catch(e => console.warn('[chat] 查已有会话失败', e));
-  }
   chatState.senderAgentId = localStorage.getItem('sases_sender_agent_id') || null;
   chatState.mode = 'free';
   chatState.pendingQuote = null;
@@ -373,6 +356,19 @@ export function openChatWindow(conversationId, chatName, agentId = null, agentTy
 
   if (chatState.conversationId) {
     loadMessages(chatState.conversationId);
+  } else if (chatState.agentId) {
+    const _targetAgentId = chatState.agentId;
+    api.listConversations().then(_res => {
+      if (chatState.agentId !== _targetAgentId) return;
+      if (chatState.conversationId) return;
+      const _list = (_res && _res.conversations) || [];
+      const _existing = _list.find(c => c.agent_id === _targetAgentId);
+      if (_existing && _existing.id) {
+        chatState.conversationId = parseInt(_existing.id);
+        console.log('[chat] 复用已有会话', chatState.conversationId);
+        loadMessages(chatState.conversationId);
+      }
+    }).catch(e => { console.warn('[chat] 查已有会话失败', e); });
   }
 }
 
