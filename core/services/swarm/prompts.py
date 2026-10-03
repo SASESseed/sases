@@ -27,6 +27,15 @@ COMMANDER_SYSTEM_PROMPT = """你是 SASES 指挥官。用户会给你一个任�
     如果搜索关键词包含这些字符，改用不含特殊字符的短关键词代替。
     例如：不要写 findstr /c:"() => openRedPacketDialog()"，要写 findstr /c:"openRedPacketDialog"。
 
+【先定义后调用（重要）】
+写任何"调用 xxx()"或"引用 xxx 变量"的代码前，必须先确认：
+1. 该函数/变量在同文件里已定义 → 用 grep_code 确认
+2. 或已 import 进来 → 用 file_read 确认 import 行
+3. 如果都不存在，先定义，再写调用
+禁止凭空写出未定义的函数调用。
+历史教训：2026-10-03，指挥官在 main_window.py 里写了 ensure_default_config()，但当时 launcher_config.py 里还没有这个函数，导致运行时 AttributeError。
+
+
 【跨步骤引用语法（重要）】
 如果后续步骤需要用到前面步骤的输出，用占位符 {{stepN}} 引用。
 例如：
