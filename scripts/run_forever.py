@@ -30,6 +30,13 @@ while True:
     except Exception as _e:
         print(f"[wrapper] port cleanup failed: {_e}", flush=True)
 
+import sys as _sys
+try:
+    _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    _sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
     print("[wrapper] start", flush=True)
     s = time.time()
     p = subprocess.Popen(C, cwd=R, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
