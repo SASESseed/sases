@@ -364,7 +364,7 @@ async def send_message(
             if _uni_text:
                 try:
                     from .. import project_service as _ps_uni
-                    from .. import auth_service as _auth_uni
+                    from ... import auth_service as _auth_uni
                     if _uni_target == 'project' and not _auth_uni.is_admin(user_id):
                         _urep = '❌ 仅管理员可导入项目库'
                     else:
