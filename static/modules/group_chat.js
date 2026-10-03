@@ -6,7 +6,15 @@ let currentGroupName = '';
 let currentAgentId = null; // 当前使用的智能体身份，null 表示用户本人
 let currentGroupMode = 'normal'; // normal 或 swarm
 let currentUserId = null; // 当前登录用户ID
+// ======================================================================
+// 【模块 0. 调试接口】
+// ======================================================================
+
 window._gcDebug = { getUserId: () => currentUserId, getAgentId: () => currentAgentId, getGroupId: () => currentGroupId };
+
+// ======================================================================
+// 【模块 1. 群聊主入口与生命周期】
+// ======================================================================
 
 export async function openGroupChat(groupId, groupName) {
   currentGroupId = groupId;
@@ -161,6 +169,10 @@ export function closeGroupChat() {
   if (modeBtn) modeBtn.style.display = 'none';
 }
 
+// ======================================================================
+// 【模块 2. 群任务（横条/列表）】
+// ======================================================================
+
 async function loadGroupTasks() {
   if (!currentGroupId) return;
   try {
@@ -203,6 +215,10 @@ function openTaskListPage(tasks) {
 }
 
 
+// ======================================================================
+// 【模块 3. 通用工具（Toast）】
+// ======================================================================
+
 window.showGroupToast = function(text) {
   const toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
@@ -216,6 +232,10 @@ window.showGroupToast = function(text) {
 };
 
 
+
+// ======================================================================
+// 【模块 4. 群红包（抢/拆/列表）】
+// ======================================================================
 
 window.openGroupRedPacket = async function(packetId) {
   try {
@@ -390,6 +410,10 @@ function openRedPacketListPage(packets) {
 }
 
 
+// ======================================================================
+// 【模块 5. 群知识库】
+// ======================================================================
+
 window.openGroupKnowledge = async function(groupId) {
   let currentKeyword = '';
 
@@ -547,6 +571,10 @@ window.openGroupKnowledgeAdd = function(groupId) {
   }, 100);
 };
 
+
+// ======================================================================
+// 【模块 6. 蜂群模式管理】
+// ======================================================================
 
 window.openSwarmConfig = async function(groupId) {
   let swarmEnabled = false;
@@ -742,6 +770,10 @@ window.openSwarmUsage = async function(groupId) {
   } catch (e) { alert('网络错误：' + e.message); }
 };
 
+
+// ======================================================================
+// 【模块 7. 群管理（公告/管理员/转让）】
+// ======================================================================
 
 window.openGroupManage = async function(groupId) {
   let admins = [];
@@ -1017,6 +1049,10 @@ window.openAddAdminDialog = function(groupId, members, currentAdmins) {
 };
 
 
+// ======================================================================
+// 【模块 8. 智能体回复（@ + 帮我回复）】
+// ======================================================================
+
 window._generateReplyWithAgent = async function(agentId, source, quotedText, groupId) {
   const prompt = '请基于以下群友的消息，帮我生成一条合适的回复：\n\n' + (quotedText || '');
   try {
@@ -1100,6 +1136,10 @@ window.openGroupAgentPickerForReply = async function(quotedText, groupId) {
 };
 
 
+// ======================================================================
+// 【模块 9. 群文件】
+// ======================================================================
+
 window.openGroupFiles = async function(groupId) {
   let files = [];
   try {
@@ -1146,6 +1186,10 @@ window.openGroupFiles = async function(groupId) {
   }, 100);
 };
 
+
+// ======================================================================
+// 【模块 10. 消息渲染与 WS 增量】
+// ======================================================================
 
 async function loadGroupMessages() {
   try {
@@ -1297,6 +1341,10 @@ function appendGroupMessage(senderName, content, isSelf = false, skipScroll = fa
   });
 }
 
+// ======================================================================
+// 【模块 11. 任务发布与详情】
+// ======================================================================
+
 window.openPublishTaskDialog = function(groupId) {
   const html = `
     <div style="padding:16px;">
@@ -1433,6 +1481,10 @@ window.openTaskDetail = function(taskId) {
 };
 
 
+// ======================================================================
+// 【模块 12. 发送群消息（乐观渲染）】
+// ======================================================================
+
 export async function sendGroupMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -1477,6 +1529,10 @@ export async function sendGroupMessage() {
 }
 
 // ==================== 群模式切换（下拉菜单） ====================
+// ======================================================================
+// 【模块 13. 模式切换（普通/蜂群）】
+// ======================================================================
+
 async function openGroupModeMenu() {
   const menu = document.getElementById('mode-menu');
   const content = document.getElementById('mode-menu-content');
@@ -1564,6 +1620,10 @@ async function applyGroupMode(mode) {
     }
   } catch (e) {}
 }
+
+// ======================================================================
+// 【模块 14. 群设置主入口】
+// ======================================================================
 
 async function openGroupSettings() {
   const contentHtml = `
@@ -1746,6 +1806,10 @@ async function openGroupSettings() {
   }
 }
 
+// ======================================================================
+// 【模块 15. 群积分加载】
+// ======================================================================
+
 async function loadGroupCredits() {
   try {
     const data = await api.getGroupCredits(currentGroupId);
@@ -1785,6 +1849,10 @@ async function loadGroupMembers() {
     document.getElementById('group-members-container').innerHTML = `<div class="subpage-placeholder">加载失败：${e.message}</div>`;
   }
 }
+
+// ======================================================================
+// 【模块 16. 邀请/移除成员】
+// ======================================================================
 
 function openInviteDialog() {
   const contentHtml = `
@@ -1841,6 +1909,10 @@ function openRemoveDialog() {
     });
   }, 300);
 }
+
+// ======================================================================
+// 【模块 17. 身份切换】
+// ======================================================================
 
 async function openAgentSwitch(fromChat = false) {
   const contentHtml = `
@@ -1953,6 +2025,10 @@ async function openAgentSwitch(fromChat = false) {
   }
 }
 
+// ======================================================================
+// 【模块 18. 群公告 + 群名称编辑】
+// ======================================================================
+
 window.openAnnouncementEditor = async function() {
 
 
@@ -2034,6 +2110,10 @@ window.openGroupNameEditor = function() {
     });
   }
 };
+// ======================================================================
+// 【模块 19. 群积分详情 + 质押 + 红包配置】
+// ======================================================================
+
 async function openGroupCreditsDetail() {
   let pool = { available: 0, staked: 0, total: 0, red_packet_hour: 20, red_packet_audience: 'all' };
   try {
@@ -2203,6 +2283,10 @@ function sendRedPacketNow() {
 
 
 
+// ======================================================================
+// 【模块 20. 群排行榜】
+// ======================================================================
+
 async function openGroupLeaderboard() {
   const tabs = [
     { key: 'contribution', label: '贡献榜' },
@@ -2283,6 +2367,10 @@ async function openGroupLeaderboard() {
 
   await renderPage();
 }
+// ======================================================================
+// 【模块 21. 群设置基础（昵称/搜索/免打扰/置顶）】
+// ======================================================================
+
 function openGroupNameEditor() {
   const html = `
     <div class="me-menu">
@@ -2421,6 +2509,10 @@ function toggleGroupPin() {
   }).catch(e => alert('操作失败: ' + e.message));
 }
 
+
+// ======================================================================
+// 【模块 22. 清空/退出/汇报】
+// ======================================================================
 
 function clearGroupHistory() {
   if (!confirm('确定清空本群聊天记录（仅你的视角）？')) return;
