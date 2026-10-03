@@ -463,11 +463,12 @@ async def send_message(
                 try:
                     from .. import supervisor_service as _sv
                     _chat_ctx = _sv.build_context(user_id, conversation_id, content, mode='chat', supervisor_id=sender_agent_id)
-                    _chat_prompt = '你是 SASES 调度员，正在与用户对话。请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。' + chr(10) + '【参考资料】' + chr(10) + _chat_ctx + chr(10) + '【用户说】' + chr(10) + content[:300]
                     import openai as _coai
                     from ... import config as _ccfg
                     _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
-                    _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'user', 'content': _chat_prompt}], temperature=0.7, max_tokens=4000)
+                    _sys_prompt = '你是 SASES 调度员，正在与用户对话。请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。'
+                    _user_prompt = '【参考资料】' + chr(10) + _chat_ctx + chr(10) + '【用户说】' + chr(10) + content[:300]
+                    _cresp = _cclient.chat.completions.create(model=_ccfg.MODEL_NAME, messages=[{'role': 'system', 'content': _sys_prompt}, {'role': 'user', 'content': _user_prompt}], temperature=0.7, max_tokens=4000)
                     _chat_reply = (_cresp.choices[0].message.content or '').strip()
                     if not _chat_reply:
                         _rc = getattr(_cresp.choices[0].message, 'reasoning_content', None) or ''
