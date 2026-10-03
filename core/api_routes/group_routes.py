@@ -725,6 +725,54 @@ async def api_list_group_files(group_id: int, user_id: int = Depends(get_current
 
 
 
+class GroupNameRequest(BaseModel):
+    name: str
+
+
+class NicknameRequest(BaseModel):
+    nickname: str
+
+
+class MuteRequest(BaseModel):
+    muted: bool
+
+
+@router.patch("/{group_id}/name")
+async def api_update_group_name(group_id: int, body: GroupNameRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.update_group_name(group_id, user_id, body.name)
+    if not ok:
+        raise HTTPException(status_code=403, detail=res)
+    return res
+
+
+@router.patch("/{group_id}/nickname")
+async def api_set_nickname(group_id: int, body: NicknameRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.set_my_nickname(group_id, user_id, body.nickname)
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return res
+
+
+@router.patch("/{group_id}/mute")
+async def api_toggle_mute(group_id: int, body: MuteRequest, user_id: int = Depends(get_current_user)):
+    ok, res = group_service.toggle_mute(group_id, user_id, body.muted)
+    return res
+
+
+@router.get("/{group_id}/search-messages")
+async def api_search_group_messages(group_id: int, q: str, user_id: int = Depends(get_current_user)):
+    from ..db import db_cursor
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="你不是群成员")
+        kw = f'%{q}%'
+        cur.execute("SELECT id, content, sender_id, sender_agent_id, created_at FROM group_messages WHERE group_id=? AND content LIKE ? ORDER BY id DESC LIMIT 50", (group_id, kw))
+        rows = [dict(r) for r in cur.fetchall()]
+    return {"messages": rows}
+
+
+
 @router.post("/red-packets/expire")
 async def api_expire_group_red_packets(user_id: int = Depends(get_current_user)):
     from ..services import group_red_packet_service
