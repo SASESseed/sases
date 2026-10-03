@@ -565,3 +565,80 @@ python -c "import hashlib; files=\['<路径1>','<路径2>']; \[print(f, '主:', 
 - 模块 22：清空/退出/汇报
 
 
+---
+
+## 十三、指令与文件速查
+
+### 13.1 最常用的 5 条命令
+
+> 以下命令均由**人**在 CMD 中执行（不是发给三者/调度员）
+
+```cmd
+:: 1. 读指定行范围
+python -c "lines = open('static/modules/group_chat.js', encoding='utf-8').readlines(); [print(f'{i+1}: {lines[i].rstrip()}') for i in range(50, 70)]"
+
+:: 2. 找函数定义行号
+python -c "c=open('static/modules/group_chat.js', encoding='utf-8').read(); i=c.find('function openXxx'); print('行号:', c[:i].count(chr(10))+1 if i>0 else 'NOT FOUND')"
+
+:: 3. 查数据库
+python -c "import sqlite3; c=sqlite3.connect('users.db'); c.row_factory=sqlite3.Row; cur=c.cursor(); cur.execute('SELECT * FROM groups WHERE id=16'); print(dict(cur.fetchone()))"
+
+:: 4. 生成 JWT Token（以 666666 为例）
+python -c "import sqlite3; from jose import jwt; c=sqlite3.connect('users.db').cursor(); c.execute('SELECT id FROM users WHERE username=?',('666666',)); uid=c.fetchone()[0]; print(jwt.encode({'sub': str(uid)}, 'sases-dev-secret-key', algorithm='HS256'))"
+
+:: 5. 重启服务（人在跑服务的窗口执行）
+python scripts/run_forever.py
+```
+
+### 13.2 file_patch 锚点铁律（5 条）
+
+1. **优先单行锚点**：避免多行 `\n` 在 Windows 上匹配失败
+2. **锚点必须唯一**：改动前用 `grep_code` 确认
+3. **避开正则符号**：锚点里不写 `$`、`\d`、`\s` 等
+4. **改动前先 file_read**：看一眼真实内容再生成锚点
+5. **多行 + 转义复杂时改用 run_python**：用字符串替换比 file_patch 稳
+
+### 13.3 run_python 特殊字符处理
+
+| 字符 | 问题 | 处理 |
+|------|------|------|
+| `$` | 被当变量 | 用 `chr(36)` |
+| `{xxx}` | f-string 冲突 | 避免 f-string，用 `+` 拼接 |
+| 中文引号 | 与 Python 引号冲突 | 用英文 `"` 或 `'` |
+| 反引号 `` ` `` | CMD 转义 | 用 `chr(96)` |
+
+### 13.4 服务重启判断
+
+| 改动位置 | 是否重启 |
+|---------|---------|
+| `core/*.py` | ✅ 必须 |
+| `static/modules/*.js` | ❌ 硬刷新即可 |
+| `users.db`（改表结构）| ✅ 必须（先 python core/db.py） |
+| `harness_modules/*` | ❌ 调 harness_reload 即可 |
+
+### 13.5 前端缓存排查三连
+
+1. 硬刷新：`Ctrl+Shift+R`
+2. 清 Service Worker：F12 → Application → Service Workers → Unregister
+3. 清缓存：F12 → Application → Storage → Clear site data
+
+### 13.6 openSubpage 必传 returnAction
+
+```javascript
+window.openSubpage('群积分', html, {
+  showMore: false,
+  returnAction: () => openGroupSettings()  // 不传会退回主界面
+});
+```
+
+### 13.7 内联 onclick 需挂 window
+
+ES Module 函数在模块作用域，HTML 内联 onclick 无法直接调用。需要在文件末尾挂载：
+
+```javascript
+window.openGroupNameEditor = openGroupNameEditor;
+```
+
+
+
+
