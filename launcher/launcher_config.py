@@ -26,6 +26,16 @@ def load_config():
     return cfg
 
 
+def ensure_default_config():
+    import os
+    import json
+    path = _config_path()
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
+    return load_config()
+
+
 def resolve_path(p):
     if os.path.isabs(p):
         return p

@@ -1,5 +1,6 @@
 """SASES 启动器主窗口。"""
 import os, sys
+import launcher.launcher_config
 
 
 def _decode_child_line(raw):
@@ -18,6 +19,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        self.cfg = ensure_default_config()
+        self.port = self.cfg.get("port", 8001)
+        self.python_path = self.cfg.get("python_path", "")
+        self.script_path = self.cfg.get("script_path", "")
+        self.work_dir = self.cfg.get("work_dir", "")
+        self.port = self.cfg.get("port", 8001)
+        self.python_path = self.cfg.get("python_path", "")
+        self.script_path = self.cfg.get("script_path", "")
+        self.work_dir = self.cfg.get("work_dir", "")
         super().__init__()
         self.proc = None
         self.setWindowTitle('SASES 启动器')
