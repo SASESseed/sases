@@ -134,7 +134,18 @@ async def send_message(
                             "sender_agent_id": sender_agent_id,
                             "mode": mode,
                         }
-                    _run_id = supervisor_service.create_run(user_id, conversation_id or 0 or _sases_fallback_cid(), sender_agent_id or agent_id, content)
+                    _cid_auto = conversation_id or 0 or _sases_fallback_cid()
+                    if not _cid_auto:
+                        _title_auto = "自主任务"
+                        if agent_id:
+                            with db_cursor() as _cq_auto:
+                                _cq_auto.execute('SELECT name FROM model_configs WHERE id=?', (agent_id,))
+                                _rq_auto = _cq_auto.fetchone()
+                            if _rq_auto:
+                                _title_auto = _rq_auto['name']
+                        _cid_auto = create_conversation(user_id, agent_id, _title_auto)
+                        print(f"[supervisor] auto_run 无会话，新建 conversation_id={_cid_auto}")
+                    _run_id = supervisor_service.create_run(user_id, _cid_auto, sender_agent_id or agent_id, content)
                     print("[supervisor] 已创建 run_id=" + str(_run_id) + " goal=" + content[:50])
                     _force_swarm = True
                     _supervisor_run_id = _run_id
@@ -142,7 +153,7 @@ async def send_message(
                     try:
                         await swarm_service.plan_task(
                             user_id=user_id,
-                            conversation_id=conversation_id or 0,
+                            conversation_id=_cid_auto,
                             user_input=content,
                             supervisor_id=sender_agent_id or agent_id,
                             supervisor_run_id=_run_id,
