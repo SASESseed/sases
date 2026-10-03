@@ -1,5 +1,6 @@
 """SASES 启动器主窗口。"""
 import os, sys
+import urllib.request
 import launcher.launcher_config
 
 
@@ -56,6 +57,28 @@ class MainWindow(QMainWindow):
         self.log.appendPlainText(t.rstrip())
 
     def start(self):
+        try:
+            urllib.request.urlopen(f'http://127.0.0.1:{launcher.launcher_config.PORT}/hive/info', timeout=2).close()
+            _log = getattr(self, 'log', None) or getattr(self, 'log_view', None) or getattr(self, 'output', None)
+            if _log is None:
+                from PyQt6.QtWidgets import QPlainTextEdit as _QPT
+                _logs = self.findChildren(_QPT)
+                _log = _logs[0] if _logs else None
+            if _log is not None:
+                if hasattr(_log, 'appendPlainText'):
+                    _log.appendPlainText('检查到外部服务已运行')
+                elif hasattr(_log, 'append'):
+                    _log.append('检查到外部服务已运行')
+            _status = getattr(self, 'status', None) or getattr(self, 'status_label', None) or getattr(self, 'label_status', None)
+            if _status is None:
+                from PyQt6.QtWidgets import QLabel as _QL
+                _labels = self.findChildren(_QL)
+                _status = _labels[0] if _labels else None
+            if _status is not None and hasattr(_status, 'setText'):
+                _status.setText('已运行（外部进程）')
+            return
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+            pass
         if self.proc:
             return
         p = QProcess(self)
