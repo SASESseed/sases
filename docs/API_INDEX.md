@@ -1,8 +1,8 @@
 # SASES API 接口清单
 共 39 个路由文件
-共 190 个接口
+共 222 个接口
 
-## agent_routes.py (8 个接口)
+## agent_routes.py (9 个接口)
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | GET | `/agents/list` | list_my_agents |  |
@@ -13,6 +13,7 @@
 | POST | `/agents/friend-requests/accept` | accept_friend_request |  |
 | POST | `/agents/friend-requests/reject` | reject_friend_request |  |
 | POST | `/agents/call` | call_agent |  |
+| POST | `/agents/chat` | api_suggest_reply | 根据智能体生成建议回复（不入库） |
 
 ## agi_routes.py (1 个接口)
 | 方法 | 路径 | 函数 | 说明 |
@@ -87,7 +88,7 @@
 |------|------|------|------|
 | GET | `/export/data` | export_data |  |
 
-## group_routes.py (32 个接口)
+## group_routes.py (63 个接口)
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | POST | `/group/group/{group_id}/leave` | api_leave_group |  |
@@ -121,6 +122,37 @@
 | GET | `/group/red-packets/{packet_id}` | api_get_group_red_packet |  |
 | GET | `/group/{group_id}/red-packets/active` | api_list_active_group_red_packets |  |
 | GET | `/group/{group_id}/leaderboard` | api_group_leaderboard |  |
+| POST | `/group/{group_id}/knowledge` | api_create_knowledge |  |
+| GET | `/group/{group_id}/knowledge` | api_list_knowledge |  |
+| GET | `/group/knowledge/{doc_id}` | api_get_knowledge |  |
+| DELETE | `/group/knowledge/{doc_id}` | api_delete_knowledge |  |
+| GET | `/group/{group_id}/report-queue` | api_list_report_queue |  |
+| POST | `/group/{group_id}/report-queue` | api_add_report |  |
+| POST | `/group/report-queue/{queue_id}/resolve` | api_resolve_report |  |
+| POST | `/group/report-queue/{queue_id}/ignore` | api_ignore_report |  |
+| GET | `/group/{group_id}/swarm/status` | api_swarm_status |  |
+| POST | `/group/{group_id}/swarm/toggle` | api_swarm_toggle |  |
+| GET | `/group/{group_id}/resource-pool` | api_list_resource_pool |  |
+| POST | `/group/{group_id}/resource-pool/bind` | api_bind_agent_model |  |
+| POST | `/group/{group_id}/resource-pool/unbind` | api_unbind_agent |  |
+| GET | `/group/{group_id}/resource-usage` | api_resource_usage |  |
+| GET | `/group/{group_id}/quota-check` | api_quota_check |  |
+| GET | `/group/{group_id}/admins` | api_list_group_admins |  |
+| POST | `/group/{group_id}/members/role` | api_set_member_role |  |
+| POST | `/group/{group_id}/ai-suggest` | api_group_ai_suggest |  |
+| GET | `/group/{group_id}/announcement` | api_get_announcement |  |
+| POST | `/group/{group_id}/announcement` | api_set_announcement |  |
+| POST | `/group/{group_id}/transfer-owner` | api_transfer_owner |  |
+| GET | `/group/{group_id}/invite-confirm` | api_get_invite_confirm |  |
+| POST | `/group/{group_id}/invite-confirm` | api_set_invite_confirm |  |
+| GET | `/group/{group_id}/pending-invites` | api_list_pending_invites |  |
+| POST | `/group/pending-invites/{pending_id}/approve` | api_approve_invite |  |
+| POST | `/group/pending-invites/{pending_id}/reject` | api_reject_invite |  |
+| GET | `/group/{group_id}/files` | api_list_group_files |  |
+| PATCH | `/group/{group_id}/name` | api_update_group_name |  |
+| PATCH | `/group/{group_id}/nickname` | api_set_nickname |  |
+| PATCH | `/group/{group_id}/mute` | api_toggle_mute |  |
+| GET | `/group/{group_id}/search-messages` | api_search_group_messages |  |
 | POST | `/group/red-packets/expire` | api_expire_group_red_packets |  |
 
 ## harness_routes.py (2 个接口)

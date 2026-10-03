@@ -1,6 +1,6 @@
 # SASES 数据库结构
 
-共 59 张表
+共 64 张表
 
 ## agent_friendships (0 行)
 | 字段 | 类型 | 默认 | 主键 |
@@ -33,7 +33,7 @@
 | is_active | INTEGER | 1 |  |
 | created_at | TIMESTAMP | CURRENT_TIMESTAMP |  |
 
-## attachments (64 行)
+## attachments (68 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -71,7 +71,7 @@
 | detail | TEXT |  |  |
 | created_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## contribution_log (617 行)
+## contribution_log (673 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -90,7 +90,7 @@
 | group_id | INTEGER |  |  |
 | role | TEXT |  |  |
 
-## conversations (9 行)
+## conversations (10 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -112,7 +112,7 @@
 | reason | TEXT |  |  |
 | timestamp | TIMESTAMP | CURRENT_TIMESTAMP |  |
 
-## credit_pool (7 行)
+## credit_pool (13 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -180,7 +180,7 @@
 | amount | INTEGER | 0 |  |
 | updated_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## group_airdrop_log (1 行)
+## group_airdrop_log (2 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -191,7 +191,7 @@
 | amount | REAL |  |  |
 | created_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## group_credit_log (10 行)
+## group_credit_log (22 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -202,7 +202,19 @@
 | detail | TEXT |  |  |
 | created_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## group_members (3 行)
+## group_invite_pending (0 行)
+| 字段 | 类型 | 默认 | 主键 |
+|------|------|------|------|
+| id | INTEGER |  | 是 |
+| group_id | INTEGER |  |  |
+| inviter_id | INTEGER |  |  |
+| invitee | TEXT |  |  |
+| status | TEXT | 'pending' |  |
+| created_at | TEXT | CURRENT_TIMESTAMP |  |
+| resolved_at | TEXT |  |  |
+| resolved_by | INTEGER |  |  |
+
+## group_members (7 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -216,8 +228,10 @@
 | last_read_at | TEXT |  |  |
 | origin_node | TEXT |  |  |
 | user_sases_id | TEXT |  |  |
+| nickname | TEXT |  |  |
+| is_muted | INTEGER | 0 |  |
 
-## group_messages (33 行)
+## group_messages (56 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -232,7 +246,7 @@
 | related_id | INTEGER |  |  |
 | extra_data | TEXT |  |  |
 
-## group_red_packet_claims (3 行)
+## group_red_packet_claims (14 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -241,7 +255,7 @@
 | amount | REAL |  |  |
 | claimed_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## group_red_packets (3 行)
+## group_red_packets (7 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -258,7 +272,44 @@
 | expires_at | TEXT |  |  |
 | packet_type | TEXT | "lucky" |  |
 
-## group_stakes (3 行)
+## group_report_queue (2 行)
+| 字段 | 类型 | 默认 | 主键 |
+|------|------|------|------|
+| id | INTEGER |  | 是 |
+| group_id | INTEGER |  |  |
+| question | TEXT |  |  |
+| asked_by | INTEGER |  |  |
+| anonymous | INTEGER | 0 |  |
+| hit_knowledge_id | INTEGER |  |  |
+| status | TEXT | 'pending' |  |
+| resolved_kb_id | INTEGER |  |  |
+| resolved_by | INTEGER |  |  |
+| resolved_at | TEXT |  |  |
+| created_at | TEXT | CURRENT_TIMESTAMP |  |
+
+## group_resource_pool (2 行)
+| 字段 | 类型 | 默认 | 主键 |
+|------|------|------|------|
+| id | INTEGER |  | 是 |
+| group_id | INTEGER |  |  |
+| agent_id | TEXT |  |  |
+| model_id | TEXT |  |  |
+| daily_limit | INTEGER | 100 |  |
+| enabled | INTEGER | 1 |  |
+| created_at | TEXT | CURRENT_TIMESTAMP |  |
+
+## group_resource_usage (23 行)
+| 字段 | 类型 | 默认 | 主键 |
+|------|------|------|------|
+| id | INTEGER |  | 是 |
+| group_id | INTEGER |  |  |
+| user_id | INTEGER |  |  |
+| agent_id | TEXT |  |  |
+| model_id | TEXT |  |  |
+| tokens_used | INTEGER | 0 |  |
+| created_at | TEXT | CURRENT_TIMESTAMP |  |
+
+## group_stakes (5 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -279,7 +330,7 @@
 | valid_until | TEXT |  |  |
 | created_at | TIMESTAMP | CURRENT_TIMESTAMP |  |
 
-## group_task_submissions (1 行)
+## group_task_submissions (4 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -293,7 +344,7 @@
 | edited_at | TEXT |  |  |
 | created_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## group_tasks (3 行)
+## group_tasks (8 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -336,6 +387,7 @@
 | last_red_packet_date | TEXT |  |  |
 | pool_packet_amount | REAL | 0 |  |
 | pool_packet_count | INTEGER | 5 |  |
+| announcement | TEXT |  |  |
 
 ## intent_feedback (4 行)
 | 字段 | 类型 | 默认 | 主键 |
@@ -348,7 +400,7 @@
 | note | TEXT |  |  |
 | created_at | TEXT |  |  |
 
-## interaction_patterns (100 行)
+## interaction_patterns (103 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -405,6 +457,24 @@
 | quality_score | INTEGER | 0 |  |
 | last_used_at | TEXT |  |  |
 
+## knowledge_docs (18 行)
+| 字段 | 类型 | 默认 | 主键 |
+|------|------|------|------|
+| id | INTEGER |  | 是 |
+| scope | TEXT | 'group' |  |
+| group_id | INTEGER |  |  |
+| title | TEXT |  |  |
+| content | TEXT |  |  |
+| category | TEXT | 'doc' |  |
+| tags | TEXT |  |  |
+| source_type | TEXT | 'manual' |  |
+| source_id | TEXT |  |  |
+| contributor_id | INTEGER |  |  |
+| hit_count | INTEGER | 0 |  |
+| visibility | TEXT | 'group' |  |
+| created_at | TEXT | CURRENT_TIMESTAMP |  |
+| updated_at | TEXT |  |  |
+
 ## main_seed_pool (0 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
@@ -427,7 +497,7 @@
 | accepted_by | INTEGER |  |  |
 | created_at | TEXT | CURRENT_TIMESTAMP |  |
 
-## messages (9511 行)
+## messages (10207 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -550,7 +620,7 @@
 | cached_solution_id | INTEGER |  |  |
 | reused_from_kb_id | INTEGER |  |  |
 
-## safety_log (1627 行)
+## safety_log (1713 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -559,7 +629,7 @@
 | category | TEXT |  |  |
 | detail | TEXT |  |  |
 
-## safety_memory (1692 行)
+## safety_memory (1785 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -611,7 +681,7 @@
 | total_count | INTEGER | 0 |  |
 | status | TEXT | 'unknown' |  |
 
-## supervisor_runs (306 行)
+## supervisor_runs (310 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -650,7 +720,7 @@
 | supervisor_id | TEXT |  |  |
 | supervisor_run_id | INTEGER |  |  |
 
-## swarm_reviews (3854 行)
+## swarm_reviews (4122 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |
@@ -714,7 +784,7 @@
 | key | TEXT |  | 是 |
 | value | TEXT |  |  |
 
-## users (7 行)
+## users (8 行)
 | 字段 | 类型 | 默认 | 主键 |
 |------|------|------|------|
 | id | INTEGER |  | 是 |

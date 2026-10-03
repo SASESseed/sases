@@ -484,3 +484,84 @@ python -c "import hashlib; files=\['<路径1>','<路径2>']; \[print(f, '主:', 
 
 \- 端到端加密
 
+
+---
+
+## 十二、2026-10-02/03 群聊大版本更新
+
+### 12.1 新增功能清单（17 项）
+
+| 功能 | 说明 |
+|------|------|
+| 群任务 | 发布/提交/选择/结算 + 12h 重播 |
+| 群红包 | 拼手气/普通/抢/过期退款 |
+| 群福利 | 定时手气红包（群池出资） |
+| 群积分 | 质押/空投/红包配置 |
+| 群排行榜 | 贡献/任务/红包三榜 |
+| 群知识库 | CRUD + 搜索 + 任务回流 |
+| 群汇报 | 未命中自动入队 + 群主补充 |
+| 群文件 | 上传/聚合/下载 |
+| 群管理 | 公告/管理员/转让/邀请确认 |
+| 蜂群模式 | 群主开关 + 智能体共享 |
+| 身份切换 | 按模式分流（普通/蜂群） |
+| @智能体 | 触发 AI 回复 |
+| 帮我回复 | 引用消息生成建议 |
+| 群设置基础 | 群名/昵称/搜索/免打扰/置顶 |
+| 工具手册 | 15 条预置 + 三者检索 |
+| WS 增量推送 | 消息不重拉 |
+| 乐观渲染 | 发送即时显示 |
+
+### 12.2 踩过的坑（8 条）
+
+1. **Windows 换行符**：多行锚点易匹配失败，优先单行锚点
+2. **run_python 吞 $**：模板字符串里的 ${xxx} 会被处理，用 chr(36) 绕过
+3. **内联 onclick**：ES 模块函数需 window.xxx = xxx 才可在 HTML 里调用
+4. **openSubpage 缺 returnAction**：返回时会退回主界面，不是上一级
+5. **时区必须存 UTC**：蜂巢计划多节点，本地时间会乱套
+6. **insert 脚本误判**：检查已存在要匹配 = function 或 = async function 定义
+7. **file_patch old_snippet 必须唯一**：多行匹配失败时用更长锚点或 run_python
+8. **定时任务 WS 广播**：任务/红包入库后要主动广播，否则用户不刷新看不到
+
+### 12.3 定时任务分组（14 个任务，4 组）
+
+```
+秒级：executor / syntax_check
+分钟级：rescue / group_rp / rp_expire
+小时级：summary / debug / pattern / git_push / task_repush
+日级：backup / cleanup / state_sync / airdrop
+```
+
+### 12.4 群设置基础功能实现要点
+
+- 群名/昵称 → 二级页面编辑（不用 prompt）
+- 消息免打扰 → 开关 + group_members.is_muted
+- 置顶聊天 → 开关 + toggle_pin_group
+- 查找记录 → 二级搜索页 + GET /group/{id}/search-messages
+
+### 12.5 工具手册预置列表（15 条）
+
+存在 knowledge_docs.scope='manual'：
+- file_patch / file_read / run_python / grep_code / dir_tree / verify_syntax
+- api_call / web_fetch / git_ops
+- 锚点选择 / 换行符 / 空行处理 / 参数名 / 保护文件 / restart_pending
+
+检索方式：commander.py 中按关键词匹配工具名，注入 prompt
+
+### 12.6 群聊子模块导航（group_chat.js 23 层）
+
+打开 group_chat.js 用 Ctrl+Shift+O 可跳转：
+- 模块 0：调试接口
+- 模块 1：群聊主入口与生命周期
+- 模块 2：群任务
+- 模块 3：通用工具（Toast）
+- 模块 4：群红包
+- 模块 5：群知识库
+- 模块 6：蜂群模式管理
+- 模块 7：群管理
+- 模块 8：智能体回复（@ + 帮我回复）
+- 模块 9：群文件
+- 模块 10：消息渲染与 WS 增量
+- 模块 11-22：发布/发送/模式/设置/积分/邀请/身份/公告/排行榜/基础
+- 模块 22：清空/退出/汇报
+
+
