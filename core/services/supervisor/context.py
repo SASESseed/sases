@@ -50,7 +50,7 @@ def build_context(user_id, conversation_id, query, mode='execute', supervisor_id
             if not content.strip():
                 continue
             _chat_lines.append(sender + "：" + content[:100])
-        for line in _chat_lines[-2:]:
+        for line in _chat_lines[-20:]:
             parts.append(line)
         if _step_lines:
             parts.append("执行步骤：" + " | ".join(_step_lines[-3:]))
