@@ -463,7 +463,7 @@ async def send_message(
                 try:
                     from .. import supervisor_service as _sv
                     _chat_ctx = _sv.build_context(user_id, conversation_id, content, mode='chat', supervisor_id=sender_agent_id)
-                    _chat_prompt = '你是 SASES 调度员，正在与用户对话。参考资料：' + _chat_ctx + ' 用户说：' + content[:300] + ' 请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。'
+                    _chat_prompt = '你是 SASES 调度员，正在与用户对话。请直接回答用户（不要提议执行、不要派单），像分析师一样给出判断，最多 200 字。' + chr(10) + '【参考资料】' + chr(10) + _chat_ctx + chr(10) + '【用户说】' + chr(10) + content[:300]
                     import openai as _coai
                     from ... import config as _ccfg
                     _cclient = _coai.OpenAI(api_key=_ccfg.DEEPSEEK_API_KEY, base_url=_ccfg.DEEPSEEK_BASE_URL, timeout=20)
