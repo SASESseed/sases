@@ -1,1 +1,1 @@
-# SASES 启动器包
+"""Launcher package marker."""

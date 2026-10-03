@@ -1,1 +1,1 @@
-# SASES 启动器 UI 包
+"""Launcher UI package marker."""
