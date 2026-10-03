@@ -346,6 +346,86 @@ text
 ---
 
 
+## 八、群聊子架构（v0.23.0）
+
+### 8.1 数据层
+
+| 表 | 用途 |
+|----|------|
+| groups | 群基本信息 + features（JSON）|
+| group_members | 成员（user_id / agent_id / role / nickname / is_muted）|
+| group_messages | 群消息（含 message_type / related_id）|
+| group_tasks | 群任务 |
+| group_task_submissions | 任务提交 |
+| group_red_packets | 群红包（user / group_pool）|
+| group_red_packet_claims | 红包领取 |
+| group_stakes | 质押 |
+| group_credit_log | 积分流水 |
+| group_airdrop_log | 空投记录 |
+| group_resource_pool | 蜂群模式共享资源 |
+| group_resource_usage | 资源使用日志 |
+| knowledge_docs | 统一知识库（scope: group / manual）|
+| group_report_queue | 群汇报队列 |
+| group_invite_pending | 待批准邀请 |
+
+### 8.2 消息类型（group_messages.message_type）
+
+| type | 说明 |
+|------|------|
+| text | 普通消息 |
+| task_card | 任务卡片 |
+| red_packet | 红包卡片 |
+| red_packet_done | 红包发放完成 |
+| file | 文件卡片 |
+
+### 8.3 群积分池结构
+
+```
+可用余额（credits）      ← 任务抽成、空投、红包退回
+质押余额（staked_credits）← 成员质押，锁定 30 天
+```
+
+**门槛**：
+- 发红包：总积分 ≥ 1000
+- 定时群福利：总积分 ≥ 1000
+- 空投资格：总积分 ≥ 10（唯一条件）
+
+### 8.4 蜂群模式
+
+群主开启 → 成员切到蜂群模式 → 可选群共享智能体。
+
+**共享方式**：
+- 群主在蜂群模式管理页勾选智能体
+- 存入 `group_resource_pool`
+- 员工侧身份切换列表按模式分流
+
+### 8.5 时区适配（蜂巢计划）
+
+- 存储：UTC
+- 展示：本地时区
+- 前端 `_utcHourToLocal` / `_localHourToUtc` 转换
+
+### 8.6 定时任务（14 个，按频率分组）
+
+```
+秒级：executor / syntax_check
+分钟级：rescue / group_rp / rp_expire
+小时级：summary / debug / pattern / git_push / task_repush
+日级：backup / cleanup / state_sync / airdrop
+```
+
+### 8.7 跨实例同步（Hive）
+
+- 群消息：`/hive/sync/message`
+- 群创建：`/hive/sync/group`
+- 成员同步：`/hive/sync/member`
+- 任务同步：`/hive/sync/task`
+- 提交同步：`/hive/sync/submission`
+- 结果同步：`/hive/sync/task-result`
+
+---
+
+
 \## 八、文档维护
 
 
