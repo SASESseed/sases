@@ -4,6 +4,25 @@ import httpx
 from datetime import datetime
 from typing import Optional
 from ...db import db_cursor
+
+
+def _sases_fallback_cid():
+    try:
+        with db_cursor() as _sases_cur:
+            _sases_cur.execute("SELECT conversation_id FROM messages WHERE sender='user' ORDER BY id DESC LIMIT 1")
+            _sases_row = _sases_cur.fetchone()
+            if _sases_row:
+                try:
+                    _sases_val = _sases_row['conversation_id']
+                except Exception:
+                    _sases_val = _sases_row[0]
+                if _sases_val:
+                    print('[supervisor] auto_run fallback conversation_id=' + str(_sases_val))
+                    return _sases_val
+    except Exception:
+        pass
+    return 0
+
 from .constants import REQUIRE_TASK_CONFIRMATION, COMMAND_PREFIX_MAP, DRAFT_PREFIXES
 from .conversations import create_conversation, get_messages, mark_conversation_read
 from .model_call import call_model_with_config
@@ -115,7 +134,7 @@ async def send_message(
                             "sender_agent_id": sender_agent_id,
                             "mode": mode,
                         }
-                    _run_id = supervisor_service.create_run(user_id, conversation_id or 0, sender_agent_id or agent_id, content)
+                    _run_id = supervisor_service.create_run(user_id, conversation_id or 0 or _sases_fallback_cid(), sender_agent_id or agent_id, content)
                     print("[supervisor] 已创建 run_id=" + str(_run_id) + " goal=" + content[:50])
                     _force_swarm = True
                     _supervisor_run_id = _run_id
