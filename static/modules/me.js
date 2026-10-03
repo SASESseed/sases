@@ -223,26 +223,6 @@ async function openKnowledgeBase() {
     myDocsHtml = '<div class="subpage-placeholder">加载失败</div>';
   }
   window.openSubpage('个人知识库', myDocsHtml);
-
-  setTimeout(function() {
-    const _rows = document.querySelectorAll('#subpage-content [data-doc-index]');
-    _rows.forEach(function(el) {
-      const _idx = parseInt(el.getAttribute('data-doc-index'));
-      const _doc = (window._myDocsCache || [])[_idx];
-      if (!_doc) return;
-      const _src = _doc.source_file;
-      el.addEventListener('click', function() { openMyDoc(_src); });
-      el.addEventListener('contextmenu', function(ev) { ev.preventDefault(); showDocContextMenu(ev.clientX, ev.clientY, _src); });
-      let _lp = null;
-      el.addEventListener('touchstart', function(ev) {
-        const _t = ev.touches[0];
-        _lp = setTimeout(function() { showDocContextMenu(_t.clientX, _t.clientY, _src); }, 800);
-      }, { passive: true });
-      el.addEventListener('touchend', function() { if (_lp) clearTimeout(_lp); });
-      el.addEventListener('touchmove', function() { if (_lp) clearTimeout(_lp); });
-    });
-  }, 50);
-
   return;
 
   let knowledgeHtml = '';
@@ -301,3 +281,48 @@ async function openContributions() {
 // 导出全局（供其他模块调用或挂载）
 window.openKnowledgeBase = openKnowledgeBase;
 window.openContributions = openContributions;
+
+
+async function deleteDocAndRefresh(sourceFile) {
+  try {
+    await api.deleteMyDoc(sourceFile);
+    alert('已删除');
+    openKnowledgeBase();
+  } catch (e) {
+    alert('删除失败：' + e.message);
+  }
+}
+
+
+function showDocContextMenu(x, y, sourceFile) {
+  const _old = document.getElementById('doc-context-menu');
+  if (_old) _old.remove();
+  const _menu = document.createElement('div');
+  _menu.id = 'doc-context-menu';
+  _menu.className = 'message-context-menu';
+  _menu.style.position = 'fixed';
+  _menu.style.left = x + 'px';
+  _menu.style.top = y + 'px';
+  _menu.style.display = 'block';
+  _menu.innerHTML = '<div class="context-menu-item" data-action="open">打开文档</div>' + '<div class="context-menu-item" data-action="delete" style="color:#e64340;">删除</div>';
+  document.body.appendChild(_menu);
+  _menu.querySelector('[data-action="open"]').addEventListener('click', function() {
+    _menu.remove();
+    openMyDoc(sourceFile);
+  });
+  _menu.querySelector('[data-action="delete"]').addEventListener('click', function() {
+    _menu.remove();
+    if (confirm('确定删除《' + sourceFile + '》？删除后不可恢复。')) {
+      deleteDocAndRefresh(sourceFile);
+    }
+  });
+  setTimeout(function() {
+    const _close = function(ev) {
+      if (!_menu.contains(ev.target)) {
+        _menu.remove();
+        document.removeEventListener('click', _close);
+      }
+    };
+    document.addEventListener('click', _close);
+  }, 50);
+}
