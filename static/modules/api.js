@@ -283,6 +283,7 @@ export const api = {
 
   // 知识库
   listKnowledge: () => request('/knowledge/list'),
+  deleteMyDoc: (sourceFile) => request('/knowledge/my-docs/' + encodeURIComponent(sourceFile), { method: 'DELETE' }),
 
   // 统计
   getLeaderboard: () => request('/stats/leaderboard'),
