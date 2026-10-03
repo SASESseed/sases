@@ -7,6 +7,7 @@ def _ctx_key(user_id, conversation_id, mode, supervisor_id, query):
 
 
 def build_context(user_id, conversation_id, query, mode='execute', supervisor_id=None):
+    # [CACHE-ORDER] 静态 system/JSON 约束置最前，user_text/目标/步骤移最后
     _ck = _ctx_key(user_id, conversation_id, mode, supervisor_id, query)
     _ct = _ctx_time.time()
     if _ck in _CTX_CACHE:
