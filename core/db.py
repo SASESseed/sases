@@ -223,6 +223,9 @@ def init_db():
         _ensure_column(cur, "group_members", "origin_node", "TEXT")
         _ensure_column(cur, "group_members", "user_sases_id", "TEXT")
 
+        _ensure_column(cur, "group_members", "nickname", "TEXT")
+        _ensure_column(cur, "group_members", "is_muted", "INTEGER DEFAULT 0")
+
         # ========== 群消息表 ==========
         cur.execute("""
             CREATE TABLE IF NOT EXISTS group_messages (
