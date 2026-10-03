@@ -96,3 +96,16 @@ async def api_suggest_reply(body: CallAgentRequest, user_id: int = Depends(get_c
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/chat")
+async def api_suggest_reply(body: CallAgentRequest, user_id: int = Depends(get_current_user)):
+    """根据智能体生成建议回复（不入库）"""
+    from ..services import chat_service
+    try:
+        reply = await chat_service.call_agent_chat(user_id, body.agent_id, body.query)
+        return {"response": reply}
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
