@@ -223,6 +223,26 @@ async function openKnowledgeBase() {
     myDocsHtml = '<div class="subpage-placeholder">加载失败</div>';
   }
   window.openSubpage('个人知识库', myDocsHtml);
+
+  setTimeout(function() {
+    const _rows = document.querySelectorAll('#subpage-content [data-doc-index]');
+    _rows.forEach(function(el) {
+      const _idx = parseInt(el.getAttribute('data-doc-index'));
+      const _doc = (window._myDocsCache || [])[_idx];
+      if (!_doc) return;
+      const _src = _doc.source_file;
+      el.addEventListener('click', function() { openMyDoc(_src); });
+      el.addEventListener('contextmenu', function(ev) { ev.preventDefault(); showDocContextMenu(ev.clientX, ev.clientY, _src); });
+      let _lp = null;
+      el.addEventListener('touchstart', function(ev) {
+        const _t = ev.touches[0];
+        _lp = setTimeout(function() { showDocContextMenu(_t.clientX, _t.clientY, _src); }, 800);
+      }, { passive: true });
+      el.addEventListener('touchend', function() { if (_lp) clearTimeout(_lp); });
+      el.addEventListener('touchmove', function() { if (_lp) clearTimeout(_lp); });
+    });
+  }, 50);
+
   return;
 
   let knowledgeHtml = '';
