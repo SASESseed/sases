@@ -4,7 +4,7 @@ import subprocess
 import shutil
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/', 'data/', 'logs/')
+ALLOWED_DIRS = ('core/', 'static/', 'scripts/', 'docs/', 'harness_modules/', 'data/', 'logs/', 'launcher/')
 FORBIDDEN = ('.env', 'users.db', '.key', '.bin', '.pem', '.crt', 'secret_key', 'api_key_encryption')
 BACKUP_DIR = '.backups'
 UI_PREFIXES = ('render', 'open', 'show', 'hide', 'update', 'toggle', 'close')

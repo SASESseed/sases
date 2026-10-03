@@ -5,7 +5,7 @@ import re as _re
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _EXTERNAL_RE = _re.compile(r'^([A-Za-z]):/')
-ALLOWED_DIRS = ("static/", "core/", "scripts/", "docs/", "harness_modules/", "data/", "logs/")
+ALLOWED_DIRS = ("static/", "core/", "scripts/", "docs/", "harness_modules/", "data/", "logs/", "launcher/")
 FORBIDDEN_PARTS = ('.env', 'users.db', 'secret_key', 'api_key_encryption', '.backups')
 FORBIDDEN_EXT = ('.key', '.bin', '.pem', '.crt', '.db', '.sqlite')
 
