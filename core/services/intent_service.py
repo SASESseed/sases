@@ -134,6 +134,14 @@ async def is_task_intent(content: str) -> bool:
     if not content or not content.strip():
         return False
 
+    # 上下文疑问句：优先判为对话（避免"刚才你改了什么"被误判为任务）
+    _ctx_q_prefixes = ('刚才', '你刚才', '刚刚', '上次', '之前', '你之前', '前面你', '前面那', '刚刚那')
+    _ctx_q_kws = ('哪一行', '哪个文件', '哪一处', '哪一个', '是什么', '是什么样', '还记得', '记得吗', '在哪', '哪几行', '哪个位置')
+    _text_stripped = content.strip()
+    if any(_text_stripped.startswith(p) for p in _ctx_q_prefixes):
+        if any(kw in _text_stripped for kw in _ctx_q_kws):
+            return False
+
     # 第一层：规则
     if _is_obvious_chat(content):
         return False
