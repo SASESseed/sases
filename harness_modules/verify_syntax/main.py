@@ -136,6 +136,26 @@ def _check_undefined_calls(content, ext):
     return []
 
 
+def _check_open_subpage_return_action(content):
+    """扫描 .js 文件里所有 openSubpage 调用，检查是否传了 returnAction。"""
+    import re as _re
+    warnings = []
+    pattern = _re.compile(r'(?:window\.)?openSubpage\s*\(')
+    for m in pattern.finditer(content):
+        start = m.end()
+        window_end = min(len(content), start + 500)
+        window_text = content[start:window_end]
+        if 'returnAction' not in window_text:
+            line_no = content[:m.start()].count(chr(10)) + 1
+            line_end = content.find(chr(10), m.start())
+            if line_end < 0:
+                line_end = len(content)
+            line_text = content[m.start():line_end].strip()[:80]
+            warnings.append('line ' + str(line_no) + ': ' + line_text)
+    return warnings
+
+
+
 def run(params):
     fp = params.get('file_path', '')
     if not fp:
