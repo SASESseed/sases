@@ -75,6 +75,18 @@ async def send_message(
 
     print(f"[SUPERVISOR_DEBUG] sender_agent_id={sender_agent_id!r} agent_id={agent_id!r} _supervisor_id={_supervisor_id!r}")
 
+    # 兜底：conversation_id 为空时，自动创建（修复对话模式 NOT NULL constraint 失败）
+    if not conversation_id:
+        _auto_title = "新会话"
+        if agent_id:
+            with db_cursor() as _cq0:
+                _cq0.execute('SELECT name FROM model_configs WHERE id=?', (agent_id,))
+                _rq0 = _cq0.fetchone()
+            if _rq0:
+                _auto_title = _rq0['name']
+        conversation_id = create_conversation(user_id, agent_id, _auto_title)
+        print(f"[MSG_DEBUG] 兜底创建 conversation_id={conversation_id}")
+
     # v0.18.3: 用户输入自动授粉
     try:
         from .. import pollination_service as _poll_in
