@@ -242,6 +242,52 @@ async function openKnowledgeBase() {
   window.openSubpage(t('knowledge_base'), knowledgeHtml);
 }
 
+function showDocContextMenu(x, y, sourceFile) {
+  const _old = document.getElementById('doc-context-menu');
+  if (_old) _old.remove();
+  const _menu = document.createElement('div');
+  _menu.id = 'doc-context-menu';
+  _menu.className = 'message-context-menu';
+  _menu.style.position = 'fixed';
+  _menu.style.left = x + 'px';
+  _menu.style.top = y + 'px';
+  _menu.style.display = 'block';
+  _menu.innerHTML = '<div class="context-menu-item" data-action="open">打开文档</div>' +
+                    '<div class="context-menu-item" data-action="delete" style="color:#e64340;">删除</div>';
+  document.body.appendChild(_menu);
+  _menu.querySelector('[data-action="open"]').addEventListener('click', function() {
+    _menu.remove();
+    openMyDoc(sourceFile);
+  });
+  _menu.querySelector('[data-action="delete"]').addEventListener('click', function() {
+    _menu.remove();
+    if (!confirm('确定删除《' + sourceFile + '》？删除后不可恢复。')) return;
+    deleteDocAndRefresh(sourceFile);
+  });
+  setTimeout(function() {
+    const _close = function(ev) {
+      if (!_menu.contains(ev.target)) {
+        _menu.remove();
+        document.removeEventListener('click', _close);
+      }
+    };
+    document.addEventListener('click', _close);
+  }, 50);
+}
+
+
+async function deleteDocAndRefresh(sourceFile) {
+  try {
+    await api.deleteMyDoc(sourceFile);
+    alert('已删除');
+    openKnowledgeBase();
+  } catch (e) {
+    alert('删除失败：' + e.message);
+  }
+}
+
+
+
 async function openMyDoc(sourceFile) {
   try {
     const token = localStorage.getItem('sases_token');
