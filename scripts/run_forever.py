@@ -2,7 +2,6 @@ import subprocess, sys, time, os
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _PORT = os.environ.get("SASES_PORT", "8001")
 _PORT = os.environ.get("SASES_PORT", "8001")
-_PORT = os.environ.get("SASES_PORT", "8001")
 C = [sys.executable, "-m", "uvicorn", "app_full:app", "--port", _PORT]
 BAD_ALLOC_THRESHOLD = 5
 
@@ -29,15 +28,6 @@ while True:
                 print(f"[wrapper] killed orphan pid={_pid} on :8001", flush=True)
     except Exception as _e:
         print(f"[wrapper] port cleanup failed: {_e}", flush=True)
-
-import sys as _sys
-sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-try:
-    _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    _sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-except Exception:
-    pass
 
     print("[wrapper] start", flush=True)
     s = time.time()
