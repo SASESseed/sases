@@ -271,7 +271,7 @@ async function openMyDoc(sourceFile) {
     const d = await r.json();
     const content = d.content || '(空)';
     const html = '<div style="padding:12px;"><div style="font-size:13px;color:#888;margin-bottom:12px;">' + (d.source_file || '') + ' · ' + (d.chunk_count || 0) + ' 分片</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;font-family:inherit;">' + content.replace(/</g, '&lt;') + '</pre></div>';
-    window.openSubpage(sourceFile, html);
+    window.openSubpage(sourceFile, html, { returnAction: function() { openKnowledgeBase(); } });
   } catch (e) {
     alert('打开失败：' + e.message);
   }
