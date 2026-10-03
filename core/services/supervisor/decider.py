@@ -136,7 +136,7 @@ async def decide_next_step(run_id):
         resp = await asyncio.to_thread(
             client.chat.completions.create,
             model=config.MODEL_NAME,
-            messages=[{'role': 'user', 'content': prompt}],
+            messages=[{'role': 'system', 'content': _sys_prompt}, {'role': 'user', 'content': _user_prompt}],
             temperature=0.3,
             max_tokens=200
         )
