@@ -31,6 +31,8 @@ while True:
         print(f"[wrapper] port cleanup failed: {_e}", flush=True)
 
 import sys as _sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 try:
     _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     _sys.stderr.reconfigure(encoding="utf-8", errors="replace")
